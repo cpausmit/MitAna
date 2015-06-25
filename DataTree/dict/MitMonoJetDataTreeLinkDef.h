@@ -1,11 +1,12 @@
 #ifndef MITMONOJET_DATATREE_LINKDEF_H
 #define MITMONOJET_DATATREE_LINKDEF_H
 
-#include "MitMonoJet/DataTree/interface/XlEvtSelData.h"
+#include "MitAna/DataTree/interface/XlEvtSelData.h"
+
 #endif
 
 #ifndef __CINT__
-# define _R__UNIQUEIDENTIFIER_ MitMonoJetDataTree
+# define _R__UNIQUEIDENTIFIER_ MitAnaDataTree
 # define _R__JOIN3_(F,X,Y) _NAME3_(F,X,Y)
 # undef _R__UNIQUE_
 # define _R__UNIQUE_(X) _R__JOIN3_( _R__UNIQUEIDENTIFIER_,X,__LINE__)

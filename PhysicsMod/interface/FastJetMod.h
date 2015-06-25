@@ -68,7 +68,7 @@ namespace mithep
       	kCA,
       	kKT,
       	kAK
-      }
+      };
         
     private:
 

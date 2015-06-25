@@ -1,5 +1,5 @@
-#include "MitPhysics/Init/interface/ModNames.h"
-#include "MitAna/Mods/interface/FastJetMod.h"
+#include "MitAna/DataTree/interface/Names.h"
+#include "MitAna/PhysicsMod/interface/FastJetMod.h"
 #include "MitAna/DataTree/interface/PFJetCol.h"
 
 #include "MitAna/DataTree/interface/XlSubJet.h"
