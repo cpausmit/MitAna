@@ -92,10 +92,16 @@ void FillerXlFatJets::Process()
   fXlSubJets->Delete();  
   
   // Load the branches we want to work with
-  LoadEventObject(fJetsName,fJets,fJetsFromBranch);
-  if (fQGTaggingActive) {
-    LoadEventObject(fPileUpDenName,fPileUpDen,fPileUpDenFromBranch);
-    LoadEventObject(fVertexesName,fVertexes,fVertexesFromBranch);
+  // LoadEventObject(fJetsName,fJets,fJetsFromBranch);
+  // if (fQGTaggingActive) {
+  //   LoadEventObject(fPileUpDenName,fPileUpDen,fPileUpDenFromBranch);
+  //   LoadEventObject(fVertexesName,fVertexes,fVertexesFromBranch);
+  // }
+  
+  fJets = GetObject<JetOArr>(fJetsName);
+  if (fQGTaggingActive){
+    fPileUpDen = GetObject<PileupEnergyDensityCol>(fPileUpDenName);
+    fVertexes = GetObject<VertexCol>(fVertexesName);
   }
 
   // Loop over PFCandidates and unmark them : necessary for skimming

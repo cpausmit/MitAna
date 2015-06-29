@@ -474,6 +474,7 @@ void OutputMod::Process()
       fTreeWriter->StoreObject(fBranchTable);
   }
 
+
   UInt_t runnum = GetEventHeader()->RunNum();
 
   // store look ahead information
@@ -587,7 +588,7 @@ void OutputMod::SetupBranches()
     if (obj) {
       fBranches[fNBranchesMax+i] = obj;
       fTreeWriter->AddBranch(objname, obj->ClassName(), &fBranches[fNBranchesMax+i], fBranchSize);
-      Info("SlaveBegin", "Adding additional branch named '%s' as requested", objname.Data());
+      Info("Process", "Adding additional branch named '%s' as requested", objname.Data());
     }
     else {
       SendError(kAbortAnalysis, "SlaveBegin", 
@@ -638,7 +639,7 @@ void OutputMod::SlaveBegin()
   fTreeWriter->SetAutoFill(tname, 0);
 
   // get pointer to all event headers
-  fSkimmedIn = GetPublicObj<EventHeaderCol>(Names::gkSkimmedHeaders);
+  fSkimmedIn = GetObject<EventHeaderCol>(Names::gkSkimmedHeaders);
 
   // create TObject space for TAM
   fBranches = new TObject*[fNBranchesMax + fAddList.size()];       
