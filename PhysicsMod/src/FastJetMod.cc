@@ -113,21 +113,19 @@ void FastJetMod::Process()
 
   // Now loop over PFJets and fill the output collection
   for (UInt_t j=0; j<fjOutJets.size(); ++j) {
+    auto * outJet = new PFJet; 
     // Inizialize PFJet with 4-vector
-    PFJet* outJet = new PFJet(fjOutJets[j].px(),
-                              fjOutJets[j].py(),
-                              fjOutJets[j].pz(),
-                              fjOutJets[j].e());
-
+    outJet->SetRawPtEtaPhiM(fjOutJets[j].pt(),
+                            fjOutJets[j].eta(),
+                            fjOutJets[j].phi(),
+                            fjOutJets[j].m());
     // Setup PFJet area
     outJet->SetJetArea(fjOutJets[j].area());
     
     // Setup PFJet particle flow related quantities
     FillPFJet(outJet, fjOutJets[j]);
+    fOutputJets->Add(outJet);
                               
-    // Add this jet to the output collection
-    fOutputJets->AddOwned(outJet);
-        
   } //end loop on fastjet jets
   
   // Now sort the output collections
