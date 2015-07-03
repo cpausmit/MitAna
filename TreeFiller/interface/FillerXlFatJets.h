@@ -6,7 +6,7 @@
 // This module process a collection of input jet, compute the substrucure
 // and fill two output collections of fXlFatJets and relative fXlSubJets
 //
-// Authors: L.DiMatteo
+// Authors: L.DiMatteo, S.Narayanan
 //--------------------------------------------------------------------------------------------------
 
 #ifndef MITANA_TREEFILLER_FILLERXLFATJETS_H
@@ -53,17 +53,17 @@ namespace mithep
       void setTopTaggingOn(Bool_t b)       { fTopTaggingActive = b; }
       void SetQGTaggerCHS(bool b)          { fQGTaggerCHS = b;      }
       void PublishOutput(Bool_t b)         { fPublishOutput = b;    }
-                                                                    
-      void SetProcessNJets(UInt_t n)       { fProcessNJets = n;     } 
-                                                                    
+
+      void SetProcessNJets(UInt_t n)       { fProcessNJets = n;     }
+
       void SetJetsName(const char *n)      { fJetsName = n;         }
       void SetJetsFromBranch(Bool_t b)     { fJetsFromBranch = b;   }
-                                                                    
+
       void SetFatJetsName(const char *n)   { fXlFatJetsName = n;    }
       const char * GetFatJetsName()        { return fXlFatJetsName;  }
       void SetSubJetsName(const char *n)   { fXlSubJetsName = n;    }
       const char * GetSubJetsName()        { return fXlSubJetsName;  }
-                                                                    
+
       void SetSoftDropZCut(double d)       { fSoftDropZCut = d;     }
       void SetSoftDropR0(double d)      { fSoftDropR0 = d;    }
       void SetPruneZCut(double d)          { fPruneZCut = d;        }
@@ -74,27 +74,27 @@ namespace mithep
       void SetTrimPtFrac(double d)         { fTrimPtFrac = d;       }
       void SetConeSize(double d)           { fConeSize = d;         }
 
- 
+
     protected:
       void Process();
       void SlaveBegin();
       void SlaveTerminate();
- 
+
       void FillXlFatJet (const PFJet *pPFJet);
       void FillXlSubJets(std::vector<fastjet::PseudoJet> &fjSubJets,
                          XlFatJet *pFatJet,XlSubJet::ESubJetType t);
       // Jet collection helpers
-      std::vector <fastjet::PseudoJet>   
-            Sorted_by_pt_min_pt(std::vector <fastjet::PseudoJet> &jets,  
-                                float jetPtMin);      
+      std::vector <fastjet::PseudoJet>
+            Sorted_by_pt_min_pt(std::vector <fastjet::PseudoJet> &jets,
+                                float jetPtMin);
       // QJets volatility helpers
-      void   GetJetConstituents(fastjet::PseudoJet &jet, std::vector <fastjet::PseudoJet> &constits,  
+      void   GetJetConstituents(fastjet::PseudoJet &jet, std::vector <fastjet::PseudoJet> &constits,
                                 float constitsPtMin);
       double GetQjetVolatility (std::vector<fastjet::PseudoJet> &constits, int QJetsN = 25, int seed = 12345);
       double FindRMS           (std::vector<float> qjetmasses);
-      double FindMean          (std::vector<float> qjetmasses); 
+      double FindMean          (std::vector<float> qjetmasses);
       // Subjet QGTagging helpers
-      void   FillSubjetQGTagging(fastjet::PseudoJet &jet, float constitsPtMin, 
+      void   FillSubjetQGTagging(fastjet::PseudoJet &jet, float constitsPtMin,
                                  XlSubJet *pSubJet, XlFatJet *pFatJet);
       // Color pull helpers
       TVector2 GetPull(fastjet::PseudoJet &jet, float constitsPtMin);
@@ -129,12 +129,16 @@ namespace mithep
       TString fVertexesName;               //(i) name of vertex coll
       Bool_t fVertexesFromBranch;          //are vertexex from Branch?
       const VertexCol *fVertexes;          //vertex coll handle
- 
+
+      TString fSecondaryVertexesName;               //(i) name of vertex coll
+      Bool_t fSecondaryVertexesFromBranch;          //are vertexex from Branch?
+      const VertexCol *fSecondaryVertexes;          //vertex coll handle
+
       TString fXlFatJetsName;              //name of output fXlFatJets collection
       XlFatJetArr *fXlFatJets;             //array of fXlFatJets
       TString fXlSubJetsName;              //name of output fXlSubJets collection
       XlSubJetArr *fXlSubJets;             //array of fXlSubJets
-      
+
       // Objects from fastjet we want to use
       fastjet::Pruner *fPruner;
       fastjet::Filter *fFilterer;
@@ -142,7 +146,7 @@ namespace mithep
       double fSoftDropZCut;                //soft-drop Z cut
       double fSoftDropR0;               //soft-drop angular distance normalisation
       double fPruneZCut;                   //pruning Z cut
-      double fPruneDistCut;                //pruning distance cut 
+      double fPruneDistCut;                //pruning distance cut
       int fFilterN;                        //number of subjets after filtering
       double fFilterRad;                   //filtered subjets radius
       double fTrimRad;                     //trimmed subjet radius
@@ -151,14 +155,14 @@ namespace mithep
       fastjet::JetDefinition *fCAJetDef;   //fastjet clustering definition
       fastjet::GhostedAreaSpec *fActiveArea;
       fastjet::AreaDefinition *fAreaDefinition;
-      
-      // QG tagger 
+
+      // QG tagger
       QGTagger *fQGTagger;                 //QGTagger calculator
-      
+
       // Counters : used to initialize seed for QJets volatility
       Long64_t fCounter;
 
-      ClassDef(FillerXlFatJets, 0)         //XlJets, Fat and Sub, filler      
+      ClassDef(FillerXlFatJets, 0)         //XlJets, Fat and Sub, filler
   };
 }
 #endif

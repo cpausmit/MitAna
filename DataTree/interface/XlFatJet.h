@@ -10,37 +10,37 @@
 
 #ifndef MITANA_DATATREE_XLFATJET_H
 #define MITANA_DATATREE_XLFATJET_H
- 
+
 #include "MitAna/DataTree/interface/PFJet.h"
 #include "MitAna/DataCont/interface/RefArray.h"
 #include "MitAna/DataTree/interface/Types.h"
 #include "MitCommon/DataFormats/interface/Vect4M.h"
 #include "MitAna/DataTree/interface/XlSubJet.h"
 
-namespace mithep 
+namespace mithep
 {
   class XlFatJet : public PFJet
   {
     public:
       XlFatJet() :
                 fCharge (0),
-                fQGTag(0), 
+                fQGTag(0),
                 fTau1(0), fTau2(0), fTau3(0),
                 fC2b0(0), fC2b0p2(0), fC2b0p5(0), fC2b1(0), fC2b2(0),
-                fQJetVol(0), 
+                fQJetVol(0),
                 fMassSDb0(0), fMassSDb1(0), fMassSDb2(0), fMassSDbm1(0),
-                fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),                 
-                fPull(0), fPullAngle(0) {}                 
-      XlFatJet(const PFJet & p) : 
+                fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),
+                fPull(0), fPullAngle(0) {}
+      XlFatJet(const PFJet & p) :
                 PFJet(p),
                 fCharge (0),
-                fQGTag(0), 
+                fQGTag(0),
                 fTau1(0), fTau2(0), fTau3(0),
                 fC2b0(0), fC2b0p2(0), fC2b0p5(0), fC2b1(0), fC2b2(0),
-                fQJetVol(0), 
+                fQJetVol(0),
                 fMassSDb0(0), fMassSDb1(0), fMassSDb2(0), fMassSDbm1(0),
-                fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),                 
-                fPull(0), fPullAngle(0) {}                 
+                fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),
+                fPull(0), fPullAngle(0) {}
 
       const XlSubJet       *SubJet(UInt_t i)                const { return fSubJets.At(i);         }
       const XlSubJet       *SubJet(UInt_t i, XlSubJet::ESubJetType t) const;
@@ -50,8 +50,8 @@ namespace mithep
       UInt_t                NSubJets(XlSubJet::ESubJetType t) const;
       UInt_t                NTopSubJets() const;
       UInt_t                NVSubJets() const;
-      Double_t              Charge()                        const { return fCharge;                } 
-      Double_t              QGTag()                         const { return fQGTag;                 } 
+      Double_t              Charge()                        const { return fCharge;                }
+      Double_t              QGTag()                         const { return fQGTag;                 }
       Double_t              Tau1()                          const { return fTau1;                  }
       Double_t              Tau2()                          const { return fTau2;                  }
       Double_t              Tau3()                          const { return fTau3;                  }
@@ -70,11 +70,16 @@ namespace mithep
       Double_t              MassTrimmed()                   const { return fMassTrimmed;           }
       Double_t              Pull()                          const { return fPull;                  }
       Double_t              PullAngle()                     const { return fPullAngle;             }
-      
+      Double_t              SVEnergyRatio0()                const { return fSVEnergyRatio0;        }
+      Double_t              SVEnergyRatio1()                const { return fSVEnergyRatio1;        }
+      Double_t              SVMass0()                       const { return fSVMass0;               }
+      Double_t              SVPt0()                         const { return fSVPt0;                 }
+      Double_t              tauDot()                        const { return fTauDot;                }
+      Double_t              zRatio()                        const { return fZRatio;                }
 
       void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
-      void                  SetCharge()                           { fCharge  = this->GetCharge();  } 
-      void                  SetQGTag(Double_t t)                  { fQGTag       = t;              } 
+      void                  SetCharge()                           { fCharge  = this->GetCharge();  }
+      void                  SetQGTag(Double_t t)                  { fQGTag       = t;              }
       void                  SetTau1(Double_t t)                   { fTau1        = t;              }
       void                  SetTau2(Double_t t)                   { fTau2        = t;              }
       void                  SetTau3(Double_t t)                   { fTau3        = t;              }
@@ -93,14 +98,19 @@ namespace mithep
       void                  SetMassTrimmed(Double_t t)            { fMassTrimmed = t;              }
       void                  SetPull(Double_t t)                   { fPull = t;                     }
       void                  SetPullAngle(Double_t t)              { fPullAngle = t;                }
-      
+      void                  SetSVEnergyRatio0(Double_t t)         { fSVEnergyRatio0 = t;           }
+      void                  SetSVEnergyRatio1(Double_t t)         { fSVEnergyRatio1 = t;           }
+      void                  SetSVMass0(Double_t t)                { fSVMass0 = t;                  }
+      void                  SetSVPt0(Double_t t)                  { fSVPt0 = t;                    }
+      void                  SetTauDot(Double_t t)                 { fTauDot = t;                   }
+      void                  SetZRatio(Double_t t)                 { fZRatio = t;                   }
 
       // Some structural tools
       void                  Mark(UInt_t i=1)                const;
 
     protected:
-      Double32_t            GetCharge()                     const; 
-      
+      Double32_t            GetCharge()                     const;
+
       Double32_t            fCharge;       //Pt-weighted jet charge
       Double32_t            fQGTag;        //QG tagging
       Double32_t            fTau1;         //1-subjettiness
@@ -110,7 +120,7 @@ namespace mithep
       Double32_t            fC2b0p2;       //ECF ratio order 2, beta 0.2
       Double32_t            fC2b0p5;       //ECF ratio order 2, beta 0.2
       Double32_t            fC2b1;         //ECF ratio order 2, beta 1
-      Double32_t            fC2b2;         //ECF ratio order 2, beta 2      
+      Double32_t            fC2b2;         //ECF ratio order 2, beta 2
       Double32_t            fQJetVol;      //QJets volatility
       Double32_t            fMassSDb0;     //Groomed mass (soft drop b 0)
       Double32_t            fMassSDb1;     //Groomed mass (soft drop b 1)
@@ -120,10 +130,18 @@ namespace mithep
       Double32_t            fMassFiltered; //Groomed mass (filtering)
       Double32_t            fMassTrimmed;  //Groomed mass (trimming)
       Double32_t            fPull;         //Color pull
-      Double32_t            fPullAngle;    //Angle between pulls of lead/subleading subjets: 
+      Double32_t            fPullAngle;    //Angle between pulls of lead/subleading subjets:
                                            //either choose 2-prong or 3-prong subclustering!
+      // IVF variables
+      Double32_t            fSVEnergyRatio0;
+      Double32_t            fSVEnergyRatio1;
+      Double32_t            fSVMass0;
+      Double32_t            fSVPt0;
+      Double32_t            fTauDot;
+      Double32_t            fZRatio;
+
       RefArray<XlSubJet>    fSubJets;      //sub jets in the jet
-      
+
     ClassDef(XlFatJet, 3) // XlFatJet class
   };
 }
@@ -141,7 +159,7 @@ inline void mithep::XlFatJet::Mark(UInt_t ib) const
 inline Double32_t mithep::XlFatJet::GetCharge() const
 {
   // Return the sum of constituents PFCandidates weighted by their pt
-  
+
   Double_t charge = 0;
   for (UInt_t i=0; i<NPFCands(); ++i)
     charge += PFCand(i)->Charge()*PFCand(i)->Pt();
