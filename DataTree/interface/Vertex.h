@@ -51,7 +51,8 @@ namespace mithep
     Double_t            TrackWeight(UInt_t i)       const { return fTrkWeights.At(i); }
     Double_t            TrackWeight(const Track *t) const;
     const FArrDouble32 &GetTrkWeights()             const { return fTrkWeights; }
-    FourVectorM         Mom4();
+    FourVectorM         Mom4() const;
+    FourVectorM         WeightedMom4() const;
 
 
     // Some structural tools

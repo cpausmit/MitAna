@@ -73,6 +73,9 @@ namespace mithep
       void SetTrimRad(double d)            { fTrimRad = d;          }
       void SetTrimPtFrac(double d)         { fTrimPtFrac = d;       }
       void SetConeSize(double d)           { fConeSize = d;         }
+      void doBtagging(XlFatJet*fatJet);
+      void recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float & tau2, std::vector<fastjet::PseudoJet> & currentAxes);
+      ThreeVector flightDirection(const Vertex * pvx, const Vertex * svx);
 
 
     protected:
