@@ -418,8 +418,8 @@ void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
     ThreeVector flightDir = flightDirection(pvx,svx); // maybe save this elsewhere, so only run once an event?
     ThreeVector jetDir(fatJet->Px(),fatJet->Py(),fatJet->Pz());
     Float_t dR2 = MathUtils::DeltaR2(flightDir,jetDir);
-        VTXmass[svx->Mom4().mass()] = idx;
     if (dR2 < maxSVDeltaRToJet*maxSVDeltaRToJet)
+        VTXmass[svx->Mom4().mass()] = idx;
   }
 
   // recalc nsubjettiness with IVF
@@ -500,8 +500,6 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
 {
   std::vector<fastjet::PseudoJet> fjParticles;
   std::vector<const Track*> svxTracks;
-  double maxSVDeltaRToJet = fConeSize-(0.1+(fConeSize-.8)*(.1/.7));
-
 
   for (std::map<double,unsigned int>::iterator iVtx = VTXmass.begin(); iVtx!=VTXmass.end(); ++iVtx) {
     const Vertex *svx = fSecondaryVertexes->At(iVtx->second);
