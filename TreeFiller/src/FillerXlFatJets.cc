@@ -514,34 +514,48 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
     }
   }
 
-  std::vector<const PFCandidate*> jetChargedPFCands;
+  std::vector<const PFCandidate*> jetPFCandsNoB;
   const PFCandidate * pfCand;
+  const Track * pfTrack;
   for (unsigned int idx=0; idx<fatJet->NPFCands(); ++idx) {
     pfCand = fatJet->PFCand(idx);
-    if (fabs(pfCand->Charge())>0.001)
-      jetChargedPFCands.push_back(pfCand);
-  }
-  double dR2;
-  for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
-    double minDeltaR2 = 9999.;
-    int minIdx = 0;
-    for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
-      dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
-      if (dR2 < minDeltaR2){
-        minDeltaR2 = dR2;
-        minIdx = idx;
+    pfTrack = pfCand->Trk()
+    Bool_t foundBTrack = kFALSE;
+    if (fabs(pfCand->Charge())>0.001) {
+      for (std::vector<const Track*>::iterator iTrk = svxTracks.begin(); iTrk!=svxTracks.end(); ++iTrk){
+        if(*iTrk == pfTrack){
+          foundBTrack = kTRUE;
+          break;
+        }
       }
+      if (!foundBTrack)
+        jetPFCandsNoB.push_back(pfCand);
+    } else {
+      jetPFCandsNoB.push_back(pfCand);
     }
-    jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
   }
 
+  // double dR2;
+  // for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
+  //   double minDeltaR2 = 9999.;
+  //   int minIdx = 0;
+  //   for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
+  //     dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
+  //     if (dR2 < minDeltaR2){
+  //       minDeltaR2 = dR2;
+  //       minIdx = idx;
+  //     }
+  //   }
+  //   jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
+  // }
+
   // loop over jet constituents that are not daughters of IVF vertices and push them in the vector of FastJet constituents
-  for(std::vector<const PFCandidate*>::iterator chargedPFCand = jetChargedPFCands.begin(); chargedPFCand!=jetChargedPFCands.end(); ++chargedPFCand)
+  for(std::vector<const PFCandidate*>::iterator iPFCand = jetPFCandsNoB.begin(); iPFCand!=jetPFCandsNoB.end(); ++jetPFCandsNoB)
   {
-    fjParticles.push_back(fastjet::PseudoJet((*chargedPFCand)->Px(),
-                                              (*chargedPFCand)->Py(),
-                                              (*chargedPFCand)->Pz(),
-                                              (*chargedPFCand)->E()));
+    fjParticles.push_back(fastjet::PseudoJet((*jetPFCandsNoB)->Px(),
+                                              (*jetPFCandsNoB)->Py(),
+                                              (*jetPFCandsNoB)->Pz(),
+                                              (*jetPFCandsNoB)->E()));
   }
 
   // re-calculate N-subjettiness
