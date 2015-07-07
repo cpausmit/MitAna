@@ -362,7 +362,8 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
     FillXlSubJets(fjSubJetsSorted,fatJet,XlSubJet::ESubJetType::eTop);
   }
   //Inclusive b-tagging
-  doBtagging(fatJet);
+  if (fDoBtagging)
+    doBtagging(fatJet);
 
 
   // Trim the output collections
@@ -519,7 +520,7 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
   const Track * pfTrack;
   for (unsigned int idx=0; idx<fatJet->NPFCands(); ++idx) {
     pfCand = fatJet->PFCand(idx);
-    pfTrack = pfCand->Trk()
+    pfTrack = pfCand->Trk();
     Bool_t foundBTrack = kFALSE;
     if (fabs(pfCand->Charge())>0.001) {
       for (std::vector<const Track*>::iterator iTrk = svxTracks.begin(); iTrk!=svxTracks.end(); ++iTrk){
@@ -550,12 +551,12 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
   // }
 
   // loop over jet constituents that are not daughters of IVF vertices and push them in the vector of FastJet constituents
-  for(std::vector<const PFCandidate*>::iterator iPFCand = jetPFCandsNoB.begin(); iPFCand!=jetPFCandsNoB.end(); ++jetPFCandsNoB)
+  for(std::vector<const PFCandidate*>::iterator iPFCand = jetPFCandsNoB.begin(); iPFCand!=jetPFCandsNoB.end(); ++iPFCand)
   {
-    fjParticles.push_back(fastjet::PseudoJet((*jetPFCandsNoB)->Px(),
-                                              (*jetPFCandsNoB)->Py(),
-                                              (*jetPFCandsNoB)->Pz(),
-                                              (*jetPFCandsNoB)->E()));
+    fjParticles.push_back(fastjet::PseudoJet((*iPFCand)->Px(),
+                                              (*iPFCand)->Py(),
+                                              (*iPFCand)->Pz(),
+                                              (*iPFCand)->E()));
   }
 
   // re-calculate N-subjettiness
