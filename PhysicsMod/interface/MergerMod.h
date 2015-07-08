@@ -69,7 +69,7 @@ void mithep::MergerMod<T>::Process()
 
   UInt_t n = fInList.size();
   for (UInt_t i=0; i<n; ++i) {
-    const TObject *in = GetObjThisEvt<TObject>(fInList.at(i).c_str());
+    const TObject *in = GetObject<TObject>(fInList.at(i).c_str());
     if (!in)
       continue;
 
