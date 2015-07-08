@@ -2,6 +2,7 @@
 <use   name="roothtml"/>
 <lib   name="Graf"/>
 <use   name="MitAna/DataUtil"/>
+<use   name="MitAna/DataTree"/>
 <use   name="CondFormats/EgammaObjects"/>
 <use   name="MitCommon/MathTools"/>
 <use   name="root"/>
