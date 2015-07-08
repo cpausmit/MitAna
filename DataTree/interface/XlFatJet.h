@@ -30,7 +30,10 @@ namespace mithep
                 fQJetVol(0),
                 fMassSDb0(0), fMassSDb1(0), fMassSDb2(0), fMassSDbm1(0),
                 fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),
-                fPull(0), fPullAngle(0) {}
+                fPull(0), fPullAngle(0),
+                fSVEnergyRatio0(-1), fSVEnergyRatio1(-1),
+                fSVMass0(-1), fSVPt0(-1),
+                fTauDot(-1), fZRatio(-1) {}
       XlFatJet(const PFJet & p) :
                 PFJet(p),
                 fCharge (0),
@@ -40,7 +43,10 @@ namespace mithep
                 fQJetVol(0),
                 fMassSDb0(0), fMassSDb1(0), fMassSDb2(0), fMassSDbm1(0),
                 fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),
-                fPull(0), fPullAngle(0) {}
+                fPull(0), fPullAngle(0),
+                fSVEnergyRatio0(-1), fSVEnergyRatio1(-1),
+                fSVMass0(-1), fSVPt0(-1),
+                fTauDot(-1), fZRatio(-1) {}
 
       const XlSubJet       *SubJet(UInt_t i)                const { return fSubJets.At(i);         }
       const XlSubJet       *SubJet(UInt_t i, XlSubJet::ESubJetType t) const;

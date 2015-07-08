@@ -362,7 +362,8 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
     FillXlSubJets(fjSubJetsSorted,fatJet,XlSubJet::ESubJetType::eTop);
   }
   //Inclusive b-tagging
-  doBtagging(fatJet);
+  if (fDoBtagging)
+    doBtagging(fatJet);
 
 
   // Trim the output collections
@@ -409,10 +410,23 @@ void FillerXlFatJets::FillXlSubJets(std::vector<fastjet::PseudoJet> &fjSubJets,
 
 void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
 
+  std::map<double, unsigned int> VTXmass;
+  const Vertex * pvx = fVertexes->At(0); // highest HT vertex is assumed to be primary
+  double maxSVDeltaRToJet = fConeSize-(0.1+(fConeSize-.8)*(.1/.7));
+  UInt_t nVertices = fSecondaryVertexes->GetEntries();
+  for (unsigned int idx=0; idx<nVertices; idx++) {
+    const Vertex * svx = fSecondaryVertexes->At(idx);
+    ThreeVector flightDir = flightDirection(pvx,svx); // maybe save this elsewhere, so only run once an event?
+    ThreeVector jetDir(fatJet->Px(),fatJet->Py(),fatJet->Pz());
+    Float_t dR2 = MathUtils::DeltaR2(flightDir,jetDir);
+    if (dR2 < maxSVDeltaRToJet*maxSVDeltaRToJet)
+        VTXmass[svx->Mom4().mass()] = idx;
+  }
+
   // recalc nsubjettiness with IVF
   std::vector<fastjet::PseudoJet> currentAxes;
   float tau1IVF=fatJet->Tau1(), tau2IVF=fatJet->Tau2();
-  recalcNsubjettiness(fatJet,tau1IVF,tau2IVF,currentAxes);
+  recalcNsubjettiness(fatJet,tau1IVF,tau2IVF,currentAxes, VTXmass);
   FourVectorM currentAxes0(currentAxes[0].pt(),
                             currentAxes[0].eta(),
                             currentAxes[0].phi(),
@@ -421,20 +435,6 @@ void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
                             currentAxes[1].eta(),
                             currentAxes[1].phi(),
                             currentAxes[1].m());
-
-  //should probably do this calculation elsewhere
-  std::map<double, unsigned int> VTXmass;
-  const Vertex * pvx = fVertexes->At(0); // highest HT vertex is assumed to be primary
-  double maxSVDeltaRToJet = fConeSize-(0.1+(fConeSize-.8)*(.1/.7));
-  UInt_t nVertices = fSecondaryVertexes->GetEntries();
-  for (unsigned int idx=0; idx<nVertices; idx++) {
-    const Vertex * svx = fSecondaryVertexes->At(idx);
-    ThreeVector flightDir = flightDirection(pvx,svx);
-    ThreeVector jetDir(fatJet->Px(),fatJet->Py(),fatJet->Pz());
-    Float_t dR2 = MathUtils::DeltaR2(flightDir,jetDir);
-    if (dR2 < maxSVDeltaRToJet*maxSVDeltaRToJet)
-      VTXmass[svx->Mom4().mass()] = idx;
-  }
 
   FourVectorM sumAllTracks(0,0,0,0);
   unsigned int nPrimaryTracks = pvx->NTracks();
@@ -493,13 +493,17 @@ ThreeVector FillerXlFatJets::flightDirection(const Vertex * pvx, const Vertex * 
   return dir;
 }
 
-void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float & tau2, std::vector<fastjet::PseudoJet> & currentAxes)
+void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
+                                          float & tau1,
+                                          float & tau2,
+                                          std::vector<fastjet::PseudoJet> & currentAxes,
+                                          std::map<double, unsigned int> VTXmass)
 {
   std::vector<fastjet::PseudoJet> fjParticles;
   std::vector<const Track*> svxTracks;
-  UInt_t nVertices = fSecondaryVertexes->GetEntries();
-  for (unsigned int idx=0; idx<nVertices; idx++) {
-    const Vertex *svx = fSecondaryVertexes->At(idx);
+
+  for (std::map<double,unsigned int>::iterator iVtx = VTXmass.begin(); iVtx!=VTXmass.end(); ++iVtx) {
+    const Vertex *svx = fSecondaryVertexes->At(iVtx->second);
     FourVectorM svxMom = svx->Mom4();
     fjParticles.push_back(fastjet::PseudoJet(svxMom.Px(),
                                               svxMom.Py(),
@@ -511,34 +515,48 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float 
     }
   }
 
-  std::vector<const PFCandidate*> jetChargedPFCands;
+  std::vector<const PFCandidate*> jetPFCandsNoB;
   const PFCandidate * pfCand;
+  const Track * pfTrack;
   for (unsigned int idx=0; idx<fatJet->NPFCands(); ++idx) {
     pfCand = fatJet->PFCand(idx);
-    if (fabs(pfCand->Charge()))
-      jetChargedPFCands.push_back(pfCand);
-  }
-  double dR2;
-  for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
-    double minDeltaR2 = 9999.;
-    int minIdx = 0;
-    for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
-      dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
-      if (dR2 < minDeltaR2){
-        minDeltaR2 = dR2;
-        minIdx = idx;
+    pfTrack = pfCand->Trk();
+    Bool_t foundBTrack = kFALSE;
+    if (fabs(pfCand->Charge())>0.001) {
+      for (std::vector<const Track*>::iterator iTrk = svxTracks.begin(); iTrk!=svxTracks.end(); ++iTrk){
+        if(*iTrk == pfTrack){
+          foundBTrack = kTRUE;
+          break;
+        }
       }
+      if (!foundBTrack)
+        jetPFCandsNoB.push_back(pfCand);
+    } else {
+      jetPFCandsNoB.push_back(pfCand);
     }
-    jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
   }
 
+  // double dR2;
+  // for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
+  //   double minDeltaR2 = 9999.;
+  //   int minIdx = 0;
+  //   for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
+  //     dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
+  //     if (dR2 < minDeltaR2){
+  //       minDeltaR2 = dR2;
+  //       minIdx = idx;
+  //     }
+  //   }
+  //   jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
+  // }
+
   // loop over jet constituents that are not daughters of IVF vertices and push them in the vector of FastJet constituents
-  for(std::vector<const PFCandidate*>::iterator chargedPFCand = jetChargedPFCands.begin(); chargedPFCand!=jetChargedPFCands.end(); ++chargedPFCand)
+  for(std::vector<const PFCandidate*>::iterator iPFCand = jetPFCandsNoB.begin(); iPFCand!=jetPFCandsNoB.end(); ++iPFCand)
   {
-    fjParticles.push_back(fastjet::PseudoJet((*chargedPFCand)->Px(),
-                                              (*chargedPFCand)->Py(),
-                                              (*chargedPFCand)->Pz(),
-                                              (*chargedPFCand)->E()));
+    fjParticles.push_back(fastjet::PseudoJet((*iPFCand)->Px(),
+                                              (*iPFCand)->Py(),
+                                              (*iPFCand)->Pz(),
+                                              (*iPFCand)->E()));
   }
 
   // re-calculate N-subjettiness

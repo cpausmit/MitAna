@@ -74,9 +74,9 @@ namespace mithep
       void SetTrimPtFrac(double d)         { fTrimPtFrac = d;       }
       void SetConeSize(double d)           { fConeSize = d;         }
       void doBtagging(XlFatJet*fatJet);
-      void recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float & tau2, std::vector<fastjet::PseudoJet> & currentAxes);
+      void recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float & tau2, std::vector<fastjet::PseudoJet> & currentAxes,  std::map<double, unsigned int> VTXmass);
       ThreeVector flightDirection(const Vertex * pvx, const Vertex * svx);
-
+      void SetDoBtagging(Bool_t b)         { fDoBtagging = b;}
 
     protected:
       void Process();
@@ -158,6 +158,8 @@ namespace mithep
       fastjet::JetDefinition *fCAJetDef;   //fastjet clustering definition
       fastjet::GhostedAreaSpec *fActiveArea;
       fastjet::AreaDefinition *fAreaDefinition;
+
+      Bool_t fDoBtagging;
 
       // QG tagger
       QGTagger *fQGTagger;                 //QGTagger calculator
