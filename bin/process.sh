@@ -74,13 +74,13 @@ then
   cp $MIT_ANA_DIR/bin/run.sh              $globDir
   cp $MIT_ANA_DIR/bin/runCrab.sh          $globDir
   cp $MIT_ANA_DIR/bin/runCrabJob.sh       $globDir
-  cp /home/$USER/cms/root/.rootlogon.C    $globDir
+  cp /home/$USER/cms/root/rootlogon.C     $globDir
   cp $MIT_USER_DIR/macros/$MIT_PROD_MACRO $globDir
   cp $MIT_ANA_DIR/macros/compile.C        $globDir
   # define our external path variable
   export EXTERNAL=/cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/external
   # compile the bare run macro
-  root -l -b -q  compile.C"(\"$MIT_PROD_MACRO\")"
+  root -l -b -q -n rootlogon.C compile.C"(\"$MIT_PROD_MACRO\")"
   if [ "$?" != "0" ]
   then
     echo "  ERROR -- compilation of the run Macro failed. EXIT!"
@@ -119,6 +119,7 @@ then
     export MIT_PROD_SDIR='/srm/v2/server?SFN=/mnt/hadoop/cms/store'
     export MIT_PROD_RDIR="user/paus/bambu"
     export MIT_DATA="/cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/MitPhysics/data"
+    export MIT_JSON_DIR="/cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/json"
     rm -rf $workDir/setup.sh
     touch  $workDir/setup.sh
     echo "export MIT_PROD_JSON='$MIT_PROD_JSON'"     >> $workDir/setup.sh
@@ -127,6 +128,7 @@ then
     echo "export MIT_PROD_SDIR=$MIT_PROD_SDIR"       >> $workDir/setup.sh
     echo "export MIT_PROD_RDIR=$MIT_PROD_RDIR"       >> $workDir/setup.sh
     echo "export MIT_DATA=$MIT_DATA"                 >> $workDir/setup.sh
+    echo "export MIT_JSON_DIR=$MIT_JSON_DIR"         >> $workDir/setup.sh
     echo "export EXTERNAL=$EXTERNAL"                 >> $workDir/setup.sh
     echo "export SCRAM_ARCH=$SCRAM_ARCH"             >> $workDir/setup.sh
 

@@ -10,11 +10,18 @@ import shutil
 import socket
 from argparse import ArgumentParser
 
+if 'CMSSW_BASE' not in os.environ:
+    print 'CMSSW_BASE not set.'
+    sys.exit(1)
+
 argParser = ArgumentParser(description = 'Submit BAMBU analysis to cluster')
 argParser.add_argument('--cfg', '-c', metavar = 'FILE', dest = 'configFileName')
+
 argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/040')
 argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset')
 argParser.add_argument('--filesets', '-s', metavar = 'FILESETS', dest = 'filesets', nargs = '*', default = [])
+
+argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFiles', nargs = '+')
 
 argParser.add_argument('--analysis', '-a', metavar = 'ANALYSIS', dest = 'analysisCfg')
 
@@ -28,13 +35,16 @@ args = argParser.parse_args()
 sys.argv = []
 
 if args.analysisCfg and not os.path.exists(args.analysisCfg):
-    raise RuntimeError('Analysis configuration file ' + args.analysisCfg + ' does not exist')
+    print 'Analysis configuration file ' + args.analysisCfg + ' does not exist'
+    sys.exit(1)
 
 if args.configFileName and not os.path.exists(args.configFileName):
-    raise RuntimeError('Task configuration file ' + args.configFileName + ' does not exist')
+    print 'Task configuration file ' + args.configFileName + ' does not exist'
+    sys.exit(1)
 
 if args.stageoutDirName and not os.path.isdir(args.stageoutDirName):
-    raise RuntimeError('Cannot write to stageout directory ' + args.stageoutDirName)
+    print 'Cannot write to stageout directory ' + args.stageoutDirName
+    sys.exit(1)
 
 def runSubproc(*args, **kwargs):
     proc = subprocess.Popen(list(args), stdout = subprocess.PIPE, stderr = subprocess.PIPE, stdin = subprocess.PIPE)
@@ -53,21 +63,38 @@ def runSubproc(*args, **kwargs):
         sys.stderr.write(err)
         sys.stderr.flush()
 
-catalogDirName = os.environ['MIT_CATALOG']
+try:
+    catalogDirName = os.environ['MIT_CATALOG']
+except KeyError:
+    print 'MIT_CATALOG environment not set.'
+    sys.exit(1)
 
+# list of pairs (book, dataset)
 datasets = []
+
+# json is usually a single file per dataset, but handling as a list since the filter module can
+# accept multiple
+jsonLists = {}
 
 if args.configFileName:
     with open(args.configFileName) as configFile:
         for line in configFile:
-            matches = re.match('([^ ]+) +([^ ]+)', line.strip())
+            matches = re.match('([^ ]+) +([^ ]+)( +[^ ]+)*', line.strip())
             if not matches:
                 continue
 
-            datasets.append((matches.group(1), matches.group(2)))
+            book = matches.group(1)
+            dataset = matches.group(2)
+            datasets.append((book, dataset))
+
+            # third paren captures the last column, which is currently assigned to JSON
+            if matches.group(3):
+                jsonLists[(book, dataset)] = [matches.group(3).strip()]
 
 elif args.book and args.dataset:
     datasets.append((args.book, args.dataset))
+    if args.goodlumiFiles:
+        jsonLists[(args.book, args.dataset)] = args.goodlumiFiles
 
 if len(datasets) == 0:
     print 'No valid dataset found.'
@@ -114,13 +141,17 @@ if not taskName:
     else:
         taskName = str(int(time.time()))
 
-taskDirName = os.environ['HOME'] + '/cms/condor/' + taskName
-outDirName = os.environ['MIT_PROD_HIST'] + '/' + taskName
-logDirName = os.environ['MIT_PROD_LOGS'] + '/' + taskName
-
-scramArch = os.environ['SCRAM_ARCH']
-cmsswbase = os.environ['CMSSW_BASE']
-release = os.path.basename(os.environ['CMSSW_RELEASE_BASE'])
+try:
+    taskDirName = os.environ['HOME'] + '/cms/condor/' + taskName
+    outDirName = os.environ['MIT_PROD_HIST'] + '/' + taskName
+    logDirName = os.environ['MIT_PROD_LOGS'] + '/' + taskName
+    
+    scramArch = os.environ['SCRAM_ARCH']
+    cmsswbase = os.environ['CMSSW_BASE']
+    release = os.path.basename(os.environ['CMSSW_RELEASE_BASE'])
+except KeyError, err:
+    print 'Environment', err.args[0], ' not set'
+    sys.exit(1)
 
 if os.path.isdir(taskDirName):
     if args.overwrite:
@@ -293,20 +324,6 @@ with open(args.condorTemplateName) as condorTemplateFile:
             key, eq, value = line.partition('=')
             condorTemplate[key.strip().lower()] = value.strip()
 
-envs = []
-if 'environment' in condorTemplate:
-    if re.match('(?:[^;]+;?)+', condorTemplate['environment']): # old format
-        envs = condorTemplate['environment'].split(';')
-    elif re.match('".*"', condorTemplate['environment']): # new format
-        envs = condorTemplate.strip('"').split()
-    else:
-        print 'Ignoring invalid environment parameter in condor configuration.'
-
-if 'HOSTNAME=' + socket.gethostname() not in envs:
-    envs.append('HOSTNAME=' + socket.gethostname())
-
-condorTemplate['environment'] = '"' + ' '.join(envs) + '"'
-
 # loop over datasets to submit
 
 for (book, dataset), filesets in allFilesets.items():
@@ -335,7 +352,7 @@ for (book, dataset), filesets in allFilesets.items():
         runSubproc('tar', 'czf', catalogPackName, '-C', catalogDirName, book + '/' + dataset)
 
     if 'transfer_input_files' not in condorTemplate:
-        inputFilesList = cmsswbase + '/src/MitAna/macros/analysis.py,'
+        inputFilesList = cmsswbase + '/src/MitAna/bin/analysis.py,'
         if x509File:
             inputFilesList += ' ' + x509File + ','
         inputFilesList += ' ' + analysisCfgName + ','
@@ -371,7 +388,11 @@ for (book, dataset), filesets in allFilesets.items():
         condorConfig.update(condorTemplate)
     
         if 'arguments' not in condorConfig:
-            condorConfig['arguments'] = '"' + book + ' ' + dataset + ' ' + fileset + '"'
+            arguments = book + ' ' + dataset + ' ' + fileset
+            if (book, dataset) in jsonLists:
+                arguments += ' ' + ' '.join(jsonLists[(book, dataset)])
+
+            condorConfig['arguments'] = '"' + arguments + '"'
     
         if 'transfer_output_files' not in condorConfig:
             condorConfig['transfer_output_files'] = outputName

@@ -375,7 +375,8 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
     FillXlSubJets(fjSubJetsSorted,fatJet,XlSubJet::ESubJetType::eTop);
   }
   //Inclusive b-tagging
-  doBtagging(fatJet);
+  if (fDoBtagging)
+    doBtagging(fatJet);
 
 
   // Trim the output collections
@@ -431,8 +432,8 @@ void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
     ThreeVector flightDir = flightDirection(pvx,svx); // maybe save this elsewhere, so only run once an event?
     ThreeVector jetDir(fatJet->Px(),fatJet->Py(),fatJet->Pz());
     Float_t dR2 = MathUtils::DeltaR2(flightDir,jetDir);
-        VTXmass[svx->Mom4().mass()] = idx;
     if (dR2 < maxSVDeltaRToJet*maxSVDeltaRToJet)
+        VTXmass[svx->Mom4().mass()] = idx;
   }
 
   // recalc nsubjettiness with IVF
@@ -513,8 +514,6 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
 {
   std::vector<fastjet::PseudoJet> fjParticles;
   std::vector<const Track*> svxTracks;
-  double maxSVDeltaRToJet = fConeSize-(0.1+(fConeSize-.8)*(.1/.7));
-
 
   for (std::map<double,unsigned int>::iterator iVtx = VTXmass.begin(); iVtx!=VTXmass.end(); ++iVtx) {
     const Vertex *svx = fSecondaryVertexes->At(iVtx->second);
@@ -529,34 +528,48 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
     }
   }
 
-  std::vector<const PFCandidate*> jetChargedPFCands;
+  std::vector<const PFCandidate*> jetPFCandsNoB;
   const PFCandidate * pfCand;
+  const Track * pfTrack;
   for (unsigned int idx=0; idx<fatJet->NPFCands(); ++idx) {
     pfCand = fatJet->PFCand(idx);
-    if (fabs(pfCand->Charge())>0.001)
-      jetChargedPFCands.push_back(pfCand);
-  }
-  double dR2;
-  for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
-    double minDeltaR2 = 9999.;
-    int minIdx = 0;
-    for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
-      dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
-      if (dR2 < minDeltaR2){
-        minDeltaR2 = dR2;
-        minIdx = idx;
+    pfTrack = pfCand->Trk();
+    Bool_t foundBTrack = kFALSE;
+    if (fabs(pfCand->Charge())>0.001) {
+      for (std::vector<const Track*>::iterator iTrk = svxTracks.begin(); iTrk!=svxTracks.end(); ++iTrk){
+        if(*iTrk == pfTrack){
+          foundBTrack = kTRUE;
+          break;
+        }
       }
+      if (!foundBTrack)
+        jetPFCandsNoB.push_back(pfCand);
+    } else {
+      jetPFCandsNoB.push_back(pfCand);
     }
-    jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
   }
 
+  // double dR2;
+  // for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
+  //   double minDeltaR2 = 9999.;
+  //   int minIdx = 0;
+  //   for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
+  //     dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
+  //     if (dR2 < minDeltaR2){
+  //       minDeltaR2 = dR2;
+  //       minIdx = idx;
+  //     }
+  //   }
+  //   jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
+  // }
+
   // loop over jet constituents that are not daughters of IVF vertices and push them in the vector of FastJet constituents
-  for(std::vector<const PFCandidate*>::iterator chargedPFCand = jetChargedPFCands.begin(); chargedPFCand!=jetChargedPFCands.end(); ++chargedPFCand)
+  for(std::vector<const PFCandidate*>::iterator iPFCand = jetPFCandsNoB.begin(); iPFCand!=jetPFCandsNoB.end(); ++iPFCand)
   {
-    fjParticles.push_back(fastjet::PseudoJet((*chargedPFCand)->Px(),
-                                              (*chargedPFCand)->Py(),
-                                              (*chargedPFCand)->Pz(),
-                                              (*chargedPFCand)->E()));
+    fjParticles.push_back(fastjet::PseudoJet((*iPFCand)->Px(),
+                                              (*iPFCand)->Py(),
+                                              (*iPFCand)->Pz(),
+                                              (*iPFCand)->E()));
   }
 
   // re-calculate N-subjettiness
