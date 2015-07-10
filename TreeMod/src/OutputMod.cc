@@ -653,8 +653,6 @@ void OutputMod::SlaveTerminate()
 {
   // Terminate tree writing and do cleanup.
 
-  RetractObj(Names::gkSkimmedHeaders);
-
   delete fTreeWriter;
   fTreeWriter = 0;
 
