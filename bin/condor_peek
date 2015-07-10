@@ -2,19 +2,19 @@
 #---------------------------------------------------------------------------------------------------
 # Script to peek at stdout/stderr of a list of given condor jobs.
 #
+# -- match cleanly using the process record                                       (July     09 2015)
 # Author: C.Paus                                                                  (November 25 2008)
 #---------------------------------------------------------------------------------------------------
 import os,sys,getopt,re
 
-usage  = "\nUsage: condor_peek [  --user=<jobOwner>  --err  --help ]  <list>\n\n"
-usage += "   --user       - specify the job owner\n"
+usage  = "\nUsage: condor_peek [  --err  --help ]  <list>\n\n"
 usage += "   --out        - show standard output instead of standard error and output\n"
 usage += "   --err        - show standard error instead of standard error and output\n"
 usage += "   --help       - prints this short help message\n\n"
 usage += "   list         - list of job ids to be peeked at\n\n"
 
 # Define the valid options which can be specified and check out the command line
-valid = ['user=','file=','out','err','help']
+valid = ['file=','out','err','help']
 try:
     opts, args = getopt.getopt(sys.argv[1:], "", valid)
 except getopt.GetoptError, ex:
@@ -25,13 +25,7 @@ except getopt.GetoptError, ex:
 # --------------------------------------------------------------------------------------------------
 # Get all parameters for the production
 # --------------------------------------------------------------------------------------------------
-# global variables
-condorDir = '/condor/execute'
 # Set defaults for each option
-user = ''
-if os.environ['USER']:
-    user = os.environ['USER']
-
 file = ''
 out  = True
 err  = True
@@ -45,8 +39,6 @@ for opt, arg in opts:
         err  = False
     if opt == "--err":
         out  = False
-    if opt == "--user":
-        user = arg
     if opt == "--file":
         file = arg
 
@@ -56,7 +48,7 @@ if len(sys.argv[1:])<1:
     print '\n ERROR -- no jobId given.\n'
     sys.exit(0)
         
-# Lop through the list and do our thing
+# Loop through the list and do our thing
 for arg in sys.argv[1:]:
 
     # Skip the options
@@ -64,8 +56,8 @@ for arg in sys.argv[1:]:
         continue
 
     # All right now we start
-    print '\nPeeking at condor job: ' + arg + \
-          '  with options=Out:"' + str(out) + '" ; Err:"' + str(err) + '"\n'
+    print '\nCONDOR_PEEK -- Peeking at condor job: ' + arg + \
+          '  with options=Out:"' + str(out) + '"; Err:"' + str(err) + '"'
 
     # Where is that job running?
     machine = "EMPTY"
@@ -80,6 +72,15 @@ for arg in sys.argv[1:]:
             f = machine.split("@")
             machine = f[1]
 
+    # What were the arguments
+    args = "EMPTY"
+    cmd = 'condor_q -global -l ' + arg + ' | grep ^Args'
+    for line in os.popen(cmd).readlines():  # run find command
+        line = line[:-1]                    # strip '\n'
+        # split into the two pieces
+        f = line.split("=")                 # splitting every '='
+        args = f[1]
+
     # When did it start, important for time matching, not 100% but should be darn close!
     startTime = 0
     cmd = 'condor_q -global -l ' + arg + ' | grep ^JobCurrentStartDate'
@@ -89,46 +90,47 @@ for arg in sys.argv[1:]:
         f = line.split("=")                 # splitting every '='
         startTime = int(f[1])
 
-    # Now search the matching jobs on the identified machine
-    # -> print ' Machine: ' + machine
-    cat = ''
+    # Search the matching jobs on the identified machine
+    condorDir = "EMPTY"
     cmd = 'ssh ' + machine + \
-          ' ls -l --time-style=+%s ' + condorDir + ' | tr -s \' \' | grep dir'
-    print ' Checking all files: ' + cmd
+        ' ps auxwww | grep %s | grep -v grep | tr -s \' \'| cut -d \' \' -f 12'%(args)
+    #print ' Find executeing directory: ' + cmd
     for line in os.popen(cmd).readlines():  # run find command
         line = line[:-1]                    # strip '\n'
-        f = line.split(" ")                 # splitting every blank
-        owner        = f[2]
-        creationTime = int(f[5])
-        dir          = f[6]
-        catFile      = '_condor_std*'        
-        if err and out:
-            catFile      = '_condor_std*'
-        elif out:
-            catFile      = '_condor_stdout'
-        elif err:
-            catFile      = '_condor_stderr'
+        f = line.split("/")                 # splitting every blank
+        condorDir = "/".join(f[:-1])
+        
+    print "\n runs on: " + machine + "   in area: " + condorDir
+
+    catFile      = '_condor_std*'        
+    if err and out:
+        catFile      = '_condor_std*'
+    elif out:
+        catFile      = '_condor_stdout'
+    elif err:
+        catFile      = '_condor_stderr'
+
+    if file != '':
+        catFile = file
+
+    list = 'ssh ' + machine + ' ls -l ' + condorDir + '/'
+    print '\nCONDOR_PEEK -- List Directory contents: %s\n'%list
+    status = os.system(list)
+
+    cat  = 'ssh ' + machine + ' cat   ' + condorDir + '/' + catFile
+    print '\nCONDOR_PEEK -- Cat file %s: %s\n'%(catFile,cat)
+    status = os.system(cat)
             
-        if file != '':
-            catFile = file
-        print '\n Next option -- owner: ' + owner + \
-              '  creation: %d (looking for %d)\n'%(creationTime,startTime)
-        if (owner == user and (startTime - creationTime) < 10):
-            list = 'ssh ' + machine + ' ls -l ' + condorDir + '/' + dir + '/'
-            print '\nCONDOR_PEEK -- List Directory contents: %s\n'%list
-            status = os.system(list)
-            cat  = 'ssh ' + machine + ' cat   ' + condorDir + '/' + dir + '/' + catFile
-            print '\nCONDOR_PEEK -- Cat file %s: %s\n'%(catFile,cat)
-            status = os.system(cat)
-            
-        if cat != '':
-            print '==== INFO ===='
-            print ' Output from: ' + cmd  + '\n' + \
-                  ' followed by: ' + list + '\n' + \
-                  ' followed by: ' + cat
-            print '==== INFO ====\n'
-        else:
-            print ' No match was made. If it is not your job, please specify the job owner.'
-            print '   --> use  --user=<jobOwner>  on the command line.\n'
+    if cat != '':
+        print ''
+        print 'CONDOR_PEEK ==== INFO ===='
+        print ' Output from: ' + list + '\n' + \
+            ' followed by: ' + cat
+        print 'CONDOR_PEEK ==== INFO ====\n'
+        print ''
+    else:
+        print ''
+        print ' No match was made.'
+        print ''
 
 sys.exit(0)

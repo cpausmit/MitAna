@@ -40,6 +40,7 @@ echo " "
 echo "  Process: dataset=$dataset, book=$book, catalog=$catalogDir"
 echo " "
 
+glogDir=$MIT_PROD_LOGS/$outputName
 logsDir=$MIT_PROD_LOGS/$outputName/$book/$dataset
 globDir=$outputDir/$outputName
 workDir=$outputDir/$outputName/$book/$dataset
@@ -53,62 +54,62 @@ then
 fi
 
 # Check the relevant tar balls
-if ! [ -e "$globDir/${CMSSW_VERSION}.tgz" ] || ! [ -e "$globDir/${CMSSW_VERSION}-src.tgz" ] ||\
-   ! [ -e "$globDir/json.tgz" ]
+if ! [ -e "$glogDir/${CMSSW_VERSION}.tgz" ] || ! [ -e "$glogDir/${CMSSW_VERSION}-src.tgz" ] ||\
+   ! [ -e "$glogDir/json.tgz" ]
 then
   echo " ERROR - one of the relevant production tar balls does not exist. EXIT."
-  echo " -> $globDir/${CMSSW_VERSION}.tgz $globDir/${CMSSW_VERSION}-src.tgz"
-  echo " -> $globDir/json.tgz"
+  echo " -> $glogDir/${CMSSW_VERSION}.tgz $glogDir/${CMSSW_VERSION}-src.tgz"
+  echo " -> $glogDir/json.tgz"
   exit 1
 fi
 
 echo "  Global directory structures exist."
-inputFiles="$globDir/${CMSSW_VERSION}.tgz,$globDir/${CMSSW_VERSION}-src.tgz"
-inputFiles=$inputFiles",$globDir/json.tgz"
+inputFiles="$glogDir/${CMSSW_VERSION}.tgz,$glogDir/${CMSSW_VERSION}-src.tgz"
+inputFiles=$inputFiles",$glogDir/json.tgz"
 
 if [ $EXTERNAL != "/cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/external" ]
 then
-  if ! [ -e "$globDir/external.tgz" ]
+  if ! [ -e "$glogDir/external.tgz" ]
   then
     echo " ERROR - set up to use local external package but tar ball does not exist. EXIT."
-    echo " -> $globDir/external.tgz"
+    echo " -> $glogDir/external.tgz"
     exit 1
   fi
 
-  inputFiles=$inputFiles",$globDir/external.tgz"
+  inputFiles=$inputFiles",$glogDir/external.tgz"
 fi
   
 # Check the relevant run files exist
-if ! [ -e "$workDir/setup.sh" ] || ! [ -e "$globDir/run.sh" ] || \
-   ! [ -e "$globDir/rootlogon.C" ] || ! [ -e "$globDir/$runMacro" ] || \
-   ! [ -e "$globDir/${runMacroTrunc}_C.so" ] || ! [ -e "$globDir/${runMacroTrunc}_C.d" ]
+if ! [ -e "$logsDir/setup.sh" ] || ! [ -e "$glogDir/run.sh" ] || \
+   ! [ -e "$glogDir/rootlogon.C" ] || ! [ -e "$glogDir/$runMacro" ] || \
+   ! [ -e "$glogDir/${runMacroTrunc}_C.so" ] || ! [ -e "$glogDir/${runMacroTrunc}_C.d" ]
 then
   echo " ERROR - one of the relevant run files does not exist. EXIT."
-  echo " -> $workDir/setup.sh $globDir/run.sh $globDir/rootlogon.C $globDir/$runMacro"
-  echo " -> $globDir/${runMacroTrunc}_C.so $globDir/${runMacroTrunc}_C.d"
+  echo " -> $logsDir/setup.sh $glogDir/run.sh $glogDir/rootlogon.C $glogDir/$runMacro"
+  echo " -> $glogDir/${runMacroTrunc}_C.so $glogDir/${runMacroTrunc}_C.d"
   exit 1
 fi
 
 echo "  Global run files exist."
-inputFiles=$inputFiles",$workDir/setup.sh,$globDir/rootlogon.C,$globDir/$runMacro"
-inputFiles=$inputFiles",$globDir/${runMacroTrunc}_C.so,$globDir/${runMacroTrunc}_C.d"
+inputFiles=$inputFiles",$logsDir/setup.sh,$glogDir/rootlogon.C,$glogDir/$runMacro"
+inputFiles=$inputFiles",$glogDir/${runMacroTrunc}_C.so,$glogDir/${runMacroTrunc}_C.d"
 
 # Check the relevant catalog
-if ! [ -e "$workDir/catalog.tgz" ]
+if ! [ -e "$logsDir/catalog.tgz" ]
 then
   echo " ERROR - relevant catalog tar balls does not exist. EXIT."
-  echo " -> $workDir/catalog.tgz"
+  echo " -> $logsDir/catalog.tgz"
   exit 1
 fi
 
 echo "  Catalog file exists. Untarring for submission."
-cd      $workDir
+cd      $logsDir
 tar fzx catalog.tgz
 cd - >& /dev/null
-inputFiles=$inputFiles",$workDir/catalog.tgz"
+inputFiles=$inputFiles",$logsDir/catalog.tgz"
 
 # set the script file
-script=$globDir/run.sh
+script=$glogDir/run.sh
 
 # Make sure there is a globus tickets available
 x509File=/tmp/x509up_u`id -u`
@@ -121,10 +122,10 @@ echo "  Submitting jobs to condor"
 
 if [ "$skim" == "noskim" ]
 then
-  filesets=$workDir/catalog/$book/$dataset/Filesets
+  filesets=$logsDir/catalog/$book/$dataset/Filesets
 else
   # needs to be reviewed if we work with skims
-  filesets=$workDir/catalog/$book/$dataset/$skim/Filesets
+  filesets=$logsDir/catalog/$book/$dataset/$skim/Filesets
 fi
 
 # Store condor status for later inspection
@@ -140,52 +141,56 @@ do
 
   rFile="$workDir"
   rFile=`echo $rFile/${outputName}_${dataset}_${skim}_${fileset}*.root 2> /dev/null | cut -d' ' -f1`
-  rFileSize=`ls -s $workDir/${outputName}_${dataset}_${skim}_${fileset}.root 2> /dev/null | cut -d' ' -f1`
+  rFileSize=`ls -s $workDir/${outputName}_${dataset}_${skim}_${fileset}*.root 2> /dev/null | cut -d' ' -f1`
 
   output="$logsDir/${outputName}_${dataset}_${skim}_${fileset}.out"
 
   # check if the output already exists and optional whether it is complete
-
+  ##echo " $rFile -- $rFileSize"
   process=false
   if [ -f "$rFile" ] && (( $rFileSize > 5 ))
   then
-     # File exists now see whether more checks are asked for
-     if [ "$noStage" == "1" ] 
-     then
-       # Check whether all events were processed
-       dir=`dirname $rFile`
-       file=`basename $rFile`
-       duration=`tail -10 $output | grep duration | tr -s ' '`
-       root -l -b -q $MIT_ANA_DIR/macros/runSimpleFileCataloger.C+\(\"$dir\",\"$file\"\) >& /tmp/tmp.$$
-       # Get number of events processed from output file
-       nEventsProcessed=`grep XX-CATALOG-XX /tmp/tmp.$$ | cut -d' ' -f3`
-       # Get number of events contained in the original input file
-       nEventsInFileset=`grep ^$fileset $workDir/catalog/$book/$dataset/Filesets | tr -s ' ' | cut -d' ' -f3`
-       # Compare whether we got what we asked for
-       if [ "$nEventsProcessed" != "$nEventsInFileset" ]
-       then
-         echo " "
-         echo " ERROR - "
-         echo "   Processed  $nEventsProcessed  of  $nEventsInFileset  total"
-         echo " "
-         process=true
-       else
-         echo "   File: $rFile completed with  $nEventsProcessed  events processed ($duration)."
-       fi
-     elif [ "$noStage" == "2" ] 
-     then
-       # Show processing duration
-       duration=`tail -10 $output | grep duration | tr -s ' '`
-       echo " Exists: $rFile -- Processing $duration"
-     else
-       # Show that file was processed (fastest option and usually sufficient)
-       echo " Exists: $rFile"
-     fi
-     # make sure to move on if completed
-     if [ "$process" == "false" ] 
-     then
-       continue
-     fi
+
+    # File exists now see whether more checks are asked for
+    if [ "$noStage" == "1" ] 
+    then
+      # Check whether all events were processed
+      dir=`dirname $rFile`
+      file=`basename $rFile`
+      duration=`tail -10 $output | grep duration | tr -s ' '`
+      #echo "root -l -b -q $MIT_ANA_DIR/macros/runSimpleFileCataloger.C+\(\"$dir\",\"$file\"\) >& /tmp/tmp.$$"
+      root -l -b -q $MIT_ANA_DIR/macros/runSimpleFileCataloger.C+\(\"$dir\",\"$file\"\) >& /tmp/tmp.$$
+      # Get number of events processed from output file
+      nEventsProcessed=`grep XX-CATALOG-XX /tmp/tmp.$$ | tail -1 | cut -d' ' -f4`
+      # Get number of events contained in the original input file
+      nEventsInFileset=`grep ^$fileset $logsDir/catalog/$book/$dataset/Filesets | tr -s ' ' | cut -d' ' -f3`
+      # Compare whether we got what we asked for
+      if [ "$nEventsProcessed" != "$nEventsInFileset" ]
+      then
+        echo " "
+        echo " ERROR - "
+        echo "   Processed  $nEventsProcessed  of  $nEventsInFileset  total"
+        echo " "
+        process=true
+      else
+        echo "   File: $rFile"
+        echo "         size:$rFileSize, nE:$nEventsProcessed,$duration)"
+      fi
+    elif [ "$noStage" == "2" ] 
+    then
+      # Show processing duration
+      duration=`tail -10 $output | grep duration | tr -s ' '`
+      echo " Exists: $rFile (size:$rFileSize,$duration)"
+    else
+      # Show that file was processed (fastest option and usually sufficient)
+      echo " Exists: $rFile (size:$rFileSize)" 
+    fi
+
+    # make sure to move on if completed
+    if [ "$process" == "false" ] 
+    then
+      continue
+    fi
   else
     process=true
   fi
@@ -214,7 +219,7 @@ do
     echo -n "   $script $runMacro $catalogDir $book $dataset $skim $fileset"
     echo    " $outputName $outputDir $runTypeIndex"
 
-    # An exit hook to avoid reprocessing without loocking at the log first
+    # An exit hook to avoid reprocessing without looking at the log first
 
     if [ "$DEBUG" != "" ]
     then
@@ -225,14 +230,13 @@ do
 
     cd $workDir
 
-cat > submit.cmd <<EOF
+cat > /tmp/submit.$$.cmd <<EOF
 Universe                = vanilla
 Environment             = "HOSTNAME=$HOSTNAME"
-# Only on Tier-2 #
-#Requirements            = UidDomain == "cmsaf.mit.edu" && \
-#                          Arch == "X86_64" && Disk >= DiskUsage && (Memory * 1024) >= ImageSize &&\
-#                          HasFileTransfer
-Requirements            = (UidDomain == "cmsaf.mit.edu" || UidDomain == "mit.edu") && Arch == "X86_64" && Disk >= DiskUsage && (Memory * 1024) >= ImageSize && HasFileTransfer
+Requirements            = (UidDomain == "cmsaf.mit.edu" || UidDomain == "mit.edu") && \
+                          Arch == "X86_64" && Disk >= DiskUsage && \
+                          (Memory * 1024) >= ImageSize && HasFileTransfer && \
+                          OpSysMajorVer == 6
 Notification            = Error
 Executable              = $script
 Arguments               = $runMacro $catalogDir $book $dataset $skim $fileset $outputName $outputDir $runTypeIndex
@@ -251,18 +255,18 @@ when_to_transfer_output = ON_EXIT
 Queue
 EOF
 
-    condor_submit submit.cmd >& /dev/null
+    condor_submit /tmp/submit.$$.cmd >& /dev/null
 
     # make sure it worked
     if [ "$?" != "0" ]
     then
       # show what happened, exit with error and leave the submit file
-      condor_submit submit.cmd
+      condor_submit /tmp/submit.$$.cmd
       exit 1
     fi
 
     # it worked, so clean up
-    rm submit.cmd
+    rm /tmp/submit.$$.cmd
 
   fi
 

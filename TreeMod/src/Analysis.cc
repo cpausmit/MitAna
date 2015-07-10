@@ -85,14 +85,22 @@ Analysis::~Analysis()
   if (fState == kInit || fState == kRun)
     Terminate();
 
+  printf("delete List\n");
   delete fList;
+  printf("delete Pkg\n");
   delete fPackages;
+  printf("delete Loa\n");
   delete fLoaders;
+  printf("delete DelLst\n");
   delete fDeleteList;
-  delete fSelector;
+  printf("delete Sel\n");
+  //delete fSelector;
+  printf("delete Sup\n");
   delete fSuperMods;
+
   fOutput = 0;   // owned by TAM
 
+  printf("delete Proo\n");
   delete fProof;
 }
 
@@ -614,9 +622,9 @@ Bool_t Analysis::Run(Bool_t browse)
   if (Init()) {
     Run();
     Terminate();
-    if (browse) {
+    if (browse)
       new TBrowser;
-    }
+
     return kTRUE;
   }
 
@@ -656,21 +664,19 @@ void Analysis::Terminate()
           break;
         }
       }
-
-    } else {
-      fOutput = fSelector->GetModOutput();
     }
+    else
+      fOutput = fSelector->GetModOutput();
 
     if (fOutput && !fAnaOutput.IsNull()) {
       TDirectory::TContext context(0); // automatically restore gDirectory
 
       std::auto_ptr<TFile> outf(TFile::Open(fAnaOutput,"recreate","", fCompLevel));
-      if (outf.get() == 0) {
+      if (outf.get() == 0)
         Error("Terminate", "Could not open file %s for output!", fAnaOutput.Data());
-      } else {
+      else {
         MDB(kAnalysis, 1)
           Info("Terminate", "Saving output to %s!", fAnaOutput.Data());
-
         if (fHierarchy)
           fOutput->Write(0,-99);
         else
