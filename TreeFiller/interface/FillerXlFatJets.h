@@ -44,10 +44,17 @@ namespace mithep
                    const char *title = "XlFatJets Filler module");
       ~FillerXlFatJets();
 
+      enum SubJetBuilder {
+        kSoftDrop,
+        kTrimmed,
+        kPruned,
+        kCMSTopTagger,
+        kNjettiness
+      }
+
       void IsData(Bool_t b)                { fIsData = b;           }
       void FillVSubJets(Bool_t b)          { fFillVSubJets = b;     }
       void FillTopSubJets(Bool_t b)        { fFillTopSubJets = b;   }
-      void NSubDeclustering(Bool_t b)      { fNSubDeclustering = b; }
       void SetBtaggingOn(Bool_t b)         { fBTaggingActive = b;   }
       void SetfQGTaggingOn(Bool_t b)       { fQGTaggingActive = b;  }
       void setTopTaggingOn(Bool_t b)       { fTopTaggingActive = b; }
@@ -77,6 +84,8 @@ namespace mithep
       void recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float & tau2, std::vector<fastjet::PseudoJet> & currentAxes);
       ThreeVector flightDirection(const Vertex * pvx, const Vertex * svx);
 
+      void SetSubJetBuilder(SubJetBuilder k) { fSubJetBuilder = k;   }
+      SubJetBuilder GetSubJetBuilder()       { return fSubJetBuilder; }
 
     protected:
       void Process();
@@ -107,7 +116,6 @@ namespace mithep
       Bool_t fIsData;                      //is this data or MC?
       Bool_t fFillVSubJets;                //=true if V-subjets are stored (2-prom structure)
       Bool_t fFillTopSubJets;              //=true if top-subjets are stored (3-prom structure)
-      Bool_t fNSubDeclustering;            //=true if subjets declustering via n-subjettiness
                                            //=false if subjets declustering via pruned CA (CMS standard)
       Bool_t fBTaggingActive;              //=true if BTagging info is filled
       Bool_t fQGTaggingActive;             //=true if QGTagging info is filled
@@ -158,6 +166,8 @@ namespace mithep
       fastjet::JetDefinition *fCAJetDef;   //fastjet clustering definition
       fastjet::GhostedAreaSpec *fActiveArea;
       fastjet::AreaDefinition *fAreaDefinition;
+
+      SubJetBuilder fSubJetBuilder = kSoftDrop;
 
       // QG tagger
       QGTagger *fQGTagger;                 //QGTagger calculator

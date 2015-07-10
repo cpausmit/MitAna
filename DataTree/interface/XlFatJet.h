@@ -141,6 +141,7 @@ namespace mithep
       Double32_t            fZRatio;
 
       RefArray<XlSubJet>    fSubJets;      //sub jets in the jet
+      
 
     ClassDef(XlFatJet, 3) // XlFatJet class
   };

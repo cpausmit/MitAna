@@ -28,7 +28,6 @@ FillerXlFatJets::FillerXlFatJets(const char *name, const char *title) :
   fIsData (kTRUE),
   fFillVSubJets (kTRUE),
   fFillTopSubJets (kFALSE),
-  fNSubDeclustering (kFALSE),
   fBTaggingActive (kFALSE),
   fQGTaggingActive (kTRUE),
   fTopTaggingActive (kFALSE),
@@ -243,7 +242,7 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   // Compute the subjettiness
   fastjet::contrib::Njettiness::AxesMode axisMode = fastjet::contrib::Njettiness::onepass_kt_axes;
   double beta = 1.0;
-  double RNsub = fConeSize; //FIXME: should revert to RNsub = fConeSize
+  double RNsub = fConeSize;
   double Rcutoff = 10000.;
   fastjet::contrib::Nsubjettiness  nSub1(1,axisMode,beta,RNsub,Rcutoff);
   fastjet::contrib::Nsubjettiness  nSub2(2,axisMode,beta,RNsub,Rcutoff);
@@ -280,15 +279,17 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   softDropSDb1.set_tagging_mode();
   softDropSDb2.set_tagging_mode();
   softDropSDbm1.set_tagging_mode();
-  double MassSDb0 = (softDropSDb0(fjJet)).m();
+  fastjet::PseudoJet fjJetSoftDrop0 = softDropSDb0(fjet);
+  double MassSDb0 = fjJetSoftDrop0.m();
   double MassSDb1 = (softDropSDb1(fjJet)).m();
   double MassSDb2 = (softDropSDb2(fjJet)).m();
   double MassSDbm1 = (softDropSDbm1(fjJet)).m();
 
   fastjet::PseudoJet fjJetPruned = (*fPruner)(fjJet);
+  fastjet::PseudoJet fjJetTrimmed = (*fTrimmer)(fjJet);
   double MassPruned = fjJetPruned.m();
   double MassFiltered = ((*fFilterer)(fjJet)).m();
-  double MassTrimmed = ((*fTrimmer)(fjJet)).m();
+  double MassTrimmed = fjJetTrimmed.m();
 
   // do the cms top tagging
   fastjet::PseudoJet iJet;
@@ -333,11 +334,17 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   // Loop on the subjets and fill the subjet Xl collections - do it according to the user request
   if (fFillVSubJets) {
     std::vector<fastjet::PseudoJet> fjVSubJets;
-    if (fNSubDeclustering)
+    if (fSubJetBuilder == SubJetBuilder::kNjettiness)
       fjVSubJets = nSub3.currentSubjets();
-    else {
-      int nSubJPruned = std::min<unsigned int>(fjJetPruned.constituents().size(),3);
+    else if (fSubJetBuilder == SubJetBuilder::kPruned) {
+      int nSubJPruned = std::min<unsigned int>(fjJetPruned.constituents().size(),2);
       fjVSubJets = fjJetPruned.associated_cluster_sequence()->exclusive_subjets(fjJetPruned,nSubJPruned);
+    } else if (fSubJetBuilder == SubJetBuilder::kTrimmed || fSubJetBuilder == SubJetBuilder::kCMSTopTagger) {
+      int nSubJTrimmed = std::min<unsigned int>(fjJetTrimmed.constituents().size(),2);
+      fjVSubJets = fjJetTrimmed.associated_cluster_sequence()->exclusive_subjets(fjJetTrimmed,nSubJTrimmed);
+    } else if (fSubJetBuilder == SubJetBuilder::kSoftDrop) {
+      int nSubJSD = std::min<unsigned int>(fjJetSoftDrop0.constituents().size(),2);
+      fjVSubJets = fjJetSoftDrop0.associated_cluster_sequence()->exclusive_subjets(fjJetSoftDrop0,nSubJSD);
     }
     // Order the subjets according to their pt and discard zero pt subjets
     std::vector<fastjet::PseudoJet> fjSubJetsSorted = Sorted_by_pt_min_pt(fjVSubJets,0.01);
@@ -347,13 +354,19 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   }
   if (fFillTopSubJets) {
     std::vector<fastjet::PseudoJet> fjTopSubJets;
-    if (fTopTaggingActive) {
-      fjTopSubJets = cmsTopJet.pieces();
-    } else if (fNSubDeclustering)
+    if (fSubJetBuilder == SubJetBuilder::kNjettiness)
       fjTopSubJets = nSub3.currentSubjets();
-    else {
+    else if (fSubJetBuilder == SubJetBuilder::kPruned) {
       int nSubJPruned = std::min<unsigned int>(fjJetPruned.constituents().size(),3);
       fjTopSubJets = fjJetPruned.associated_cluster_sequence()->exclusive_subjets(fjJetPruned,nSubJPruned);
+    } else if (fSubJetBuilder == SubJetBuilder::kTrimmed) {
+      int nSubJTrimmed = std::min<unsigned int>(fjJetTrimmed.constituents().size(),3);
+      fjTopSubJets = fjJetTrimmed.associated_cluster_sequence()->exclusive_subjets(fjJetTrimmed,nSubJTrimmed);
+    } else if (fSubJetBuilder == SubJetBuilder::kCMSTopTagger) {
+      fjTopSubJets = cmsTopJet.pieces();
+    } else if (fSubJetBuilder == SubJetBuilder::kSoftDrop) {
+      int nSubJSD = std::min<unsigned int>(fjJetSoftDrop0.constituents().size(),3);
+      fjTopSubJets = fjJetSoftDrop0.associated_cluster_sequence()->exclusive_subjets(fjJetSoftDrop0,nSubJSD);
     }
     // Order the subjets according to their pt
     std::vector<fastjet::PseudoJet> fjSubJetsSorted = Sorted_by_pt_min_pt(fjTopSubJets,0.01);
