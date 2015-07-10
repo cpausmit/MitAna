@@ -279,7 +279,7 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   softDropSDb1.set_tagging_mode();
   softDropSDb2.set_tagging_mode();
   softDropSDbm1.set_tagging_mode();
-  fastjet::PseudoJet fjJetSoftDrop0 = softDropSDb0(fjet);
+  fastjet::PseudoJet fjJetSoftDrop0 = softDropSDb0(fjJet);
   double MassSDb0 = fjJetSoftDrop0.m();
   double MassSDb1 = (softDropSDb1(fjJet)).m();
   double MassSDb2 = (softDropSDb2(fjJet)).m();

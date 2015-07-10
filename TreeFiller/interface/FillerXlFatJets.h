@@ -50,7 +50,7 @@ namespace mithep
         kPruned,
         kCMSTopTagger,
         kNjettiness
-      }
+      };
 
       void IsData(Bool_t b)                { fIsData = b;           }
       void FillVSubJets(Bool_t b)          { fFillVSubJets = b;     }
