@@ -1,13 +1,9 @@
 <use   name="MitCommon/DataFormats"/>
+<use   name="MitCommon/MathTools"/>
+<use   name="MitAna/DataUtil"/>
+<use   name="root"/>
 <use   name="roothtml"/>
 <lib   name="Graf"/>
-<use   name="MitAna/DataUtil"/>
-<use   name="CondFormats/EgammaObjects"/>
-<use   name="MitCommon/MathTools"/>
-<use   name="root"/>
-<use   name="roofit"/>
-<use   name="roottmva"/>
-<lib   name="EG"/>
 <export>
   <lib   name="1"/>
 </export>

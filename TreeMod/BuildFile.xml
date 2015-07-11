@@ -5,9 +5,6 @@
 <use   name="MitAna/Catalog"/>
 <use   name="MitAna/Utils"/>
 <use   name="MitCommon/MathTools"/>
-<use   name="qjets"/>
-<use   name="fastjet"/>
-<use   name="fastjet-contrib"/>
 <use   name="root"/>
 <lib   name="Proof"/>
 <export>
