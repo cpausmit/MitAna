@@ -2,8 +2,7 @@
 <use   name="MitCommon/Utils"/>
 <use   name="MitAna/DataCont"/>
 <use   name="MitAna/Utils"/>
-<lib   name="EG"/>
+<use   name="rooteg"/>
 <export>
-  <use   name="EG"/>
   <lib   name="1"/>
 </export>

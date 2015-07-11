@@ -1,7 +1,5 @@
 <use   name="MitAna/TreeMod"/>
 <use   name="fastjet"/>
-<use   name="qjets"/>
-<use   name="boost"/>
 <export>
   <lib   name="1"/>
 </export>
