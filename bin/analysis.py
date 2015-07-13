@@ -69,9 +69,8 @@ if __name__ == '__main__':
     if args.hierarchy:
         analysis.SetKeepHierarchy(True)
 
-    for mod in analysis._sequence.build()[0]:
-        analysis._core.AddSuperModule(mod)
-    
+    analysis.buildSequence()
+   
     print '\n+++++ ANALYSIS FLOW +++++\n'
     analysis.PrintModuleTree()
     print '\n+++++++++++++++++++++++++\n'

@@ -1,115 +1,68 @@
 import os
 import sys
-
 import ROOT
+from sequenceable import Node
+from configurable import Configurable
+
 ROOT.gROOT.SetBatch(True)
 ROOT.gSystem.Load('libMitAnaTreeMod.so')
 
-class _Sequenceable(object):
+class Module(Configurable, Node):
     """
-    Base class for objects that can be in a sequence or be a sequence itself
-    """
-
-    def __init__(self):
-        pass
-
-    def __add__(self, next):
-        return _Bundle([self, next])
-
-    def __mul__(self, next):
-        return _Chain([self, next])
-
-    def build(self, modlist = []):
-        return ([], [])
-
-
-class _Module(_Sequenceable):
-    """
-    PyROOT wrapper for mithep TAModules
+    A wrapper for all Bambu modules inheriting from mithep::BaseMod.
     """
 
-    def __init__(self, cls, *args, **kwargs):
-        self._core = cls(*args)
+    def __init__(self, cppcls, cppclsName, *args):
+        Configurable.__init__(self, cppcls, cppclsName, *args)
+        Node.__init__(self, self._cppobj, self._cppobj.GetName())
+
+
+class _Generator(object):
+    """
+    Constructor wrapper for C++ objects to allow CMSSW-like initializer
+     mod = mithep.Module('module', 'my module', Attr1 = value, ..)
+    which translates to
+     mod = mithep.Module('module', 'my module')
+     mod.SetAttr1(value)
+    """
+
+    def __init__(self, cls, clsName):
+        self._cls = cls
+        self._clsName = clsName
+
+    def __call__(self, *args, **kwargs):
+        try:
+            tclass = self._cls.Class()
+        except AttributeError:
+            tclass = None
+
+        if tclass:
+            if tclass.InheritsFrom(ROOT.mithep.BaseMod.Class()):
+                obj = Module(self._cls, self._clsName, *args)
+            else:
+                obj = Configurable(self._cls, self._clsName, *args)
+        else:
+            obj = self._cls(*args)
 
         for key, value in kwargs.items():
             try:
-                getattr(self._core, 'Set' + key)(value)
+                method = getattr(obj, 'Set' + key)
             except AttributeError:
-                print 'No function Set' + key + ' defined for class ' + self._core.IsA().GetName()
+                print 'class ' + self._clsName + ' has no attribute ' + key + ' (i.e. has no method Set' + key + ').'
                 sys.exit(1)
 
+            if type(value) is tuple:
+                method(*value)
+            else:
+                method(value)
+
+        return obj
+
     def __getattr__(self, name):
-        attr = getattr(self._core, name)
-        setattr(self, name, attr)
-        return attr
-
-    def build(self, modlist = []):
-        if self._core in modlist:
-            print 'Module ' + self._core.GetName() + ' used multiple times in the analysis sequence'
-            sys.exit(1)
-
-        modlist.append(self._core)
-        return ([self._core], [self._core])
-
-
-class _Chain(_Sequenceable):
-    """
-    Linear sequence of sequenceables
-    """
-    
-    def __init__(self, nodes):
-        self._nodes = list(nodes)
-
-    def build(self, modlist = []):
-        head = []
-        tail = []
-        for node in self._nodes:
-            hm, tm = node.build(modlist)
-            if len(tail) != 0:
-                for mod in hm:
-                    tail[-1].Add(mod)
-
-            tail = list(tm)
-
-            if len(head) == 0:
-                head = list(hm)
-
-        return (head, tail)
-
-
-class _Bundle(_Sequenceable):
-    """
-    List of parallel chains
-    """
-
-    def __init__(self, chains):
-        self._chains = list(chains)
-
-    def __mul__(self, next):
-        print 'Cannot make a module dependent on two parallel chains'
-        sys.exit(1)
-
-    def build(self, modlist = []):
-        head = []
-        tail = []
-        for chain in self._chains:
-            hm, tm = chain.build(modlist)
-            head += hm
-            tail += tm
-
-        return (head, tail)
-
-
-class _ModClass(object):
-    """
-    Constructor class for mithep TAModules
-    """
-
-    def __init__(self, cls):
-        self._cls = cls
-
-    def __call__(self, *args, **kwargs):
-        return _Module(self._cls, *args, **kwargs)
+        """
+        Access static members of the class
+        """
+        return getattr(self._cls, name)
 
 
 class _mithep(object):
@@ -141,8 +94,6 @@ class _mithep(object):
                 else:
                     mangled += str(len(name)) + name
 
-                mangled += '5ClassEv'
-                    
                 libdirs = os.environ['LD_LIBRARY_PATH'].split(':')
                 for libdir in libdirs:
                     for libname in os.listdir(libdir):
@@ -174,18 +125,14 @@ class _mithep(object):
                 print 'No class "' + name + '" found in namespace mithep. Perhaps a missing library?'
                 sys.exit(1)
 
-        try:
-            if cls.Class().InheritsFrom(ROOT.mithep.BaseMod.Class()):
-                cls = _ModClass(cls)
-        except:
-            pass
+        gen = _Generator(cls, 'mithep.' + name)
 
-        setattr(self, name, cls)
+        setattr(self, name, gen)
 
-        return cls
+        return gen
 
     def loadlib(self, package, module):
-        ROOT.gSystem.Load('lib' + package + 'module' + '.so')
+        ROOT.gSystem.Load('lib' + package + module + '.so')
 
 
 class _Analysis(object):
@@ -198,13 +145,43 @@ class _Analysis(object):
         self._core.SetKeepHierarchy(False)
         self._sequence = None
 
-    def setSequence(self, seq):
-        self._sequence = seq
-
     def __getattr__(self, name):
         attr = getattr(self._core, name)
         setattr(self, name, attr)
         return attr
+
+    def setSequence(self, seq):
+        self._sequence = seq
+
+    def buildSequence(self):
+        headNodes = self._sequence.build()
+
+        for mod in headNodes:
+            self._core.AddSuperModule(mod)
+
+    def dumpPython(self):
+        iMod = 0
+        auxObjects = {}
+
+        code = ''
+
+        for mod in self._sequence:
+            for methodName, args in mod.config:
+                for arg in args:
+                    if not isinstance(arg, Configurable):
+                        continue
+                    if arg in auxObjects:
+                        continue
+
+                    auxName = 'aux' + str(len(auxObjects))
+                    code += arg.dumpPython(auxName, auxObjects)
+                    auxObjects[arg] = auxName
+
+            modName = 'mod' + str(iMod)
+            code += mod.dumpPython(modName, auxObjects)
+            iMod += 1
+
+        return code
 
 
 mithep = _mithep()
