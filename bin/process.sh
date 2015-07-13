@@ -11,6 +11,7 @@
 # There are two more environment variables that you can use to further the checks or debugging:
 #
 #  DEBUG - is set to anything it will tell you which jobs failed and tell you the err/out locations
+#          in that case it will not resubmit the failed job
 #
 #  CHECK_COMPLETE - if set to "1" it will confirm that all events were processed
 #                   if set to "2" it will tell you the the duration of the completed jobs
@@ -69,14 +70,14 @@ then
   
   # create the global tar balls and files
   echo " generate tar balls and other files"
-  cd $MIT_PROD_HIST/$MIT_PROD_CFG
+  cd $MIT_PROD_LOGS/$MIT_PROD_CFG
   makeTgz.sh
-  cp $MIT_ANA_DIR/bin/run.sh              $globDir
-  cp $MIT_ANA_DIR/bin/runCrab.sh          $globDir
-  cp $MIT_ANA_DIR/bin/runCrabJob.sh       $globDir
-  cp /home/$USER/cms/root/rootlogon.C     $globDir
-  cp $MIT_USER_DIR/macros/$MIT_PROD_MACRO $globDir
-  cp $MIT_ANA_DIR/macros/compile.C        $globDir
+  cp $MIT_ANA_DIR/bin/run.sh              $logsDir
+  cp $MIT_ANA_DIR/bin/runCrab.sh          $logsDir
+  cp $MIT_ANA_DIR/bin/runCrabJob.sh       $logsDir
+  cp /home/$USER/cms/root/rootlogon.C     $logsDir
+  cp $MIT_USER_DIR/macros/$MIT_PROD_MACRO $logsDir
+  cp $MIT_ANA_DIR/macros/compile.C        $logsDir
   # define our external path variable
   export EXTERNAL=/cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/external
   # compile the bare run macro
@@ -107,8 +108,8 @@ then
     logsDir=$MIT_PROD_LOGS/$MIT_PROD_CFG/$BOOK_VERSION/$DATASET
     mkdir -p $logsDir
     globDir=$MIT_PROD_HIST/$MIT_PROD_CFG
-    mkdir -p $globDir
-    workDir=$MIT_PROD_HIST/$MIT_PROD_CFG/$BOOK_VERSION/$DATASET
+    mkdir -p $globDir/$BOOK_VERSION/$DATASET
+    workDir=$MIT_PROD_LOGS/$MIT_PROD_CFG/$BOOK_VERSION/$DATASET
     mkdir -p $workDir
 
     # define all variables that need to be defined when running in queue
@@ -188,8 +189,6 @@ do
   then
     submit.sh $MIT_PROD_MACRO $MIT_CATALOG $BOOK $DATASET $SKIM $MIT_PROD_CFG $MIT_PROD_HIST "" \
               $CHECK_COMPLETE
-
-    ## exit          # for now just one prodcution
 
   # or using CRAB
   else

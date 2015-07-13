@@ -2,8 +2,12 @@
 // Vertex
 //
 // Vertex class derived from BaseVertex holding additional fit information.
+// Note on TrackWeight:
+//  For vertices filled from MiniAOD, track weight is discrete with the correspondence:
+//  1: UsedInFitTight, 0.5: UsedInFitLoose, 0: CompatibilityDz or CompatibilityBTag
+// -1: NotReconstructedPrimary or OtherDeltaZ
 //
-// Authors: J.Bendavid, C.Paus
+// Authors: J.Bendavid, C.Paus, Y.Iiyama
 //--------------------------------------------------------------------------------------------------
 
 #ifndef MITANA_DATATREE_VERTEX_H
