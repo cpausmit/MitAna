@@ -80,7 +80,7 @@ namespace mithep
       void SetTrimRad(double d)            { fTrimRad = d;          }
       void SetTrimPtFrac(double d)         { fTrimPtFrac = d;       }
       void SetConeSize(double d)           { fConeSize = d;         }
-      void doBtagging(XlFatJet*fatJet);
+      void runBtagging(XlFatJet*fatJet);
       void recalcNsubjettiness(XlFatJet *fatJet, float & tau1, float & tau2, std::vector<fastjet::PseudoJet> & currentAxes,  std::map<double, unsigned int> VTXmass);
       ThreeVector flightDirection(const Vertex * pvx, const Vertex * svx);
       void SetSubJetBuilder(SubJetBuilder k) { fSubJetBuilder = k;   }

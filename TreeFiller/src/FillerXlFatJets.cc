@@ -376,7 +376,7 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   }
   //Inclusive b-tagging
   if (fDoBtagging)
-    doBtagging(fatJet);
+    runBtagging(fatJet);
 
 
   // Trim the output collections
@@ -421,12 +421,12 @@ void FillerXlFatJets::FillXlSubJets(std::vector<fastjet::PseudoJet> &fjSubJets,
 }
 //--------------------------------------------------------------------------------------------------
 
-void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
+void FillerXlFatJets::runBtagging(XlFatJet*fatJet) {
 
   std::map<double, unsigned int> VTXmass;
   const Vertex * pvx = fVertexes->At(0); // highest HT vertex is assumed to be primary
   double maxSVDeltaRToJet = fConeSize-(0.1+(fConeSize-.8)*(.1/.7));
-  UInt_t nVertices = fSecondaryVertexes->GetEntries();
+  unsigned int nVertices = fSecondaryVertexes->GetEntries();
   for (unsigned int idx=0; idx<nVertices; idx++) {
     const Vertex * svx = fSecondaryVertexes->At(idx);
     ThreeVector flightDir = flightDirection(pvx,svx); // maybe save this elsewhere, so only run once an event?
@@ -435,6 +435,21 @@ void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
     if (dR2 < maxSVDeltaRToJet*maxSVDeltaRToJet)
         VTXmass[svx->Mom4().mass()] = idx;
   }
+
+  FourVectorM sumAllTracks(0,0,0,0);
+  const PFCandidate * pfCand;
+  const Track * trk = NULL;
+  unsigned int nPFCands = fatJet->NPFCands();
+  std::vector<const Track*> jetTracks;
+  for (unsigned int idx=0; idx<nPFCands; ++idx) {
+    pfCand = fatJet->PFCand(idx);
+    trk = pfCand->Trk();
+    if (trk) {
+      jetTracks.push_back(trk);
+      sumAllTracks += FourVectorM(trk->Pt(),trk->Eta(),trk->Phi(),pfCand->M());
+    }
+  }
+  float totalEnergy = sumAllTracks.E();
 
   // recalc nsubjettiness with IVF
   std::vector<fastjet::PseudoJet> currentAxes;
@@ -449,17 +464,8 @@ void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
                             currentAxes[1].phi(),
                             currentAxes[1].m());
 
-  FourVectorM sumAllTracks(0,0,0,0);
-  unsigned int nPrimaryTracks = pvx->NTracks();
-  std::vector<const Track*> jetTracks;
-  for (unsigned int i=0; i<nPrimaryTracks; ++i) {
-      const Track * trk = pvx->Trk(i);
-      if (MathUtils::DeltaR(*fatJet,*trk) < fConeSize) {
-          sumAllTracks += FourVectorM(trk->Pt(),trk->Eta(),trk->Phi(),0.13957018);
-          jetTracks.push_back(trk);
-      }
-  }
-  float totalEnergy = sumAllTracks.E();
+  unsigned nJetTracks = jetTracks.size();
+  decayLength = new std::vector<float>
 
   int cont=0;
   ThreeVector flightDir_0, flightDir_1;
@@ -496,6 +502,9 @@ void FillerXlFatJets::doBtagging(XlFatJet*fatJet) {
       break; // only consider leading two
     }
   }
+
+
+
 }
 
 
@@ -530,39 +539,20 @@ void FillerXlFatJets::recalcNsubjettiness(XlFatJet *fatJet,
 
   std::vector<const PFCandidate*> jetPFCandsNoB;
   const PFCandidate * pfCand;
-  const Track * pfTrack;
+  const Track * pfTrack = NULL;
   for (unsigned int idx=0; idx<fatJet->NPFCands(); ++idx) {
     pfCand = fatJet->PFCand(idx);
     pfTrack = pfCand->Trk();
-    Bool_t foundBTrack = kFALSE;
-    if (fabs(pfCand->Charge())>0.001) {
-      for (std::vector<const Track*>::iterator iTrk = svxTracks.begin(); iTrk!=svxTracks.end(); ++iTrk){
-        if(*iTrk == pfTrack){
-          foundBTrack = kTRUE;
-          break;
-        }
-      }
-      if (!foundBTrack)
-        jetPFCandsNoB.push_back(pfCand);
-    } else {
+    if (pfTrack) {
+      // charged particle, check it didn't come from a secondary vertex
+      Bool_t keepTrack = (std::find(svxTracks.begin(),svxTracks.end(),pfTrack) == svxTracks.end());
+      if (keepTrack) jetPFCandsNoB.push_back(pfCand);
+    }
+    else {
+      // not charged, no need to remove
       jetPFCandsNoB.push_back(pfCand);
     }
   }
-
-  // double dR2;
-  // for (std::vector<const Track*>::iterator trk = svxTracks.begin(); trk!=svxTracks.end(); ++trk) {
-  //   double minDeltaR2 = 9999.;
-  //   int minIdx = 0;
-  //   for (unsigned int idx = 0; idx < jetChargedPFCands.size(); ++idx) {
-  //     dR2 = MathUtils::DeltaR2(*(jetChargedPFCands[idx]),**trk);
-  //     if (dR2 < minDeltaR2){
-  //       minDeltaR2 = dR2;
-  //       minIdx = idx;
-  //     }
-  //   }
-  //   jetChargedPFCands.erase(jetChargedPFCands.begin()+minIdx); // remove the charged track closest to the svx track
-  // }
-
   // loop over jet constituents that are not daughters of IVF vertices and push them in the vector of FastJet constituents
   for(std::vector<const PFCandidate*>::iterator iPFCand = jetPFCandsNoB.begin(); iPFCand!=jetPFCandsNoB.end(); ++iPFCand)
   {
