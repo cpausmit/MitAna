@@ -35,6 +35,15 @@
 #include "MitAna/DataTree/interface/VertexCol.h"
 #include "MitAna/PhysicsUtils/interface/QGTagger.h"
 
+#include "MitAna/SDAlgorithm/interface/AnalysisParameters.h"
+#include "MitAna/SDAlgorithm/interface/Exception.h"
+#include "MitAna/SDAlgorithm/interface/Message.h"
+#include "MitAna/SDAlgorithm/interface/TopGluonModel.h"
+#include "MitAna/SDAlgorithm/interface/BackgroundModel.h"
+#include "MitAna/SDAlgorithm/interface/ISRModel.h"
+#include "MitAna/SDAlgorithm/interface/Deconstruct.h"
+#include "MitAna/SDAlgorithm/interface/ParseUtils.h"
+
 namespace mithep
 {
   class FillerXlFatJets : public BaseMod
@@ -49,6 +58,7 @@ namespace mithep
         kTrimmed,
         kPruned,
         kCMSTopTagger,
+        kHEPTopTagger,
         kNjettiness
       };
 
@@ -85,7 +95,8 @@ namespace mithep
       ThreeVector flightDirection(const Vertex * pvx, const Vertex * svx);
       void SetSubJetBuilder(SubJetBuilder k) { fSubJetBuilder = k;   }
       SubJetBuilder GetSubJetBuilder()       { return fSubJetBuilder; }
-      void SetDoBtagging(Bool_t b)         { fDoBtagging = b;}
+      void SetDoBtagging(Bool_t b)         { fDoBtagging = b;         }
+      void SetMicrojetR0(double t)         { fMicrojetR0 = t;         }
 
     protected:
       void Process();
@@ -111,6 +122,8 @@ namespace mithep
       // Color pull helpers
       TVector2 GetPull(fastjet::PseudoJet &jet, float constitsPtMin);
       double GetPullAngle(std::vector<fastjet::PseudoJet> &fjSubJets, float constitsPtMin);
+      double fMicrojetR0 = -1.0;
+
 
     private:
       Bool_t fIsData;                      //is this data or MC?
@@ -166,6 +179,8 @@ namespace mithep
       fastjet::JetDefinition *fCAJetDef;   //fastjet clustering definition
       fastjet::GhostedAreaSpec *fActiveArea;
       fastjet::AreaDefinition *fAreaDefinition;
+
+      Deconstruct *fDeconstruct;
 
       SubJetBuilder fSubJetBuilder = kSoftDrop;
       Bool_t fDoBtagging;

@@ -48,6 +48,7 @@ namespace mithep
                 fSVMass0(-1), fSVPt0(-1),
                 fTauDot(-1), fZRatio(-1) {}
 
+      ~XlFatJet();
       const XlSubJet       *SubJet(UInt_t i)                const { return fSubJets.At(i);         }
       const XlSubJet       *SubJet(UInt_t i, XlSubJet::ESubJetType t) const;
       Bool_t                HasSubJet(const XlSubJet *p)    const { return fSubJets.HasObject(p);  }
@@ -82,6 +83,8 @@ namespace mithep
       Double_t              SVPt0()                         const { return fSVPt0;                 }
       Double_t              tauDot()                        const { return fTauDot;                }
       Double_t              zRatio()                        const { return fZRatio;                }
+      Double_t              chi()                           const { return fChi;                   }
+      Int_t                 nMicrojets()                    const { return fNMicrojets;            }
 
       void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
       void                  SetCharge()                           { fCharge  = this->GetCharge();  }
@@ -110,6 +113,8 @@ namespace mithep
       void                  SetSVPt0(Double_t t)                  { fSVPt0 = t;                    }
       void                  SetTauDot(Double_t t)                 { fTauDot = t;                   }
       void                  SetZRatio(Double_t t)                 { fZRatio = t;                   }
+      void                  SetChi(Double_t t)                    { fChi = t;                      }
+      void                  SetNMicrojets(Int_t t)                { fNMicrojets = t;               }
 
       // Some structural tools
       void                  Mark(UInt_t i=1)                const;
@@ -138,16 +143,51 @@ namespace mithep
       Double32_t            fPull;         //Color pull
       Double32_t            fPullAngle;    //Angle between pulls of lead/subleading subjets:
                                            //either choose 2-prong or 3-prong subclustering!
+      Double32_t            fChi=-999;          // shower deconstruction probability
+      Int_t                 fNMicrojets;
+      //////////////////////////////////////////////
       // IVF variables
+      //////////////////////////////////////////////
       Double32_t            fSVEnergyRatio0;
       Double32_t            fSVEnergyRatio1;
       Double32_t            fSVMass0;
       Double32_t            fSVPt0;
       Double32_t            fTauDot;
       Double32_t            fZRatio;
+      // per track
+      float *track_length= new float[N_MAX_TRACKS];
+      float *track_dist= new float[N_MAX_TRACKS];
+      float *track_dxy= new float[N_MAX_TRACKS];
+      float *track_dz= new float[N_MAX_TRACKS];
+      float *track_IP2D = new float[N_MAX_TRACKS];
+      float *track_IP2Dsig = new float[N_MAX_TRACKS];
+      float *track_IP = new float[N_MAX_TRACKS];
+      float *track_IPsig = new float[N_MAX_TRACKS];
+      float *track_IP2Derr = new float[N_MAX_TRACKS];
+      float *track_IPerr = new float[N_MAX_TRACKS];
+      float *track_Prob = new float[N_MAX_TRACKS];
+      float *track_pt = new float[N_MAX_TRACKS];
+      float *track_eta = new float[N_MAX_TRACKS];
+      float *track_chi2 = new float[N_MAX_TRACKS];
+      float *track_charge = new float[N_MAX_TRACKS];
+      float *track_PVWeight = new float[N_MAX_TRACKS];
+      int *track_nHitAll = new int[N_MAX_TRACKS];
+      int *track_nHitPixel = new int[N_MAX_TRACKS];
+      int *track_nHitStrip = new int[N_MAX_TRACKS];
+      int *track_nHitTIB = new int[N_MAX_TRACKS];
+      int *track_nHitTID = new int[N_MAX_TRACKS];
+      int *track_nHitTOB = new int[N_MAX_TRACKS];
+      int *track_nHitTEC = new int[N_MAX_TRACKS];
+      int *track_nHitPXB = new int[N_MAX_TRACKS];
+      int *track_nHitPXF = new int[N_MAX_TRACKS];
+      int *track_isHitL1 = new int[N_MAX_TRACKS];
+      int *track_PV = new int[N_MAX_TRACKS];
+      int *track_fromSV = new int[N_MAX_TRACKS];
+      int *track_SV = new int[N_MAX_TRACKS];
+
 
       RefArray<XlSubJet>    fSubJets;      //sub jets in the jet
-      
+
 
     ClassDef(XlFatJet, 3) // XlFatJet class
   };

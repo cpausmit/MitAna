@@ -6,6 +6,38 @@ ClassImp(mithep::XlFatJet)
 
 namespace mithep {
 
+XlFatJet::~XlFatJet() {
+  delete[] track_length;
+  delete[] track_dist;
+  delete[] track_dxy;
+  delete[] track_dz;
+  delete[] track_IP2D;
+  delete[] track_IP2Dsig;
+  delete[] track_IP;
+  delete[] track_IPsig;
+  delete[] track_IP2Derr;
+  delete[] track_IPerr;
+  delete[] track_Prob;
+  delete[] track_pt;
+  delete[] track_eta;
+  delete[] track_chi2;
+  delete[] track_charge;
+  delete[] track_PVWeight;
+  delete[] track_nHitAll;
+  delete[] track_nHitPixel;
+  delete[] track_nHitStrip;
+  delete[] track_nHitTIB;
+  delete[] track_nHitTID;
+  delete[] track_nHitTOB;
+  delete[] track_nHitTEC;
+  delete[] track_nHitPXB;
+  delete[] track_nHitPXF;
+  delete[] track_isHitL1;
+  delete[] track_PV;
+  delete[] track_fromSV;
+  delete[] track_SV;
+}
+
 const XlSubJet* XlFatJet::SubJet(UInt_t i, XlSubJet::ESubJetType t) const {
     UInt_t NJets = fSubJets.Entries();
     UInt_t counter = 0;

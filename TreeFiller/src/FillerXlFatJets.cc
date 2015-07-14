@@ -7,8 +7,10 @@
 #include "MitCommon/DataFormats/interface/Vect4M.h"
 #include "MitCommon/DataFormats/interface/Vect3.h"
 #include "MitCommon/DataFormats/interface/Types.h"
+#include "MitCommon/Utils/interface/Utils.h"
 #include "MitCommon/MathTools/interface/MathUtils.h"
 #include "MitAna/PhysicsUtils/interface/CMSTopTagger.h"
+#include "MitAna/PhysicsUtils/interface/HEPTopTagger.h"
 #include "QjetsPlugin.h"
 #include "Qjets.h"
 
@@ -17,6 +19,9 @@
 #include "fastjet/contrib/Nsubjettiness.hh"
 #include "fastjet/contrib/NjettinessPlugin.hh"
 #include "fastjet/contrib/SoftDrop.hh"
+
+
+#define N_MAX_TRACKS=1024
 
 using namespace mithep;
 
@@ -61,7 +66,8 @@ FillerXlFatJets::FillerXlFatJets(const char *name, const char *title) :
   fTrimRad (0.2),
   fTrimPtFrac (0.05),
   fConeSize (0.6),
-  fCounter (0)
+  fCounter (0),
+  fDeconstruct(0)
 {
   // Constructor.
 }
@@ -84,6 +90,8 @@ FillerXlFatJets::~FillerXlFatJets()
   delete fAreaDefinition;
 
   delete fQGTagger;
+
+  delete fDeconstruct;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -115,6 +123,17 @@ void FillerXlFatJets::Process()
   // Setup pileup density for QG computation
   if (fQGTaggingActive)
     fQGTagger->SetRhoIso(fPileUpDen->At(0)->RhoRandomLowEta());
+
+  // set up shower deconstruction stuff
+  if (fTopTaggingActive) {
+    TString inputCard = Utils::GetEnv("CMSSW_BASE");
+    inputCard += TString::Format("/src/MitAna/SDAlgorithm/config/input_card_%i.dat",int(fR0*10));
+    AnalysisParameters param(inputCard.Data());
+    TopGluonModel *signal = new TopGluonModel(param);
+    BackgroundModel *background = new BackgroundModel(param);
+    ISRModel *isr = new ISRModel(param);
+    fDeconstruct = new Deconstruct(param, *signal, *background, *isr);
+  }
 
   // Loop over jets
   for (UInt_t i=0; i<fJets->GetEntries(); ++i) {
@@ -295,10 +314,43 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
   fastjet::PseudoJet iJet;
   fastjet::PseudoJet cmsTopJet;
   fastjet::CMSTopTagger* fCMSTopTagger = new fastjet::CMSTopTagger();
+  HEPTopTagger hepTopJet;
   if (fTopTaggingActive) {
       std::vector<fastjet::PseudoJet> lOutJets = sorted_by_pt(fjClustering->inclusive_jets(0.0));
       iJet = lOutJets[0];
       cmsTopJet = fCMSTopTagger->result(iJet);
+      hepTopJet = HEPTopTagger::HEPTopTagger(fjClustering,iJet);
+
+      // shower deconstruction
+      double microconesize;
+      if  (fMicrojetR0<0){
+        // From Tobias:
+        // 0..500   -> 0.3
+        // 500..700 -> 0.2
+        // 700..inf -> 0.
+        if (fj_it->pt() < 500)
+         	 microconesize=0.3;
+        else if (fj_it->pt() < 700)
+         	 microconesize=0.2;
+        else
+         	 microconesize=0.1;
+      } else {
+        microconesize = fMicrojetR0;
+      }
+      fastjet::JetDefinition reclustering(fastjet::JetAlgorithm::kt_algorithm, microconesize);
+      fastjet::ClusterSequence * cs_micro = new fastjet::ClusterSequence(fjParts, reclustering);
+      std::vector<fastjet::PseudoJet> microjets = fastjet::sorted_by_pt(cs_micro->inclusive_jets(10.));
+      fatJet->SetNMicrojets(microjets.size());
+      if (microjets.size()>9)
+        microjets.erase(microjets.begin()+9,microjets.end());
+      double Psignal = 0.0;
+      double Pbackground = 0.0;
+      try {
+        double chi = deconstruct->deconstruct(microjets, Psignal, Pbackground);
+        fatJet->SetChi(chi);
+      } catch(Deconstruction::Exception &e) {
+        std::cout << "Exception while running SD: " << e.what() << std::endl;
+      }
   }
 
   // ---- Fastjet is done ----
@@ -364,6 +416,8 @@ void FillerXlFatJets::FillXlFatJet(const PFJet *pPFJet)
       fjTopSubJets = fjJetTrimmed.associated_cluster_sequence()->exclusive_subjets(fjJetTrimmed,nSubJTrimmed);
     } else if (fSubJetBuilder == SubJetBuilder::kCMSTopTagger) {
       fjTopSubJets = cmsTopJet.pieces();
+    } else if (fSubJetBuilder == SubJetBuilder::kHEPTopTagger) {
+      fjTopSubJets = hepTopJet.top_subjets();
     } else if (fSubJetBuilder == SubJetBuilder::kSoftDrop) {
       int nSubJSD = std::min<unsigned int>(fjJetSoftDrop0.constituents().size(),3);
       fjTopSubJets = fjJetSoftDrop0.associated_cluster_sequence()->exclusive_subjets(fjJetSoftDrop0,nSubJSD);
@@ -465,7 +519,6 @@ void FillerXlFatJets::runBtagging(XlFatJet*fatJet) {
                             currentAxes[1].m());
 
   unsigned nJetTracks = jetTracks.size();
-  decayLength = new std::vector<float>
 
   int cont=0;
   ThreeVector flightDir_0, flightDir_1;
