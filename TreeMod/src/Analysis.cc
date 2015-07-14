@@ -97,10 +97,6 @@ Analysis::~Analysis()
   //delete fSelector;
   printf("delete Sup\n");
   delete fSuperMods;
-
-  fOutput = 0;   // owned by TAM
-
-  printf("delete Proo\n");
   delete fProof;
 }
 
