@@ -85,22 +85,12 @@ Analysis::~Analysis()
   if (fState == kInit || fState == kRun)
     Terminate();
 
-  printf("delete List\n");
   delete fList;
-  printf("delete Pkg\n");
   delete fPackages;
-  printf("delete Loa\n");
   delete fLoaders;
-  printf("delete DelLst\n");
   delete fDeleteList;
-  printf("delete Sel\n");
-  //delete fSelector;
-  printf("delete Sup\n");
+  delete fSelector;
   delete fSuperMods;
-
-  fOutput = 0;   // owned by TAM
-
-  printf("delete Proo\n");
   delete fProof;
 }
 

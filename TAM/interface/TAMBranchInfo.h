@@ -36,7 +36,7 @@ struct TAMBranchInfo : TNamed {
       BranchAddr_t                *fPtr; //pointer to the TAModule's 
                                          // pointer to the branch object
       BranchPtr_t(BranchAddr_t* ptr) : fPtr(ptr) {}
-      virtual ~BranchPtr_t()                     { (*fPtr) = 0; }
+      virtual ~BranchPtr_t() {}
       virtual const type_info& GetType() const = 0;
       virtual TClass* GetClass() const = 0;
    };

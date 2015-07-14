@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 # Need this wrapper since system default python is 2.6 while 2.7 is used in CMSSW
 
