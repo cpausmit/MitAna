@@ -32,7 +32,7 @@ if __name__ == '__main__':
         print 'Cannot specify file and dataset at the same time.'
         sys.exit(1)
 
-    if flatConfig:
+    if args.flatConfig:
         execfile(sequenceFile)
 
         import ROOT

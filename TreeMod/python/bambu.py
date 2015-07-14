@@ -18,7 +18,7 @@ class Module(Configurable, Node):
 
     def connect(self, nextNode):
         Node.connect(self, nextNode)
-        self._cppobj.Add(nextNode)
+        self._cppobj.Add(nextNode._cppobj)
 
 
 class _Generator(object):
@@ -164,7 +164,7 @@ class _Analysis(object):
         self._sequence.build()
 
         for mod in self._sequence.headNodes:
-            self._core.AddSuperModule(mod)
+            self._core.AddSuperModule(mod._cppobj)
 
         self._core.SetKeepHierarchy(self._keepHierarchy)
 

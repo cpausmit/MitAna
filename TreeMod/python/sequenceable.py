@@ -58,8 +58,8 @@ class Node(Sequenceable):
         self._core = obj
         self._name = name
         self.nextNodes = None
-        self.headNodes = [obj]
-        self.tailNodes = [obj]
+        self.headNodes = [self]
+        self.tailNodes = [self]
 
     def __iter__(self):
         return Node.Iterator(self)
@@ -123,7 +123,7 @@ class Chain(Sequenceable):
         # elem here can be a Node, Chain, or Bundle
         tail = None
         for elem in self._elems:
-            elem.build(elemlist)
+            elem.build(nodelist)
             if tail:
                 for node in elem.headNodes:
                     tail.connect(node)
