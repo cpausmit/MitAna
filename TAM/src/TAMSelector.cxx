@@ -1114,6 +1114,10 @@ void TAMSelector::SlaveTerminate()
    // have been processed. When running with PROOF SlaveTerminate() is called
    // on each slave server.
 
+   // All branch pointers are invalid at this point.
+   // Zero them out before modules do anything with them (including delete).
+   ZeroAllBranches();
+
    if (fAnalysisAborted) {
       return;
    } else {
