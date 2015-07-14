@@ -181,11 +181,10 @@ if os.path.isdir(taskDirName):
 else:
     newTask = True
 
-analysisCfgName = taskDirName + '/analysisCfg.py' # shipping the actual python script until module export works
+analysisCfgName = taskDirName + '/analysisCfg.py'
 envFileName = taskDirName + '/taskenv.sh'
 libPackName = cmsswbase + '.lib.tar.gz'
 incPackName = cmsswbase + '.inc.tar.gz'
-pyPackName = cmsswbase + '.python.tar.gz'
 binPackName = cmsswbase + '.MitAna-bin.tar.gz'
 
 if newTask:
@@ -202,45 +201,13 @@ if newTask:
         envFile.write('export SCRAM_ARCH="' + scramArch + '"\n')
         envFile.write('export CMSSW_RELEASE="' + release + '"\n')
 
-    ### TEMPORARY
-    # NOT COOL BUT NECESSARY UNTIL INTRA-PYTHON MODULE PACKING IS FIGURED OUT
-    shutil.copy(args.analysisCfg, analysisCfgName)
+    # define an ad-hoc function to confine namespace
+    def writeAnalysisConfig():
+        execfile(args.analysisCfg)
+        with open(analysisCfgName, 'w') as flatCfg:
+            flatCfg.write(analysis.dumpPython())
 
-    remakePyPack = not os.path.exists(pyPackName)
-
-    if os.path.exists(pyPackName):
-        packLastUpdate = os.path.getmtime(pyPackName)
-    else:
-        packLastUpdate = 0
-    
-    for package in os.listdir(cmsswbase + '/python'):
-        if not os.path.isdir(cmsswbase + '/python/' + package):
-            continue
-
-        for module in os.listdir(cmsswbase + '/python/' + package):
-            if not os.path.isdir(cmsswbase + '/python/' + package + '/' + module):
-                continue
-
-            for path in glob.glob(cmsswbase + '/python/' + package + '/' + module + '/*'):
-                if os.path.islink(path):
-                    path = os.readlink(path)
-
-                if os.path.getmtime(path) > packLastUpdate:
-                    remakePyPack = True
-                    break
-            else:
-                continue
-
-            break
-        else:
-            continue
-
-        break
-    
-    if remakePyPack:
-        print 'Creating python tarball.'
-        runSubproc('tar', 'chzf', pyPackName, '-C', cmsswbase, 'python')
-    ### TEMPORARY
+    writeAnalysisConfig()
   
     remakeLibPack = not os.path.exists(libPackName)
 
@@ -362,7 +329,6 @@ for (book, dataset), filesets in allFilesets.items():
         inputFilesList += ' ' + envFileName + ','
         inputFilesList += ' ' + libPackName + ','
         inputFilesList += ' ' + incPackName + ','
-        inputFilesList += ' ' + pyPackName + ','
         inputFilesList += ' ' + binPackName + ','
         inputFilesList += ' ' + catalogPackName
     else:

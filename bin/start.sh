@@ -22,9 +22,6 @@ env
 scram project CMSSW $CMSSW_RELEASE
 tar xzf *.lib.tar.gz -C $CMSSW_RELEASE
 tar xzf *.inc.tar.gz -C $CMSSW_RELEASE
-# TEMPORARY
-tar xzf *.python.tar.gz -C $CMSSW_RELEASE
-# TEMPORARY
 tar xzf *.MitAna-bin.tar.gz -C $CMSSW_RELEASE
 
 mkdir catalog
@@ -47,6 +44,6 @@ then
   JSONARG="--goodlumi $JSONLIST"
 fi
 
-echo "python analysis.py analysisCfg.py --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG"
+echo "./analysis.py analysisCfg.py --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG"
 echo ""
-python analysis.py analysisCfg.py --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG
+./analysis.py analysisCfg.py --flat --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG

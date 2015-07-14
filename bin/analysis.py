@@ -9,16 +9,16 @@ if __name__ == '__main__':
     import os
     
     argParser = ArgumentParser(description = 'Run BAMBU analysis')
-    argParser.add_argument('config', metavar = 'CONFIG')
-    argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/041')
-    argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset')
-    argParser.add_argument('--fileset', '-s', metavar = 'FILESET', dest = 'fileset', default = '0000')
-    argParser.add_argument('--file', '-f', metavar = 'INPUT', dest = 'inputFile')
-    argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFiles', nargs = '+')
-    argParser.add_argument('--output', '-o', metavar = 'FILENAME', dest = 'outputFile')
-    argParser.add_argument('--nentries', '-n', metavar = 'N', dest = 'nentries', type = int, default = -1)
-    argParser.add_argument('--cacher', '-c', action = 'store_true', dest = 'useCacher')
-    argParser.add_argument('--hierarchy', '-E', action = 'store_true', dest = 'hierarchy')
+    argParser.add_argument('config', metavar = 'CONFIG', help = 'Analysis macro defining the module sequence.')
+    argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/041', help = 'Input book, e.g. t2mit/filefi/041.')
+    argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset', help = 'Input dataset.')
+    argParser.add_argument('--fileset', '-s', metavar = 'FILESET', dest = 'fileset', default = '0000', help = 'Input fileset.')
+    argParser.add_argument('--file', '-f', metavar = 'INPUT', dest = 'inputFile', help = 'Input file name when running on a single file.')
+    argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFiles', nargs = '+', help = 'Input good lumi JSON file.')
+    argParser.add_argument('--output', '-o', metavar = 'FILENAME', dest = 'outputFile', help = 'Output file name.')
+    argParser.add_argument('--nentries', '-n', metavar = 'N', dest = 'nentries', type = int, default = -1, help = 'Number of entries to process.')
+    argParser.add_argument('--hierarchy', '-E', action = 'store_true', dest = 'hierarchy', help = 'Create hierarchical output.')
+    argParser.add_argument('--flat', '-t', action = 'store_true', dest = 'flatConfig', help = 'Use "flat python" (no custom imports) analysis macro.')
     
     args = argParser.parse_args()
     sys.argv = []
@@ -31,13 +31,28 @@ if __name__ == '__main__':
     if args.inputFile and args.dataset:
         print 'Cannot specify file and dataset at the same time.'
         sys.exit(1)
-    
-    setSequence(args.config)
 
-    from MitAna.TreeMod.bambu import mithep, analysis
+    if flatConfig:
+        execfile(sequenceFile)
+
+        import ROOT
+        mithep = ROOT.mithep
+    else:
+        setSequence(args.config)
+    
+        from MitAna.TreeMod.bambu import mithep, analysis
+
+        # if good run / lumi list is given, prepend the filter module
+        if args.goodlumiFiles:
+            from MitAna.PhysicsMod.runlumisel import goodLumiFilter
+            filterMod = goodLumiFilter(args.goodlumiFiles)
+            analysis._sequence = filterMod * analysis._sequence
+
+        analysis.buildSequence()
 
     # set up input (dataset / fileset or individual file)
     if args.dataset:
+        ROOT.gSystem.Load('libMitAnaCatalog.so')
         try:
             catalog = mithep.Catalog(os.environ['MIT_CATALOG'])
         except KeyError:
@@ -51,26 +66,15 @@ if __name__ == '__main__':
     elif args.inputFile:
         analysis.AddFile(args.inputFile)
 
-    # if good run / lumi list is given, prepend the filter module
-    if args.goodlumiFiles:
-        from MitAna.PhysicsMod.runlumisel import goodLumiFilter
-        filterMod = goodLumiFilter(args.goodlumiFiles)
-        analysis._sequence = filterMod * analysis._sequence
-    
     if args.outputFile:
         analysis.SetOutputName(args.outputFile)
     
     if args.nentries >= 0:
         analysis.SetProcessNEvents(args.nentries)
     
-    if args.useCacher:
-        analysis.SetUseCacher(1)
-    
     if args.hierarchy:
         analysis.SetKeepHierarchy(True)
 
-    analysis.buildSequence()
-   
     print '\n+++++ ANALYSIS FLOW +++++\n'
     analysis.PrintModuleTree()
     print '\n+++++++++++++++++++++++++\n'

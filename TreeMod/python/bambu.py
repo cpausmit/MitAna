@@ -16,6 +16,10 @@ class Module(Configurable, Node):
         Configurable.__init__(self, cppcls, cppclsName, *args)
         Node.__init__(self, self._cppobj, self._cppobj.GetName())
 
+    def connect(self, nextNode):
+        Node.connect(self, nextNode)
+        self._cppobj.Add(nextNode)
+
 
 class _Generator(object):
     """
@@ -72,6 +76,7 @@ class _mithep(object):
 
     def __init__(self):
         self._core = ROOT.mithep
+        self.loadedLibs = ['libMitAnaTreeMod.so']
 
     def __getattr__(self, name):
         try:
@@ -79,8 +84,6 @@ class _mithep(object):
         except:
             # search in the standard library directory and find a possible match
             try:
-                loaded = map(os.path.basename, ROOT.gSystem.GetLibraries('libMit', '', False).split())
-    
                 mangled = '_ZN6mithep'
                 if '<' in name:
                     # templated class - can only deal with simple templates
@@ -97,7 +100,7 @@ class _mithep(object):
                 libdirs = os.environ['LD_LIBRARY_PATH'].split(':')
                 for libdir in libdirs:
                     for libname in os.listdir(libdir):
-                        if not libname.startswith('libMit') or libname in loaded:
+                        if not libname.startswith('libMit') or libname in self.loadedLibs:
                             continue
     
                         with open(libdir + '/' + libname, 'rb') as lib:
@@ -108,7 +111,7 @@ class _mithep(object):
                       
                             print '(mithep): Auto-loading library', libname
                             ROOT.gSystem.Load(libname)
-                            loaded.append(libname)
+                            self.loadedLibs.append(libname)
                             try:
                                 cls = getattr(self._core, name)
                                 break
@@ -131,8 +134,9 @@ class _mithep(object):
 
         return gen
 
-    def loadlib(self, package, module):
-        ROOT.gSystem.Load('lib' + package + module + '.so')
+    def loadlib(self, libName):
+        ROOT.gSystem.Load(libName)
+        self.loadedLibs.append(libName)
 
 
 class _Analysis(object):
@@ -142,29 +146,40 @@ class _Analysis(object):
 
     def __init__(self):
         self._core = ROOT.mithep.Analysis()
-        self._core.SetKeepHierarchy(False)
         self._sequence = None
+        self._keepHierarchy = False
 
     def __getattr__(self, name):
         attr = getattr(self._core, name)
         setattr(self, name, attr)
         return attr
 
+    def SetKeepHierarchy(self, keep):
+        self._keepHierarchy = keep
+
     def setSequence(self, seq):
         self._sequence = seq
 
     def buildSequence(self):
-        headNodes = self._sequence.build()
+        self._sequence.build()
 
-        for mod in headNodes:
+        for mod in self._sequence.headNodes:
             self._core.AddSuperModule(mod)
+
+        self._core.SetKeepHierarchy(self._keepHierarchy)
 
     def dumpPython(self):
         iMod = 0
         auxObjects = {}
 
-        code = ''
+        code = 'import ROOT\n'
+        code += 'ROOT.gROOT.SetBatch(True)\n'
+        for libName in mithep.loadedLibs:
+            code += 'ROOT.gSystem.Load(' + libName + ')\n'
 
+        code += '\n'
+
+        modNames = {}
         for mod in self._sequence:
             for methodName, args in mod.config:
                 for arg in args:
@@ -178,8 +193,23 @@ class _Analysis(object):
                     auxObjects[arg] = auxName
 
             modName = 'mod' + str(iMod)
+            modNames[mod] = modName
             code += mod.dumpPython(modName, auxObjects)
             iMod += 1
+
+        if not self._sequence.isBuilt:
+            self._sequence.build()
+
+        for mod in self._sequence:
+            for nextNode in mod.nextNodes:
+                code += modNames[mod] + '.Add(' + modNames[nextNode] + ')\n'
+
+        code += '\n'
+
+        code += 'analysis = mithep.Analysis()\n'
+        code += 'analysis.SetKeepHierarchy(' + str(self._keepHierarchy) + ')\n'
+        for mod in self._sequence.headNodes:
+            code += 'analysis.AddSuperModule(' + modNames[mod] + ')\n'
 
         return code
 

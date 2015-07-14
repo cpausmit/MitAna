@@ -7,11 +7,13 @@ class Sequenceable(object):
     Three classes derive from Sequenceable: Node, Chain (list of
     consecutive modules), and Bundle (list of parallel Chains). At build(),
     returns a pair (list of chain heads, list of chain tails). The lists are
-    single element for Module and Chain.
+    single element for Node and Chain.
     """
 
     def __init__(self):
-        pass
+        self.isBuilt = False
+        self.headNodes = []
+        self.tailNodes = []
 
     def __add__(self, next):
         """
@@ -25,13 +27,17 @@ class Sequenceable(object):
         """
         return Chain([self, next])
 
-    def build(self, modlist = []):
+    def build(self, nodelist = []):
+        if self.isBuilt:
+            print 'Cannot build a sequence twice.'
+            sys.exit(1)
+
         return ([], [])
 
 
 class Node(Sequenceable):
     """
-    PyROOT wrapper for mithep TAModules
+    Node with links to next nodes (constructed at Chain.build())
     """
 
     class Iterator(object):
@@ -48,19 +54,31 @@ class Node(Sequenceable):
 
 
     def __init__(self, obj, name):
+        Sequenceable.__init__(self)
         self._core = obj
         self._name = name
+        self.nextNodes = None
+        self.headNodes = [obj]
+        self.tailNodes = [obj]
 
     def __iter__(self):
         return Node.Iterator(self)
 
-    def build(self, modlist = []):
-        if self._core in modlist:
+    def build(self, nodelist = []):
+        if self.isBuilt:
+            print 'Cannot build a sequence twice.'
+            sys.exit(1)
+
+        if self._core in nodelist:
             print 'Module ' + self._name + ' used multiple times in the analysis sequence'
             sys.exit(1)
 
-        modlist.append(self._core)
-        return ([self._core], [self._core])
+        self.nextNodes = []
+
+        nodelist.append(self._core)
+
+    def connect(self, nextNode):
+        self.nextNodes.append(nextNode)
 
 
 class Chain(Sequenceable):
@@ -70,7 +88,7 @@ class Chain(Sequenceable):
 
     class Iterator(object):
         def __init__(self, chain):
-            self._nodes = chain._nodes
+            self._elems = chain._elems
             self._idx = -1
             self._itr = None
             
@@ -83,35 +101,42 @@ class Chain(Sequenceable):
 
             self._idx += 1
 
-            if self._idx == len(self._nodes):
+            if self._idx == len(self._elems):
                 raise StopIteration
 
-            self._itr = iter(self._nodes[self._idx])
+            self._itr = iter(self._elems[self._idx])
             return self.next()
 
     
-    def __init__(self, nodes):
-        self._nodes = list(nodes)
+    def __init__(self, elems):
+        Sequenceable.__init__(self)
+        self._elems = list(elems)
 
     def __iter__(self):
         return Chain.Iterator(self)
 
-    def build(self, modlist = []):
-        head = []
-        tail = []
-        for node in self._nodes:
-            hm, tm = node.build(modlist)
-            if len(tail) != 0:
-                for mod in hm:
-                    tail[-1].Add(mod)
+    def build(self, nodelist = []):
+        if self.isBuilt:
+            print 'Cannot build a sequence twice.'
+            sys.exit(1)
 
-            tail = list(tm)
+        # elem here can be a Node, Chain, or Bundle
+        tail = None
+        for elem in self._elems:
+            elem.build(elemlist)
+            if tail:
+                for node in elem.headNodes:
+                    tail.connect(node)
 
-            if len(head) == 0:
-                head = list(hm)
+            # There should be only one tail node for each
+            # element unless it is the last one. Taking the
+            # last here but can be first too
+            tail = elem.tailNodes[-1]
 
-        return (head, tail)
+            if len(self.headNodes) == 0:
+                self.headNodes = list(elem.headNodes)
 
+        self.tailNodes = [tail]
 
 class Bundle(Sequenceable):
     """
@@ -141,6 +166,7 @@ class Bundle(Sequenceable):
 
 
     def __init__(self, chains):
+        Sequenceable.__init__(self)
         self._chains = list(chains)
 
     def __mul__(self, next):
@@ -150,12 +176,12 @@ class Bundle(Sequenceable):
     def __iter__(self):
         return Bundle.Iterator(self)
 
-    def build(self, modlist = []):
-        head = []
-        tail = []
-        for chain in self._chains:
-            hm, tm = chain.build(modlist)
-            head += hm
-            tail += tm
+    def build(self, nodelist = []):
+        if self.isBuilt:
+            print 'Cannot build a sequence twice.'
+            sys.exit(1)
 
-        return (head, tail)
+        for chain in self._chains:
+            chain.build(nodelist)
+            self.headNodes += chain.headNodes
+            self.tailNodes += chain.tailNodes
