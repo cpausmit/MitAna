@@ -10,6 +10,24 @@ import shutil
 import socket
 from argparse import ArgumentParser
 
+def runSubproc(*args, **kwargs):
+    proc = subprocess.Popen(list(args), stdout = subprocess.PIPE, stderr = subprocess.PIPE, stdin = subprocess.PIPE)
+
+    if 'stdin' in kwargs and type(kwargs['stdin']) is str:
+        stdin = kwargs['stdin']
+    else:
+        stdin = None
+            
+    out, err = proc.communicate(stdin)
+
+    if out.strip():
+        print out
+
+    if err.strip():
+        sys.stderr.write(err)
+        sys.stderr.flush()
+
+
 if 'CMSSW_BASE' not in os.environ:
     print 'CMSSW_BASE not set.'
     sys.exit(1)
@@ -45,23 +63,6 @@ if args.configFileName and not os.path.exists(args.configFileName):
 if args.stageoutDirName and not os.path.isdir(args.stageoutDirName):
     print 'Cannot write to stageout directory ' + args.stageoutDirName
     sys.exit(1)
-
-def runSubproc(*args, **kwargs):
-    proc = subprocess.Popen(list(args), stdout = subprocess.PIPE, stderr = subprocess.PIPE, stdin = subprocess.PIPE)
-
-    if 'stdin' in kwargs and type(kwargs['stdin']) is str:
-        stdin = kwargs['stdin']
-    else:
-        stdin = None
-            
-    out, err = proc.communicate(stdin)
-
-    if out.strip():
-        print out
-
-    if err.strip():
-        sys.stderr.write(err)
-        sys.stderr.flush()
 
 try:
     catalogDirName = os.environ['MIT_CATALOG']
@@ -325,13 +326,15 @@ with open(args.condorTemplateName) as condorTemplateFile:
             condorTemplate[key.strip().lower()] = value.strip()
 
 # loop over datasets to submit
-
 for (book, dataset), filesets in allFilesets.items():
+    condorConfig = {}
+    condorConfig.update(condorTemplate)
+
     jobDirName = taskDirName + '/' + book + '/' + dataset
     jobOutDirName = outDirName + '/' + book + '/' + dataset
     jobLogDirName = logDirName + '/' + book + '/' + dataset
 
-    condorTemplate['initialdir'] = jobOutDirName
+    condorConfig['initialdir'] = jobOutDirName
 
     if not os.path.exists(jobDirName):
         os.makedirs(jobDirName)
@@ -351,7 +354,7 @@ for (book, dataset), filesets in allFilesets.items():
     if not os.path.exists(catalogPackName):
         runSubproc('tar', 'czf', catalogPackName, '-C', catalogDirName, book + '/' + dataset)
 
-    if 'transfer_input_files' not in condorTemplate:
+    if 'transfer_input_files' not in condorConfig:
         inputFilesList = cmsswbase + '/src/MitAna/bin/analysis.py,'
         if x509File:
             inputFilesList += ' ' + x509File + ','
@@ -363,14 +366,39 @@ for (book, dataset), filesets in allFilesets.items():
         inputFilesList += ' ' + binPackName + ','
         inputFilesList += ' ' + catalogPackName
     else:
-        inputFilesList = condorTemplate['transfer_input_files']
+        inputFilesList = condorConfig['transfer_input_files']
 
-    # loop over filesets and do actual submission   
+    if 'arguments' not in condorConfig:
+        arguments = book + ' ' + dataset + ' {fileset}'
+        if (book, dataset) in jsonLists:
+            arguments += ' ' + ' '.join(jsonLists[(book, dataset)])
+
+        condorConfig['arguments'] = '"' + arguments + '"'
+
+    if 'transfer_output_files' not in condorConfig:
+        condorConfig['transfer_output_files'] = '{fileset}.root'
+
+    if args.stageoutDirName:
+        condorConfig['transfer_output_remaps'] = '"' + outputName + ' = ' + stageoutDest + '/{fileset}.root'
+
+    condorConfig['output'] = jobLogDirName + '/{fileset}.out'
+    condorConfig['error'] = jobLogDirName + '/{fileset}.err'
+    condorConfig['log'] = jobLogDirName + '/{fileset}.log'
+    condorConfig['transfer_input_files'] = inputFilesList
+
+    # write the condor JDL template for record
+    with open(jobDirName + '/condor.jdl', 'w') as jdlFile:
+        for key, value in condorConfig.items():
+            jdlFile.write(key + ' = ' + value + '\n')
+
+        jdlFile.write('queue\n')
+
+    # loop over filesets and do actual submission
     for fileset in filesets:
         if (book, dataset, fileset) in running:
             print 'Running: ', book, dataset, fileset
             continue
-    
+
         outputName = fileset + '.root'
    
         if args.stageoutDirName:
@@ -379,32 +407,11 @@ for (book, dataset), filesets in allFilesets.items():
             outputPath = jobOutDirName + '/' + outputName
     
         if os.path.exists(outputPath) and os.stat(outputPath).st_size != 0:
-            print 'Output exists: ', book, dataset, fileset
+            print 'Output exists:', book, dataset, fileset
             continue
 
-        print book, dataset, fileset
+        print 'Submitting:', book, dataset, fileset
 
-        condorConfig = {}
-        condorConfig.update(condorTemplate)
-    
-        if 'arguments' not in condorConfig:
-            arguments = book + ' ' + dataset + ' ' + fileset
-            if (book, dataset) in jsonLists:
-                arguments += ' ' + ' '.join(jsonLists[(book, dataset)])
-
-            condorConfig['arguments'] = '"' + arguments + '"'
-    
-        if 'transfer_output_files' not in condorConfig:
-            condorConfig['transfer_output_files'] = outputName
-    
-        if args.stageoutDirName:
-            condorConfig['transfer_output_remaps'] = '"' + outputName + ' = ' + outputPath + '"'
-    
-        condorConfig['output'] = jobLogDirName + '/' + fileset + '.out'
-        condorConfig['error'] = jobLogDirName + '/' + fileset + '.err'
-        condorConfig['log'] = jobLogDirName + '/' + fileset + '.log'
-        condorConfig['transfer_input_files'] = inputFilesList
-    
-        jdlCommand = '\n'.join([key + ' = ' + value for key, value in condorConfig.items()]) + '\nqueue\n'
+        jdlCommand = '\n'.join([key + ' = ' + value.format(fileset = fileset) for key, value in condorConfig.items()]) + '\nqueue\n'
 
         runSubproc('condor_submit', stdin = jdlCommand)
