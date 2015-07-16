@@ -1,0 +1,174 @@
+//--------------------------------------------------------------------------------------------------
+// $Id: PFJet.h,v 1.7 2012/03/28 12:15:34 paus Exp $
+//
+// FatJet
+//
+// This class holds information about reconstructed jets and their substructure
+//
+// Authors: L.DiMatteo, S.Narayanan
+//--------------------------------------------------------------------------------------------------
+
+#ifndef MITANA_DATATREE_FATJET_H
+#define MITANA_DATATREE_FATJET_H
+
+#include "MitAna/DataTree/interface/PFJet.h"
+#include "MitAna/DataCont/interface/RefArray.h"
+#include "MitAna/DataTree/interface/Types.h"
+#include "MitCommon/DataFormats/interface/Vect4M.h"
+#include "MitAna/DataTree/interface/XlSubJet.h"
+
+using namespace std;
+
+namespace mithep
+{
+  class FatJet : public PFJet
+  {
+    public:
+      struct TrackData {
+        double length;             // per track
+        double dist;
+        double dxy;
+        double dz;
+        double IP2D ;
+        double IP2Dsig ;
+        double IP ;
+        double IPsig ;
+        double IP2Derr ;
+        double IPerr ;
+        double prob ;
+        double pt ;
+        double eta ;
+        double chi2 ;
+        double charge ;
+        double PVWeight ;
+        double SVWeight ;
+        int nHitAll ;
+        int nHitPixel ;
+        int nHitStrip ;
+        int nHitTIB ;
+        int nHitTID ;
+        int nHitTOB ;
+        int nHitTEC ;
+        int nHitPXB ;
+        int nHitPXF ;
+        int isHitL1 ;
+        int PV ;
+        int fromSV ;
+        int SV ;
+      }
+
+      struct SVData {
+        double flight;                //per SV
+        double flightErr;
+        double deltaRJet;
+        double deltaRSumJet;
+        double deltaRSumDir;
+        double flight2D;
+        double flight2DErr;
+        double totCharge;
+        double vtxDistJetAxis;
+        int nTrk;
+        double mass;
+        double energyRatio;
+        double pt;
+        double eta;
+        double phi;
+        double dirX;
+        double dirY;
+        double dirZ;
+      }
+
+      FatJet() :
+                fCharge (0),
+                fTau1(0), fTau2(0), fTau3(0),
+                fQJetVol(0),
+                fTauDot(-1), fZRatio(-1) {}
+      FatJet(const PFJet & p) :
+                PFJet(p),
+                fCharge (0),
+                fTau1(0), fTau2(0), fTau3(0),
+                fQJetVol(0),
+                fTauDot(-1), fZRatio(-1) {}
+
+      ~FatJet();
+      // const XlSubJet       *SubJet(UInt_t i)                const { return fSubJets.At(i);         }
+      // const XlSubJet       *SubJet(UInt_t i, XlSubJet::ESubJetType t) const;
+      Bool_t                HasSubJet(const XlSubJet *p, XlSubJet::ESubJetType t)    const;
+      Jet                  *MakeCopy()                      const { return new FatJet(*this);    }
+      Double_t              Charge()                        const { return fCharge;                }
+      Double_t              Tau1()                          const { return fTau1;                  }
+      Double_t              Tau2()                          const { return fTau2;                  }
+      Double_t              Tau3()                          const { return fTau3;                  }
+      Double_t              QJetVol()                       const { return fQJetVol;               }
+      Double_t              tauDot()                        const { return fTauDot;                }
+      Double_t              zRatio()                        const { return fZRatio;                }
+      vector<TrackData*>    TrackData()                     const { return fTracks;                }
+      vector<SVData*>       SVData()                        const { return fSVs;                   }
+      const RefArray<XlSubJet>*    GetSubjets(XlSubJet::ESubJetType t) const;
+
+      // void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
+      void                  SetCharge()                           { fCharge  = this->GetCharge();  }
+      void                  SetTau1(Double_t t)                   { fTau1        = t;              }
+      void                  SetTau2(Double_t t)                   { fTau2        = t;              }
+      void                  SetTau3(Double_t t)                   { fTau3        = t;              }
+      void                  SetQJetVol(Double_t t)                { fQJetVol     = t;              }
+      void                  SetTauDot(Double_t t)                 { fTauDot = t;                   }
+      void                  SetZRatio(Double_t t)                 { fZRatio = t;                   }
+      void                  SetChi(Double_t t)                    { fChi = t;                      }
+      void                  SetNMicrojets(Int_t t)                { fNMicrojets = t;               }
+      void                  AddTrackData(TrackData *t)            { fTrackData.push_back(t);       }
+      void                  AddSVData(SVData *s)                  { fSVData.push_back(s);          }
+      void                  AddSubjet(const XlSubJet * sj; XlSubJet::ESubJetType t);
+      void                  AddSubjet(const XlSubJet * sj);
+      void                  SetPrunedP(Vect4M p)                 { fPrunedP = p;                  }
+      void                  SetTrimmedP(Vect4M p)                { fTrimmedP = p;                  }
+      // Some structural tools
+      void                  Mark(UInt_t i=1)                const;
+
+    protected:
+      Double32_t            GetCharge()                     const;
+
+      Double32_t            fCharge;       //Pt-weighted jet charge
+      Double32_t            fTau1;         //1-subjettiness
+      Double32_t            fTau2;         //2-subjettiness
+      Double32_t            fTau3;         //3-subjettiness
+      Double32_t            fQJetVol;      //QJets volatility
+      Double32_t            fChi=-999;          // shower deconstruction probability
+      Int_t                 fNMicrojets;
+      Vect4M            fPrunedP;
+      Vect4M            fTrimmedP;
+
+      map<XlSubJet::ESubJetType,RefArray<XlSubJet>*>    fSubJets;      //sub jets in the jet
+
+      // IVF variables
+      Double32_t            fTauDot;
+      Double32_t            fZRatio;
+      vector<TrackData*> fTracks;
+      vector<SVData*> fSVs;
+
+    ClassDef(FatJet, 0) // FatJet class
+  };
+}
+
+//--------------------------------------------------------------------------------------------------
+inline void mithep::FatJet::Mark(UInt_t ib) const
+{
+  // mark myself
+  mithep::DataObject::Mark(ib);
+  // mark my dependencies if they are there
+  fSubJets.Mark(ib);
+}
+
+//--------------------------------------------------------------------------------------------------
+inline Double32_t mithep::FatJet::GetCharge() const
+{
+  // Return the sum of constituents PFCandidates weighted by their pt
+
+  Double_t charge = 0;
+  for (UInt_t i=0; i<NPFCands(); ++i)
+    charge += PFCand(i)->Charge()*PFCand(i)->Pt();
+
+  return charge/this->Pt();
+}
+
+#endif

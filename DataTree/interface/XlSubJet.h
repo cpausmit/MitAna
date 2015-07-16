@@ -10,30 +10,33 @@
 
 #ifndef MITANA_DATATREE_XLSUBJET_H
 #define MITANA_DATATREE_XLSUBJET_H
- 
+
 #include "MitAna/DataTree/interface/Jet.h"
 #include "MitAna/DataTree/interface/Types.h"
 #include "MitCommon/DataFormats/interface/Vect3.h"
 
-namespace mithep 
+namespace mithep
 {
   class XlSubJet : public Jet
   {
     public:
       enum ESubJetType {
-        eX = 0,      //unidentified
-        eV,          //vector boson subjet
-        eTop         //top subjet
+        kSoftDrop,
+        kPruned,
+        kTrimmed,
+        kCMSTT,
+        kHEPTT,
+        kNjettiness
       };
 
 
-      XlSubJet() : 
-                fBTag(0), 
+      XlSubJet() :
+                fBTag(0),
                 fQGTag(0), fQGPtD (0), fQGAxis1 (0), fQGAxis2 (0), fQGMult (0),
                 fSubJetType(eX) {}
-      XlSubJet(const Jet & p) : 
+      XlSubJet(const Jet & p) :
                 Jet(p),
-                fBTag(0), 
+                fBTag(0),
                 fQGTag(0), fQGPtD (0), fQGAxis1 (0), fQGAxis2 (0), fQGMult (0),
                 fSubJetType(eX) {}
 
@@ -44,14 +47,14 @@ namespace mithep
       Double_t              QGAxis1()                       const { return fQGAxis1;               }
       Double_t              QGAxis2()                       const { return fQGAxis2;               }
       Double_t              QGMult()                        const { return fQGMult;                }
-      ESubJetType           SubJetType()                    const { return fSubJetType;            } 
+      ESubJetType           SubJetType()                    const { return fSubJetType;            }
       void                  SetBTag(Double_t d)                   { fBTag       = d;               }
       void                  SetQGTag(Double_t d)                  { fQGTag      = d;               }
       void                  SetQGPtD(Double_t d)                  { fQGPtD      = d;               }
       void                  SetQGAxis1(Double_t d)                { fQGAxis1    = d;               }
       void                  SetQGAxis2(Double_t d)                { fQGAxis2    = d;               }
       void                  SetQGMult(Double_t d)                 { fQGMult     = d;               }
-      void                  SetSubJetType(ESubJetType t)          { fSubJetType = t;               } 
+      void                  SetSubJetType(ESubJetType t)          { fSubJetType = t;               }
 
       // Some structural tools
       void                  Mark(UInt_t i=1)                const;
@@ -65,7 +68,7 @@ namespace mithep
       Double32_t            fQGAxis2;    //QG tagging Axis2
       Double32_t            fQGMult;     //QG tagging Multiplicity
       ESubJetType           fSubJetType; //subjet type
-      
+
     ClassDef(XlSubJet, 2) // XlFatJet class
   };
 }

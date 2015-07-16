@@ -38,6 +38,13 @@ XlFatJet::~XlFatJet() {
   delete[] track_SV;
 }
 
+XlFatJet::~XlFatJet() {
+  for (TrackData *t : fTracks)
+    delete t;
+  for (SVData *s : fSVs)
+    delete s;
+}
+
 const XlSubJet* XlFatJet::SubJet(UInt_t i, XlSubJet::ESubJetType t) const {
     UInt_t NJets = fSubJets.Entries();
     UInt_t counter = 0;

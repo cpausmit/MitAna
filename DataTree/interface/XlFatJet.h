@@ -22,6 +22,60 @@ namespace mithep
   class XlFatJet : public PFJet
   {
     public:
+      struct TrackData {
+        double length;             // per track
+        double dist;
+        double dxy;
+        double dz;
+        double IP2D ;
+        double IP2Dsig ;
+        double IP ;
+        double IPsig ;
+        double IP2Derr ;
+        double IPerr ;
+        double prob ;
+        double pt ;
+        double eta ;
+        double chi2 ;
+        double charge ;
+        double PVWeight ;
+        double SVWeight ;
+        int nHitAll ;
+        int nHitPixel ;
+        int nHitStrip ;
+        int nHitTIB ;
+        int nHitTID ;
+        int nHitTOB ;
+        int nHitTEC ;
+        int nHitPXB ;
+        int nHitPXF ;
+        int isHitL1 ;
+        int PV ;
+        int fromSV ;
+        int SV ;
+      }
+
+      struct SVData {
+        double flight;                //per SV
+        double flightErr;
+        double deltaRJet;
+        double deltaRSumJet;
+        double deltaRSumDir;
+        double flight2D;
+        double flight2DErr;
+        double totCharge;
+        double vtxDistJetAxis;
+        int nTrk;
+        double mass;
+        double energyRatio;
+        double pt;
+        double eta;
+        double phi;
+        double dirX;
+        double dirY;
+        double dirZ;
+      }
+
       XlFatJet() :
                 fCharge (0),
                 fQGTag(0),
@@ -31,8 +85,6 @@ namespace mithep
                 fMassSDb0(0), fMassSDb1(0), fMassSDb2(0), fMassSDbm1(0),
                 fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),
                 fPull(0), fPullAngle(0),
-                fSVEnergyRatio0(-1), fSVEnergyRatio1(-1),
-                fSVMass0(-1), fSVPt0(-1),
                 fTauDot(-1), fZRatio(-1) {}
       XlFatJet(const PFJet & p) :
                 PFJet(p),
@@ -44,8 +96,6 @@ namespace mithep
                 fMassSDb0(0), fMassSDb1(0), fMassSDb2(0), fMassSDbm1(0),
                 fMassPruned(0), fMassFiltered(0), fMassTrimmed(0),
                 fPull(0), fPullAngle(0),
-                fSVEnergyRatio0(-1), fSVEnergyRatio1(-1),
-                fSVMass0(-1), fSVPt0(-1),
                 fTauDot(-1), fZRatio(-1) {}
 
       ~XlFatJet();
@@ -77,10 +127,6 @@ namespace mithep
       Double_t              MassTrimmed()                   const { return fMassTrimmed;           }
       Double_t              Pull()                          const { return fPull;                  }
       Double_t              PullAngle()                     const { return fPullAngle;             }
-      Double_t              SVEnergyRatio0()                const { return fSVEnergyRatio0;        }
-      Double_t              SVEnergyRatio1()                const { return fSVEnergyRatio1;        }
-      Double_t              SVMass0()                       const { return fSVMass0;               }
-      Double_t              SVPt0()                         const { return fSVPt0;                 }
       Double_t              tauDot()                        const { return fTauDot;                }
       Double_t              zRatio()                        const { return fZRatio;                }
       Double_t              chi()                           const { return fChi;                   }
@@ -107,10 +153,6 @@ namespace mithep
       void                  SetMassTrimmed(Double_t t)            { fMassTrimmed = t;              }
       void                  SetPull(Double_t t)                   { fPull = t;                     }
       void                  SetPullAngle(Double_t t)              { fPullAngle = t;                }
-      void                  SetSVEnergyRatio0(Double_t t)         { fSVEnergyRatio0 = t;           }
-      void                  SetSVEnergyRatio1(Double_t t)         { fSVEnergyRatio1 = t;           }
-      void                  SetSVMass0(Double_t t)                { fSVMass0 = t;                  }
-      void                  SetSVPt0(Double_t t)                  { fSVPt0 = t;                    }
       void                  SetTauDot(Double_t t)                 { fTauDot = t;                   }
       void                  SetZRatio(Double_t t)                 { fZRatio = t;                   }
       void                  SetChi(Double_t t)                    { fChi = t;                      }
@@ -145,51 +187,17 @@ namespace mithep
                                            //either choose 2-prong or 3-prong subclustering!
       Double32_t            fChi=-999;          // shower deconstruction probability
       Int_t                 fNMicrojets;
+      RefArray<XlSubJet>    fSubJets;      //sub jets in the jet
+
       //////////////////////////////////////////////
       // IVF variables
       //////////////////////////////////////////////
-      Double32_t            fSVEnergyRatio0;
-      Double32_t            fSVEnergyRatio1;
-      Double32_t            fSVMass0;
-      Double32_t            fSVPt0;
       Double32_t            fTauDot;
       Double32_t            fZRatio;
-      // per track
-      float *track_length= new float[N_MAX_TRACKS];
-      float *track_dist= new float[N_MAX_TRACKS];
-      float *track_dxy= new float[N_MAX_TRACKS];
-      float *track_dz= new float[N_MAX_TRACKS];
-      float *track_IP2D = new float[N_MAX_TRACKS];
-      float *track_IP2Dsig = new float[N_MAX_TRACKS];
-      float *track_IP = new float[N_MAX_TRACKS];
-      float *track_IPsig = new float[N_MAX_TRACKS];
-      float *track_IP2Derr = new float[N_MAX_TRACKS];
-      float *track_IPerr = new float[N_MAX_TRACKS];
-      float *track_Prob = new float[N_MAX_TRACKS];
-      float *track_pt = new float[N_MAX_TRACKS];
-      float *track_eta = new float[N_MAX_TRACKS];
-      float *track_chi2 = new float[N_MAX_TRACKS];
-      float *track_charge = new float[N_MAX_TRACKS];
-      float *track_PVWeight = new float[N_MAX_TRACKS];
-      int *track_nHitAll = new int[N_MAX_TRACKS];
-      int *track_nHitPixel = new int[N_MAX_TRACKS];
-      int *track_nHitStrip = new int[N_MAX_TRACKS];
-      int *track_nHitTIB = new int[N_MAX_TRACKS];
-      int *track_nHitTID = new int[N_MAX_TRACKS];
-      int *track_nHitTOB = new int[N_MAX_TRACKS];
-      int *track_nHitTEC = new int[N_MAX_TRACKS];
-      int *track_nHitPXB = new int[N_MAX_TRACKS];
-      int *track_nHitPXF = new int[N_MAX_TRACKS];
-      int *track_isHitL1 = new int[N_MAX_TRACKS];
-      int *track_PV = new int[N_MAX_TRACKS];
-      int *track_fromSV = new int[N_MAX_TRACKS];
-      int *track_SV = new int[N_MAX_TRACKS];
+      vector<TrackData*> fTracks;
+      vector<SVData*> fSVs;
 
-
-      RefArray<XlSubJet>    fSubJets;      //sub jets in the jet
-
-
-    ClassDef(XlFatJet, 3) // XlFatJet class
+    ClassDef(XlFatJet, 4) // XlFatJet class
   };
 }
 
