@@ -55,7 +55,7 @@ namespace mithep
         int PV ;
         int fromSV ;
         int SV ;
-      }
+      };
 
       struct SVData {
         double flight;                //per SV
@@ -76,17 +76,17 @@ namespace mithep
         double dirX;
         double dirY;
         double dirZ;
-      }
+      };
 
       FatJet() :
                 fCharge (0),
-                fTau1(0), fTau2(0), fTau3(0),
+                fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
                 fQJetVol(0),
                 fTauDot(-1), fZRatio(-1) {}
       FatJet(const PFJet & p) :
                 PFJet(p),
                 fCharge (0),
-                fTau1(0), fTau2(0), fTau3(0),
+                fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
                 fQJetVol(0),
                 fTauDot(-1), fZRatio(-1) {}
 
@@ -99,18 +99,20 @@ namespace mithep
       Double_t              Tau1()                          const { return fTau1;                  }
       Double_t              Tau2()                          const { return fTau2;                  }
       Double_t              Tau3()                          const { return fTau3;                  }
+      Double_t              Tau4()                          const { return fTau4;                  }
       Double_t              QJetVol()                       const { return fQJetVol;               }
       Double_t              tauDot()                        const { return fTauDot;                }
       Double_t              zRatio()                        const { return fZRatio;                }
-      vector<TrackData*>    TrackData()                     const { return fTracks;                }
-      vector<SVData*>       SVData()                        const { return fSVs;                   }
-      const RefArray<XlSubJet>*    GetSubjets(XlSubJet::ESubJetType t) const;
+      vector<TrackData*>    GetTrackData()                     const { return fTrackData;                }
+      vector<SVData*>       GetSVData()                        const { return fSVData;                   }
+      const RefArray<XlSubJet>*    GetSubJets(XlSubJet::ESubJetType t) const;
 
       // void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
       void                  SetCharge()                           { fCharge  = this->GetCharge();  }
       void                  SetTau1(Double_t t)                   { fTau1        = t;              }
       void                  SetTau2(Double_t t)                   { fTau2        = t;              }
       void                  SetTau3(Double_t t)                   { fTau3        = t;              }
+      void                  SetTau4(Double_t t)                   { fTau4        = t;              }
       void                  SetQJetVol(Double_t t)                { fQJetVol     = t;              }
       void                  SetTauDot(Double_t t)                 { fTauDot = t;                   }
       void                  SetZRatio(Double_t t)                 { fZRatio = t;                   }
@@ -118,8 +120,8 @@ namespace mithep
       void                  SetNMicrojets(Int_t t)                { fNMicrojets = t;               }
       void                  AddTrackData(TrackData *t)            { fTrackData.push_back(t);       }
       void                  AddSVData(SVData *s)                  { fSVData.push_back(s);          }
-      void                  AddSubjet(const XlSubJet * sj; XlSubJet::ESubJetType t);
-      void                  AddSubjet(const XlSubJet * sj);
+      void                  AddSubJet(const XlSubJet * sj);
+      void                  AddSubJet(const XlSubJet * sj, XlSubJet::ESubJetType t);
       void                  SetPrunedP(Vect4M p)                 { fPrunedP = p;                  }
       void                  SetTrimmedP(Vect4M p)                { fTrimmedP = p;                  }
       // Some structural tools
@@ -132,6 +134,7 @@ namespace mithep
       Double32_t            fTau1;         //1-subjettiness
       Double32_t            fTau2;         //2-subjettiness
       Double32_t            fTau3;         //3-subjettiness
+      Double32_t            fTau4;         //4-subjettiness
       Double32_t            fQJetVol;      //QJets volatility
       Double32_t            fChi=-999;          // shower deconstruction probability
       Int_t                 fNMicrojets;
@@ -143,8 +146,8 @@ namespace mithep
       // IVF variables
       Double32_t            fTauDot;
       Double32_t            fZRatio;
-      vector<TrackData*> fTracks;
-      vector<SVData*> fSVs;
+      vector<TrackData*> fTrackData;
+      vector<SVData*> fSVData;
 
     ClassDef(FatJet, 0) // FatJet class
   };
@@ -156,7 +159,10 @@ inline void mithep::FatJet::Mark(UInt_t ib) const
   // mark myself
   mithep::DataObject::Mark(ib);
   // mark my dependencies if they are there
-  fSubJets.Mark(ib);
+  typedef map<XlSubJet::ESubJetType,RefArray<XlSubJet>*>::const_iterator it_type;
+  for (it_type fSubJet = fSubJets.begin(); fSubJet!=fSubJets.end(); ++fSubJet) {
+    (fSubJet->second)->Mark(ib);
+  }
 }
 
 //--------------------------------------------------------------------------------------------------

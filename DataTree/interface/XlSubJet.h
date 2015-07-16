@@ -33,12 +33,12 @@ namespace mithep
       XlSubJet() :
                 fBTag(0),
                 fQGTag(0), fQGPtD (0), fQGAxis1 (0), fQGAxis2 (0), fQGMult (0),
-                fSubJetType(eX) {}
+                fSubJetType(kSoftDrop) {}
       XlSubJet(const Jet & p) :
                 Jet(p),
                 fBTag(0),
                 fQGTag(0), fQGPtD (0), fQGAxis1 (0), fQGAxis2 (0), fQGMult (0),
-                fSubJetType(eX) {}
+                fSubJetType(kSoftDrop) {}
 
       Jet                  *MakeCopy()                      const { return new XlSubJet(*this);    }
       Double_t              BTag()                          const { return fBTag;                  }
