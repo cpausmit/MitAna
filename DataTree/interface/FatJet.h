@@ -80,15 +80,15 @@ namespace mithep
 
       FatJet() :
                 fCharge (0),
-                fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
                 fTau1IVF(-1), fTau2IVF(-1), fTau3IVF(),
-                fQJetVol(0)
+                fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
+                fQJetVol(0),
                 fTauDot(-1), fZRatio(-1) {}
       FatJet(const PFJet & p) :
                 PFJet(p),
                 fCharge (0),
-                fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
                 fTau1IVF(-1), fTau2IVF(-1), fTau3IVF(),
+                fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
                 fQJetVol(0),
                 fTauDot(-1), fZRatio(-1) {}
 
