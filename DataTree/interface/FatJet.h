@@ -36,8 +36,10 @@ namespace mithep
         double IP2Derr ;
         double IPerr ;
         double prob ;
+        double p ;
         double pt ;
         double eta ;
+        double phi ;
         double chi2 ;
         double charge ;
         double PVWeight ;
