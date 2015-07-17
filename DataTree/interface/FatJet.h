@@ -81,12 +81,14 @@ namespace mithep
       FatJet() :
                 fCharge (0),
                 fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
-                fQJetVol(0),
+                fTau1IVF(-1), fTau2IVF(-1), fTau3IVF(),
+                fQJetVol(0)
                 fTauDot(-1), fZRatio(-1) {}
       FatJet(const PFJet & p) :
                 PFJet(p),
                 fCharge (0),
                 fTau1(-1), fTau2(-1), fTau3(-1), fTau4(-1),
+                fTau1IVF(-1), fTau2IVF(-1), fTau3IVF(),
                 fQJetVol(0),
                 fTauDot(-1), fZRatio(-1) {}
 
@@ -96,6 +98,9 @@ namespace mithep
       Bool_t                HasSubJet(const XlSubJet *p, XlSubJet::ESubJetType t)    const;
       Jet                  *MakeCopy()                      const { return new FatJet(*this);    }
       Double_t              Charge()                        const { return fCharge;                }
+      Double_t              Tau1IVF()                          const { return fTau1IVF;                  }
+      Double_t              Tau2IVF()                          const { return fTau2IVF;                  }
+      Double_t              Tau3IVF()                          const { return fTau3IVF;                  }
       Double_t              Tau1()                          const { return fTau1;                  }
       Double_t              Tau2()                          const { return fTau2;                  }
       Double_t              Tau3()                          const { return fTau3;                  }
@@ -109,6 +114,9 @@ namespace mithep
 
       // void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
       void                  SetCharge()                           { fCharge  = this->GetCharge();  }
+      void                  SetTau1IVF(Double_t t)                   { fTau1IVF        = t;              }
+      void                  SetTau2IVF(Double_t t)                   { fTau2IVF        = t;              }
+      void                  SetTau3IVF(Double_t t)                   { fTau3IVF        = t;              }
       void                  SetTau1(Double_t t)                   { fTau1        = t;              }
       void                  SetTau2(Double_t t)                   { fTau2        = t;              }
       void                  SetTau3(Double_t t)                   { fTau3        = t;              }
@@ -131,6 +139,9 @@ namespace mithep
       Double32_t            GetCharge()                     const;
 
       Double32_t            fCharge;       //Pt-weighted jet charge
+      Double32_t            fTau1IVF;         //1-subjettiness
+      Double32_t            fTau2IVF;         //2-subjettiness
+      Double32_t            fTau3IVF;         //3-subjettiness
       Double32_t            fTau1;         //1-subjettiness
       Double32_t            fTau2;         //2-subjettiness
       Double32_t            fTau3;         //3-subjettiness
