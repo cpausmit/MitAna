@@ -80,6 +80,17 @@ namespace mithep
         double dirZ;
       };
 
+      struct LeptonData {
+        double pt;
+        double eta;
+        double phi;
+        double ptRel;
+        double ratio;
+        double ratioRel;
+        double IP;
+        double IP2D;
+      }
+
       FatJet() :
                 fCharge (0),
                 fTau1IVF(-1), fTau2IVF(-1), fTau3IVF(),
@@ -103,6 +114,7 @@ namespace mithep
       Double_t              Tau1IVF()                          const { return fTau1IVF;                  }
       Double_t              Tau2IVF()                          const { return fTau2IVF;                  }
       Double_t              Tau3IVF()                          const { return fTau3IVF;                  }
+      Vect3                 GetTauIVFAxis(int i)               const { return fTauIVFAxes.at(i); }
       Double_t              Tau1()                          const { return fTau1;                  }
       Double_t              Tau2()                          const { return fTau2;                  }
       Double_t              Tau3()                          const { return fTau3;                  }
@@ -112,6 +124,8 @@ namespace mithep
       Double_t              zRatio()                        const { return fZRatio;                }
       vector<TrackData*>    GetTrackData()                     const { return fTrackData;                }
       vector<SVData*>       GetSVData()                        const { return fSVData;                   }
+      vector<LeptonData*>       GetMuonData()                        const { return fMuonData;                   }
+      vector<LeptonData*>       GetElectronData()                        const { return fElectronData;                   }
       const RefArray<XlSubJet>*    GetSubJets(XlSubJet::ESubJetType t) const;
 
       // void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
@@ -119,6 +133,7 @@ namespace mithep
       void                  SetTau1IVF(Double_t t)                   { fTau1IVF        = t;              }
       void                  SetTau2IVF(Double_t t)                   { fTau2IVF        = t;              }
       void                  SetTau3IVF(Double_t t)                   { fTau3IVF        = t;              }
+      void                  AddTauIVFAxis(Vect3 p)                { fTauIVFAxes.push_back(p);      }
       void                  SetTau1(Double_t t)                   { fTau1        = t;              }
       void                  SetTau2(Double_t t)                   { fTau2        = t;              }
       void                  SetTau3(Double_t t)                   { fTau3        = t;              }
@@ -130,6 +145,8 @@ namespace mithep
       void                  SetNMicrojets(Int_t t)                { fNMicrojets = t;               }
       void                  AddTrackData(TrackData *t)            { fTrackData.push_back(t);       }
       void                  AddSVData(SVData *s)                  { fSVData.push_back(s);          }
+      void                  AddMuonData(LeptonData *s)            { fMuonData.push_back(s);          }
+      void                  AddElectronData(LeptonData *s)        { fElectronData.push_back(s);          }
       void                  AddSubJet(const XlSubJet * sj);
       void                  AddSubJet(const XlSubJet * sj, XlSubJet::ESubJetType t);
       void                  SetPrunedP(Vect4M p)                 { fPrunedP = p;                  }
@@ -144,6 +161,7 @@ namespace mithep
       Double32_t            fTau1IVF;         //1-subjettiness
       Double32_t            fTau2IVF;         //2-subjettiness
       Double32_t            fTau3IVF;         //3-subjettiness
+      std::vector<Vect3>    fTauIVFAxes;
       Double32_t            fTau1;         //1-subjettiness
       Double32_t            fTau2;         //2-subjettiness
       Double32_t            fTau3;         //3-subjettiness
@@ -161,6 +179,8 @@ namespace mithep
       Double32_t            fZRatio;
       vector<TrackData*> fTrackData;
       vector<SVData*> fSVData;
+      vector<LeptonData*> fMuonData;
+      vector<LeptonData*> fElectronData;
 
     ClassDef(FatJet, 0) // FatJet class
   };
