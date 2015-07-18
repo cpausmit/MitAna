@@ -89,7 +89,7 @@ namespace mithep
         double ratioRel;
         double IP;
         double IP2D;
-      }
+      };
 
       FatJet() :
                 fCharge (0),
