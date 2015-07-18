@@ -69,22 +69,32 @@ class _Generator(object):
         return getattr(self._cls, name)
 
 
-class _mithep(object):
+class _Namespace(object):
     """
-    PyROOT wrapper for mithep namespace
+    PyROOT wrapper for generic C++ namespace.
     """
 
-    def __init__(self):
-        self._core = ROOT.mithep
-        self.loadedLibs = ['libMitAnaTreeMod.so']
+    def __init__(self, namespace, namespaceName, superspaces = []):
+        self._core = namespace
+        self._name = namespaceName
+        self._superspaces = superspaces
+        self.loadedLibs = []
 
     def __getattr__(self, name):
         try:
             cls = getattr(self._core, name)
         except:
-            # search in the standard library directory and find a possible match
+            # search for the class name in the compiled libraries
             try:
-                mangled = '_ZN6mithep'
+                cppname = ''
+                for sup in self._superspaces:
+                    cppname += sup + '::'
+                cppname += self._name + '::' + name
+
+                mangled = '_ZN'
+                for sup in self._superspaces:
+                    mangled += str(len(sup)) + sup
+                mangled += str(len(self._name)) + self._name
                 if '<' in name:
                     # templated class - can only deal with simple templates
                     op = name.find('<')
@@ -97,18 +107,21 @@ class _mithep(object):
                 else:
                     mangled += str(len(name)) + name
 
+                # mangled name now looks like '_ZN6mithep9OutputMod'
+
                 libdirs = os.environ['LD_LIBRARY_PATH'].split(':')
                 for libdir in libdirs:
                     for libname in os.listdir(libdir):
+                        # only look at libraries that start with libMit or those linked manually
                         if not libname.startswith('libMit') or libname in self.loadedLibs:
                             continue
     
                         with open(libdir + '/' + libname, 'rb') as lib:
                             cont = lib.read()
-                            if cont.find(mangled) < 0 and cont.find('mithep::' + name) < 0:
-                                # second condition: typedef names are not mangled
+                            if cont.find(mangled) < 0 and cont.find(cppname) < 0:
+                                # typedefs are written directly with cppname
                                 continue
-                      
+
                             print '(mithep): Auto-loading library', libname
                             ROOT.gSystem.Load(libname)
                             self.loadedLibs.append(libname)
@@ -128,11 +141,25 @@ class _mithep(object):
                 print 'No class "' + name + '" found in namespace mithep. Perhaps a missing library?'
                 sys.exit(1)
 
-        gen = _Generator(cls, 'mithep.' + name)
+        if hasattr(cls, 'Class'):
+            # this is a TObject
 
-        setattr(self, name, gen)
+            clsName = ''
+            for sup in self._superspaces:
+                clsName += sup + '.'
+            clsName += self._name + '.' + name
 
-        return gen
+            ret = _Generator(cls, clsName)
+        elif issubclass(type(cls), ROOT.PyRootType):
+            # this is a namespace
+            ret = _Namespace(cls, name, self._superspaces + [self._name])
+        else:
+            # this is a simple variable
+            ret = cls
+
+        setattr(self, name, ret)
+
+        return ret
 
     def loadlib(self, libName):
         ROOT.gSystem.Load(libName)
@@ -175,7 +202,7 @@ class _Analysis(object):
         code = 'import ROOT\n'
         code += 'ROOT.gROOT.SetBatch(True)\n'
         for libName in mithep.loadedLibs:
-            code += 'ROOT.gSystem.Load(' + libName + ')\n'
+            code += 'ROOT.gSystem.Load(\'' + libName + '\')\n'
 
         code += '\n'
 
@@ -214,5 +241,8 @@ class _Analysis(object):
         return code
 
 
-mithep = _mithep()
+ROOT.gSystem.Load('libMitAnaTreeMod.so')
+mithep = _Namespace(ROOT.mithep, 'mithep')
+mithep.loadedLibs.append('libMitAnaTreeMod.so')
+
 analysis = _Analysis()
