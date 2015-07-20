@@ -12,73 +12,29 @@ class Module(Configurable, Node):
     A wrapper for all Bambu modules inheriting from mithep::BaseMod.
     """
 
-    def __init__(self, cppcls, cppclsName, *args):
-        Configurable.__init__(self, cppcls, cppclsName, *args)
+    def __init__(self, cppcls, clsName, *args, **kwargs):
+        Configurable.__init__(self, cppcls, clsName, *args, **kwargs)
         Node.__init__(self, self._cppobj, self._cppobj.GetName())
 
     def connect(self, nextNode):
+        """
+        Overriding Node.connect which gets called when building a sequence
+        """
         Node.connect(self, nextNode)
         self._cppobj.Add(nextNode._cppobj)
 
 
-class _Generator(object):
-    """
-    Constructor wrapper for C++ objects to allow CMSSW-like initializer
-     mod = mithep.Module('module', 'my module', Attr1 = value, ..)
-    which translates to
-     mod = mithep.Module('module', 'my module')
-     mod.SetAttr1(value)
-    """
-
-    def __init__(self, cls, clsName):
-        self._cls = cls
-        self._clsName = clsName
-
-    def __call__(self, *args, **kwargs):
-        try:
-            tclass = self._cls.Class()
-        except AttributeError:
-            tclass = None
-
-        if tclass:
-            if tclass.InheritsFrom(ROOT.mithep.BaseMod.Class()):
-                obj = Module(self._cls, self._clsName, *args)
-            else:
-                obj = Configurable(self._cls, self._clsName, *args)
-        else:
-            obj = self._cls(*args)
-
-        for key, value in kwargs.items():
-            try:
-                method = getattr(obj, 'Set' + key)
-            except AttributeError:
-                print 'class ' + self._clsName + ' has no attribute ' + key + ' (i.e. has no method Set' + key + ').'
-                sys.exit(1)
-
-            if type(value) is tuple:
-                method(*value)
-            else:
-                method(value)
-
-        return obj
-
-    def __getattr__(self, name):
-        """
-        Access static members of the class
-        """
-        return getattr(self._cls, name)
-
-
-class _Namespace(object):
+class Namespace(object):
     """
     PyROOT wrapper for generic C++ namespace.
     """
+
+    loadedLibs = []
 
     def __init__(self, namespace, namespaceName, superspaces = []):
         self._core = namespace
         self._name = namespaceName
         self._superspaces = superspaces
-        self.loadedLibs = []
 
     def __getattr__(self, name):
         try:
@@ -113,7 +69,7 @@ class _Namespace(object):
                 for libdir in libdirs:
                     for libname in os.listdir(libdir):
                         # only look at libraries that start with libMit or those linked manually
-                        if not libname.startswith('libMit') or libname in self.loadedLibs:
+                        if not libname.startswith('libMit') or libname in Namespace.loadedLibs:
                             continue
     
                         with open(libdir + '/' + libname, 'rb') as lib:
@@ -124,7 +80,7 @@ class _Namespace(object):
 
                             print '(mithep): Auto-loading library', libname
                             ROOT.gSystem.Load(libname)
-                            self.loadedLibs.append(libname)
+                            Namespace.loadedLibs.append(libname)
                             try:
                                 cls = getattr(self._core, name)
                                 break
@@ -141,18 +97,28 @@ class _Namespace(object):
                 print 'No class "' + name + '" found in namespace mithep. Perhaps a missing library?'
                 sys.exit(1)
 
-        if hasattr(cls, 'Class'):
+        try:
+            tclass = cls.Class()
+        except AttributeError:
+            tclass = None
+
+        if tclass:
             # this is a TObject
+            configurable = Configurable
+            if tclass.InheritsFrom(ROOT.mithep.BaseMod.Class()):
+                configurable = Module
 
             clsName = ''
             for sup in self._superspaces:
                 clsName += sup + '.'
             clsName += self._name + '.' + name
 
-            ret = _Generator(cls, clsName)
+            ret = Configurable.Generator(cls, clsName, configurable)
+
         elif issubclass(type(cls), ROOT.PyRootType):
             # this is a namespace
-            ret = _Namespace(cls, name, self._superspaces + [self._name])
+            ret = Namespace(cls, name, self._superspaces + [self._name])
+
         else:
             # this is a simple variable
             ret = cls
@@ -161,54 +127,50 @@ class _Namespace(object):
 
         return ret
 
-    def loadlib(self, libName):
+    @staticmethod
+    def loadlib(libName):
         ROOT.gSystem.Load(libName)
-        self.loadedLibs.append(libName)
+        Namespace.loadedLibs.append(libName)
 
 
-class _Analysis(object):
+class _Analysis(Configurable):
     """
     PyROOT wrapper for mithep::Analysis
     """
 
     def __init__(self):
-        self._core = ROOT.mithep.Analysis()
+        Configurable.__init__(self, ROOT.mithep.Analysis, 'mithep.Analysis')
         self._sequence = None
-        self._keepHierarchy = False
-
-    def __getattr__(self, name):
-        attr = getattr(self._core, name)
-        setattr(self, name, attr)
-        return attr
-
-    def SetKeepHierarchy(self, keep):
-        self._keepHierarchy = keep
 
     def setSequence(self, seq):
         self._sequence = seq
 
     def buildSequence(self):
+        modNames = []
+        for mod in self._sequence:
+            if mod._name in modNames:
+                print 'Multiple modules with name ' + mod._name + ' in sequence.'
+                sys.exit(1)
+                
+            modNames.append(mod._name)
+
         self._sequence.build()
 
         for mod in self._sequence.headNodes:
-            self._core.AddSuperModule(mod._cppobj)
+            self.AddSuperModule(mod)
 
-        self._core.SetKeepHierarchy(self._keepHierarchy)
+    def dumpPython(self, varName = 'analysis', objects = {}):
+        if not self._sequence.isBuilt:
+            self.buildSequence()
 
-    def dumpPython(self):
-        iMod = 0
+        code = ''
         auxObjects = {}
+        modules = {}
 
-        code = 'import ROOT\n'
-        code += 'ROOT.gROOT.SetBatch(True)\n'
-        for libName in mithep.loadedLibs:
-            code += 'ROOT.gSystem.Load(\'' + libName + '\')\n'
+        # module names are guaranteed to be unique from buildSequence()
 
-        code += '\n'
-
-        modNames = {}
         for mod in self._sequence:
-            for methodName, args in mod.config:
+            for attrName, args, isMethod in mod.config:
                 for arg in args:
                     if not isinstance(arg, Configurable):
                         continue
@@ -217,32 +179,27 @@ class _Analysis(object):
 
                     auxName = 'aux' + str(len(auxObjects))
                     code += arg.dumpPython(auxName, auxObjects)
+                    code += '\n'
                     auxObjects[arg] = auxName
 
-            modName = 'mod' + str(iMod)
-            modNames[mod] = modName
-            code += mod.dumpPython(modName, auxObjects)
-            iMod += 1
+            code += mod.dumpPython(mod._name, auxObjects)
+            code += '\n'
 
-        if not self._sequence.isBuilt:
-            self._sequence.build()
+            modules[mod] = mod._name
 
         for mod in self._sequence:
             for nextNode in mod.nextNodes:
-                code += modNames[mod] + '.Add(' + modNames[nextNode] + ')\n'
+                code += mod._name + '.Add(' + nextNode._name + ')\n'
 
         code += '\n'
 
-        code += 'analysis = mithep.Analysis()\n'
-        code += 'analysis.SetKeepHierarchy(' + str(self._keepHierarchy) + ')\n'
-        for mod in self._sequence.headNodes:
-            code += 'analysis.AddSuperModule(' + modNames[mod] + ')\n'
+        code += Configurable.dumpPython(self, 'analysis', modules)
 
         return code
 
 
 ROOT.gSystem.Load('libMitAnaTreeMod.so')
-mithep = _Namespace(ROOT.mithep, 'mithep')
+mithep = Namespace(ROOT.mithep, 'mithep')
 mithep.loadedLibs.append('libMitAnaTreeMod.so')
 
 analysis = _Analysis()

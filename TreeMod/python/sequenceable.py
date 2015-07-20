@@ -1,6 +1,8 @@
 # "Sequenceable" classes to realize the job (module sequence) configuration syntax
 # using * and + signs.
 
+import sys
+
 class Sequenceable(object):
     """
     Base class for objects that can be in a sequence or be a sequence itself.
@@ -32,7 +34,7 @@ class Sequenceable(object):
             print 'Cannot build a sequence twice.'
             sys.exit(1)
 
-        return ([], [])
+        self.isBuilt = True
 
 
 class Node(Sequenceable):
@@ -76,6 +78,8 @@ class Node(Sequenceable):
         self.nextNodes = []
 
         nodelist.append(self._core)
+
+        self.isBuilt = True
 
     def connect(self, nextNode):
         self.nextNodes.append(nextNode)
@@ -138,6 +142,9 @@ class Chain(Sequenceable):
 
         self.tailNodes = [tail]
 
+        self.isBuilt = True
+
+
 class Bundle(Sequenceable):
     """
     List of parallel chains
@@ -185,3 +192,5 @@ class Bundle(Sequenceable):
             chain.build(nodelist)
             self.headNodes += chain.headNodes
             self.tailNodes += chain.tailNodes
+
+        self.isBuilt = True
