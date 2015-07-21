@@ -141,6 +141,7 @@ class _Analysis(Configurable):
     def __init__(self):
         Configurable.__init__(self, ROOT.mithep.Analysis, 'mithep.Analysis')
         self._sequence = None
+        self.isRealData = False
 
     def setSequence(self, seq):
         self._sequence = seq

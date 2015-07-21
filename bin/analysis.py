@@ -33,7 +33,7 @@ def configureSequence(args):
             ROOT.gSystem.Load('libMitAnaTreeMod.so')
             mithep = ROOT.mithep
 
-        if args.goodlumiFiles is not None:
+        if args.goodlumiFile is not None:
             # RunLumiSelectionMod assumed to be the first module
             try:
                 jsonDir = os.environ['MIT_JSON_DIR']
@@ -41,22 +41,24 @@ def configureSequence(args):
                     if sm.Class() != mithep.RunLumiSelectionMod.Class():
                         continue
 
-                    for fileName in args.goodlumiFiles:
-                        sm.AddJSONFile(jsonDir + '/' + fileName)
+                    sm.AddJSONFile(jsonDir + '/' + goodlumiFile)
 
             except:
                 print 'Lumi list configuration failed.'
                 sys.exit(1)
 
     else:
-        execfile(args.config)
-
         from MitAna.TreeMod.bambu import analysis, mithep
 
+        if args.realData or args.goodlumiFile is not None:
+            analysis.isRealData = True
+
+        execfile(args.config)
+
         # if good run / lumi list is given, prepend the filter module
-        if args.goodlumiFiles is not None:
+        if args.goodlumiFile is not None:
             from MitAna.PhysicsMod.runlumisel import goodLumiFilter
-            filterMod = goodLumiFilter(args.goodlumiFiles)
+            filterMod = goodLumiFilter(args.goodlumiFile)
             analysis._sequence = filterMod * analysis._sequence
     
         analysis.buildSequence()
@@ -75,9 +77,10 @@ if __name__ == '__main__':
     argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset', help = 'Input dataset.')
     argParser.add_argument('--fileset', '-s', metavar = 'FILESET', dest = 'fileset', default = '0000', help = 'Input fileset.')
     argParser.add_argument('--file', '-f', metavar = 'INPUT', dest = 'inputFile', help = 'Input file name when running on a single file.')
-    argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFiles', nargs = '+', help = 'Input good lumi JSON file.')
+    argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', help = 'Input good lumi JSON file.')
     argParser.add_argument('--output', '-o', metavar = 'FILENAME', dest = 'outputFile', help = 'Output file name.')
     argParser.add_argument('--nentries', '-n', metavar = 'N', dest = 'nentries', type = int, default = -1, help = 'Number of entries to process.')
+    argParser.add_argument('--data', '-D', action = 'store_true', dest = 'realData', help = 'Process real data (sets the real-data flag on various modules).')
     argParser.add_argument('--hierarchy', '-E', action = 'store_true', dest = 'hierarchy', help = 'Create hierarchical output.')
     argParser.add_argument('--flat', '-F', action = 'store_true', dest = 'flatConfig', help = 'Input config is flat, i.e. has no imports (used for batch submission)')
     

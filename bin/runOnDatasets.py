@@ -60,7 +60,7 @@ def setupTask(env):
         configArgs = Env()
         configArgs.config = env.inMacroPath
         configArgs.flatConfig = False
-        configArgs.goodlumiFiles = ''
+        configArgs.goodlumiFile = ''
         mithep, analysis = configureSequence(configArgs)
     
         with open(env.taskDir + '/' + env.macro, 'w') as macro:
