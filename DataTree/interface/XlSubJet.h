@@ -26,7 +26,8 @@ namespace mithep
         kTrimmed,
         kCMSTT,
         kHEPTT,
-        kNjettiness
+        kNjettiness,
+        nSubJetTypes
       };
 
 

@@ -9,36 +9,18 @@ using namespace std;
 namespace mithep {
 
 FatJet::~FatJet() {
-  for (TrackData *t : fTrackData)
-    delete t;
-  for (SVData *s : fSVData)
-    delete s;
 }
 
 const RefArray<XlSubJet>* FatJet::GetSubJets(XlSubJet::ESubJetType t) const {
-  try {
-    return fSubJets.at(t);
-  } catch(out_of_range& e) {
-    return NULL;
-  }
+  return fSubJets[(unsigned int)t];
 }
 
 Bool_t FatJet::HasSubJet(const XlSubJet*p, XlSubJet::ESubJetType t) const {
-   try {
-     return fSubJets.at(t)->HasObject(p);
-   } catch(out_of_range& e) {
-     fprintf(stderr,"Warning, searching for subjet of nonexistent type\n");
-     return kFALSE;
-   }
+   return fSubJets[(unsigned int)t]->HasObject(p);
 }
 
 void FatJet::AddSubJet(const XlSubJet * sj, XlSubJet::ESubJetType t) {
-  try {
-    fSubJets.at(t)->Add(sj);
-  } catch(out_of_range& e) {
-    fSubJets[t] = new RefArray<XlSubJet>;
-    fSubJets.at(t)->Add(sj);
-  }
+  fSubJets[(unsigned int)t]->Add(sj);
 }
 
 

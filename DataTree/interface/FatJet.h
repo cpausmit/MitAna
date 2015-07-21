@@ -36,24 +36,11 @@ namespace mithep
         double IP2Derr ;
         double IPerr ;
         double prob ;
-        double p ;
         double pt ;
         double eta ;
         double phi ;
-        double chi2 ;
-        double charge ;
         double PVWeight ;
         double SVWeight ;
-        int nHitAll ;
-        int nHitPixel ;
-        int nHitStrip ;
-        int nHitTIB ;
-        int nHitTID ;
-        int nHitTOB ;
-        int nHitTEC ;
-        int nHitPXB ;
-        int nHitPXF ;
-        int isHitL1 ;
         int PV ;
         int fromSV ;
         int SV ;
@@ -122,10 +109,10 @@ namespace mithep
       Double_t              QJetVol()                       const { return fQJetVol;               }
       Double_t              tauDot()                        const { return fTauDot;                }
       Double_t              zRatio()                        const { return fZRatio;                }
-      vector<TrackData*>    GetTrackData()                     const { return fTrackData;                }
-      vector<SVData*>       GetSVData()                        const { return fSVData;                   }
-      vector<LeptonData*>       GetMuonData()                        const { return fMuonData;                   }
-      vector<LeptonData*>       GetElectronData()                        const { return fElectronData;                   }
+      vector<TrackData>    GetTrackData()                     const { return fTrackData;                }
+      vector<SVData>       GetSVData()                        const { return fSVData;                   }
+      vector<LeptonData>       GetMuonData()                        const { return fMuonData;                   }
+      vector<LeptonData>       GetElectronData()                        const { return fElectronData;                   }
       const RefArray<XlSubJet>*    GetSubJets(XlSubJet::ESubJetType t) const;
 
       // void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
@@ -143,10 +130,10 @@ namespace mithep
       void                  SetZRatio(Double_t t)                 { fZRatio = t;                   }
       void                  SetChi(Double_t t)                    { fChi = t;                      }
       void                  SetNMicrojets(Int_t t)                { fNMicrojets = t;               }
-      void                  AddTrackData(TrackData *t)            { fTrackData.push_back(t);       }
-      void                  AddSVData(SVData *s)                  { fSVData.push_back(s);          }
-      void                  AddMuonData(LeptonData *s)            { fMuonData.push_back(s);          }
-      void                  AddElectronData(LeptonData *s)        { fElectronData.push_back(s);          }
+      void                  AddTrackData(TrackData *t)            { fTrackData.push_back(*t);       }
+      void                  AddSVData(SVData *s)                  { fSVData.push_back(*s);          }
+      void                  AddMuonData(LeptonData *s)            { fMuonData.push_back(*s);          }
+      void                  AddElectronData(LeptonData *s)        { fElectronData.push_back(*s);          }
       void                  AddSubJet(const XlSubJet * sj);
       void                  AddSubJet(const XlSubJet * sj, XlSubJet::ESubJetType t);
       void                  SetPrunedP(Vect4M p)                 { fPrunedP = p;                  }
@@ -172,15 +159,15 @@ namespace mithep
       Vect4M            fPrunedP;
       Vect4M            fTrimmedP;
 
-      map<XlSubJet::ESubJetType,RefArray<XlSubJet>*>    fSubJets;      //sub jets in the jet
+      RefArray<XlSubJet>*    fSubJets[XlSubJet::nSubJetTypes];      //sub jets in the jet
 
       // IVF variables
       Double32_t            fTauDot;
       Double32_t            fZRatio;
-      vector<TrackData*> fTrackData;
-      vector<SVData*> fSVData;
-      vector<LeptonData*> fMuonData;
-      vector<LeptonData*> fElectronData;
+      vector<TrackData> fTrackData;
+      vector<SVData> fSVData;
+      vector<LeptonData> fMuonData;
+      vector<LeptonData> fElectronData;
 
     ClassDef(FatJet, 0) // FatJet class
   };
@@ -192,9 +179,8 @@ inline void mithep::FatJet::Mark(UInt_t ib) const
   // mark myself
   mithep::DataObject::Mark(ib);
   // mark my dependencies if they are there
-  typedef map<XlSubJet::ESubJetType,RefArray<XlSubJet>*>::const_iterator it_type;
-  for (it_type fSubJet = fSubJets.begin(); fSubJet!=fSubJets.end(); ++fSubJet) {
-    (fSubJet->second)->Mark(ib);
+  for (unsigned int i = 0; i!=XlSubJet::nSubJetTypes; ++i) {
+    (fSubJets[i])->Mark(ib);
   }
 }
 
