@@ -113,7 +113,7 @@ namespace mithep
       vector<SVData>       GetSVData()                        const { return fSVData;                   }
       vector<LeptonData>       GetMuonData()                        const { return fMuonData;                   }
       vector<LeptonData>       GetElectronData()                        const { return fElectronData;                   }
-      const RefArray<XlSubJet>*    GetSubJets(XlSubJet::ESubJetType t) const;
+      const RefArray<XlSubJet>    GetSubJets(XlSubJet::ESubJetType t) const;
 
       // void                  AddSubJet(const XlSubJet *p)          { fSubJets.Add(p);               }
       void                  SetCharge()                           { fCharge  = this->GetCharge();  }
@@ -159,7 +159,7 @@ namespace mithep
       Vect4M            fPrunedP;
       Vect4M            fTrimmedP;
 
-      RefArray<XlSubJet>*    fSubJets[XlSubJet::nSubJetTypes];      //sub jets in the jet
+      RefArray<XlSubJet>    fSubJets[XlSubJet::nSubJetTypes];      //sub jets in the jet
 
       // IVF variables
       Double32_t            fTauDot;

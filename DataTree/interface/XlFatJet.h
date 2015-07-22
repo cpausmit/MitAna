@@ -74,6 +74,7 @@ namespace mithep
       void                  SetPullAngle(Double_t t)              { fPullAngle = t;                }
       void                  SetChi(Double_t t)                    { fChi = t;                      }
       void                  SetNMicrojets(Int_t t)                { fNMicrojets = t;               }
+      void                  ResetSubJetCol();
 
 
     protected:
@@ -93,10 +94,8 @@ namespace mithep
       Double32_t            fMassTrimmed;  //Groomed mass (trimming)
       Double32_t            fPull;         //Color pull
       Double32_t            fPullAngle;    //Angle between pulls of lead/subleading subjets:
-                                           //either choose 2-prong or 3-prong subclustering!
       Double32_t            fChi=-999;          // shower deconstruction probability
       Int_t                 fNMicrojets;
-      RefArray<XlSubJet>    fSubJets;      //sub jets in the jet
 
     ClassDef(XlFatJet, 5) // XlFatJet class
   };
