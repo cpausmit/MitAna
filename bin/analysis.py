@@ -76,7 +76,7 @@ if __name__ == '__main__':
     argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/041', help = 'Input book, e.g. t2mit/filefi/041.')
     argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset', help = 'Input dataset.')
     argParser.add_argument('--fileset', '-s', metavar = 'FILESET', dest = 'fileset', default = '0000', help = 'Input fileset.')
-    argParser.add_argument('--file', '-f', metavar = 'INPUT', dest = 'inputFile', help = 'Input file name when running on a single file.')
+    argParser.add_argument('--file', '-f', metavar = 'INPUT', dest = 'inputFiles', nargs = '*', help = 'Input file name when running on a single file.')
     argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', help = 'Input good lumi JSON file.')
     argParser.add_argument('--output', '-o', metavar = 'FILENAME', dest = 'outputFile', help = 'Output file name.')
     argParser.add_argument('--nentries', '-n', metavar = 'N', dest = 'nentries', type = int, default = -1, help = 'Number of entries to process.')
@@ -92,7 +92,7 @@ if __name__ == '__main__':
             print 'book, dataset, and fileset must be set together.'
             sys.exit(1)
     
-    if args.inputFile and args.dataset:
+    if args.inputFiles and args.dataset:
         print 'Cannot specify file and dataset at the same time.'
         sys.exit(1)
 
@@ -110,8 +110,9 @@ if __name__ == '__main__':
         analysis.AddDataset(dataset)
         analysis.SetUseCacher(1)
         
-    elif args.inputFile:
-        analysis.AddFile(args.inputFile)
+    elif args.inputFiles:
+        for f in args.inputFiles:
+            analysis.AddFile(f)
 
     if args.outputFile:
         analysis.SetOutputName(args.outputFile)
