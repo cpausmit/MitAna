@@ -68,17 +68,7 @@ class Configurable(object):
         self._clsName = clsName
         self.config = [('_Ctor', args, True)] # attribute name, args, is method
 
-        for key, value in kwargs.items():
-            try:
-                method = getattr(self, 'Set' + key)
-            except AttributeError:
-                print 'Error raised in ' + clsName + ' constructor argument ' + key + ' = ' + str(value)
-                raise
-
-            if type(value) is tuple:
-                method(*value)
-            else:
-                method(value)
+        self._configureFromArgs(kwargs)
 
     def __getattr__(self, name):
         """
@@ -113,6 +103,19 @@ class Configurable(object):
                 pass
 
         object.__setattr__(self, name, value)
+
+    def _configureFromArgs(self, kwargs):
+        for key, value in kwargs.items():
+            try:
+                method = getattr(self, 'Set' + key)
+            except AttributeError:
+                print 'Error raised in ' + self._clsName + ' constructor argument ' + key + ' = ' + str(value)
+                raise
+
+            if type(value) is tuple:
+                method(*value)
+            else:
+                method(value)
 
     def _callMethod(self, methodName, args):
         """
@@ -158,7 +161,7 @@ class Configurable(object):
         method = getattr(self._cppobj, methodName)
         return method(*args)
 
-    def clone(self):
+    def clone(self, *args, **kwargs):
         """
         Instantiate an object of the same type and call the recorded non-const methods
         in sequence.
@@ -167,20 +170,26 @@ class Configurable(object):
         calls = iter(self.config)
 
         # first config is always Ctor
-        newObj = type(self)(*calls.next()[1])
+        if len(args) != 0:
+            newObj = type(self)(type(self._cppobj), self._clsName, *args)
+            calls.next()
+        else:
+            newObj = type(self)(type(self._cppobj), self._clsName, *calls.next()[1])
 
         while True:
             try:
-                attrName, args, isMethod = calls.next()
+                attrName, arguments, isMethod = calls.next()
                 if isMethod:
                     # if method, args is a tuple
-                    getattr(newObj, attrName)(*args)
+                    getattr(newObj, attrName)(*arguments)
                 else:
                     # if not method, args is a flat variable
-                    setattr(newObj, attrName, args)
+                    setattr(newObj, attrName, arguments)
 
             except StopIteration:
                 break
+
+        newObj._configureFromArgs(kwargs)
 
         return newObj
 
