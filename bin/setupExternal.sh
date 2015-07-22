@@ -5,40 +5,172 @@
 # they appear in the right places for linking. We can assume that when this script this called CMSSW is already setup.
 #
 #                                                                                            C.Paus, V0 (Mar 05, 2014)
+#                                                                                          Y.Iiyama, V1 (Jul 13, 2015)
 #---------------------------------------------------------------------------------------------------------------------
 
-# go to the base area
-cd $CMSSW_BASE/..
+#---------------------
+# SET PARAMETERS HERE
+#
+# PACKAGES TO INSTALL
+#PACKAGES="fastjet fastjet-contrib qjets"
+PACKAGES="qjets"
 
-# Setup for qjets
-# -----------------
+# SPECIFIC PARAMETERS
+FJ_VERSION="3.1.0-odfocd"
+FJCONTRIB_VERSION="1.014-odfocd"
+#---------------------
 
-# move the old setup out of the way
-echo ' moving old config out of the way'
-mv $CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/qjets.xml \
-   $CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/qjets.xml-last.$$
+if ! [ "$CMSSW_BASE" ]
+then
+  echo "CMSSW_BASE not set"
+  exit 1
+fi
 
-# Generate qjets file from modified template
-echo \
-'
-  <tool name="qjets" version="2">
+# Utility function to find the installation of the external
+find-external() {
+  local PACKAGE=$1
+  local EXTERNAL
+
+  # look in CMSSW default first
+  for EXTERNAL in \
+  /cvmfs/cms.cern.ch/$SCRAM_ARCH/external/$PACKAGE \
+  /cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/external/$PACKAGE
+  do
+    if [ -d $EXTERNAL ]
+    then
+      echo $EXTERNAL
+      exit 0
+    fi
+  done
+
+  EXTERNAL="/home/$USER/cms/external/$PACKAGE"
+  echo " INFO - making directory at: $EXTERNAL"
+  echo ""
+
+  mkdir -p $EXTERNAL
+  echo $EXTERNAL
+}
+
+### Installer functions
+
+# Install fastjet
+install-fastjet() {
+  # add local fastjet external to scarm config
+
+  local VERSION=$1
+  local FASTJET_BASE=$(find-external fastjet/$VERSION)
+  local TARGET=$CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/fastjet.xml
+
+  echo ""
+  echo " INFO - using fastjet at: $FASTJET_BASE"
+  echo ""
+
+  mv $TARGET ${TARGET}-last.$(date +%s) 2> /dev/null
+
+  echo \
+'  <tool name="fastjet" version="'$VERSION'">
+    <info url="http://www.lpthe.jussieu.fr/~salam/fastjet/"/>
+    <lib name="fastjetplugins"/>
+    <lib name="fastjettools"/>
+    <lib name="siscone"/>
+    <lib name="siscone_spherical"/>
+    <lib name="fastjet"/>
+    <client>
+      <environment name="FASTJET_BASE" default="'$FASTJET_BASE'"/>
+      <environment name="LIBDIR" default="$FASTJET_BASE/lib"/>
+      <environment name="INCLUDE" default="$FASTJET_BASE/include"/>
+    </client>
+    <runtime name="ROOT_INCLUDE_PATH" value="$INCLUDE" type="path"/>
+    <use name="root_cxxdefaults"/>
+  </tool>
+' > $TARGET
+
+  # commit the scram config changes
+  cd $CMSSW_BASE/src
+  scram setup fastjet
+}
+
+# Install fastjet-contrib
+install-fastjet-contrib() {
+  # add local fastjet-contrib external to scarm config
+
+  local VERSION=$1
+  local FASTJET_CONTRIB_BASE=$(find-external fastjet-contrib/$VERSION)
+  local TARGET=$CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/fastjet-contrib.xml
+
+  echo ""
+  echo " INFO - using fastjet-contrib at: $FASTJET_CONTRIB_BASE"
+  echo ""
+  
+  mv $TARGET ${TARGET}-last.$(date +%s) 2> /dev/null
+
+  echo \
+'  <tool name="fastjet-contrib" version="'$VERSION'">
+    <info url="http://fastjet.hepforge.org/contrib/"/>
+    <lib name="fastjetcontribfragile"/>
+    <client>
+      <environment name="FASTJET_CONTRIB_BASE" default="'$FASTJET_CONTRIB_BASE'"/>
+      <environment name="LIBDIR" default="$FASTJET_CONTRIB_BASE/lib"/>
+      <environment name="INCLUDE" default="$FASTJET_CONTRIB_BASE/include"/>
+    </client>
+  </tool>
+' > $TARGET
+
+  # commit the scram config changes
+  cd $CMSSW_BASE/src
+  scram setup fastjet-contrib
+}
+
+# Install qjets
+install-qjets() {
+  # add local fastjet-contrib external to scarm config
+  # Qjets itself is not versioned, but since it is compiled against fastjet libraries
+  # we use the fastjet version to tag the packages
+
+  local VERSION=$1
+  local QJETS_BASE=$(find-external Qjets/$VERSION)
+  local TARGET=$CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/qjets.xml
+
+  echo ""
+  echo " INFO - using qjets at: $QJETS_BASE"
+  echo ""
+
+  mv $TARGET ${TARGET}-last.$(date +%s) 2> /dev/null
+
+  echo \
+'  <tool name="qjets" version="'$VERSION'">
     <info url="http://jets.physics.harvard.edu/Qjets/html/Welcome.html"/>
     <lib name="qjets"/>
     <client>
-      <environment name="QJETS_BASE" default="xx-PATH-xx/Qjets/3.1.0-odfocd"/>
+      <environment name="QJETS_BASE" default="'$QJETS_BASE'"/>
       <environment name="LIBDIR" default="$QJETS_BASE/lib"/>
       <environment name="INCLUDE" default="$QJETS_BASE"/>
     </client>
   </tool>
-' | sed "s#xx-PATH-xx#$EXTERNAL#" \
-> $CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/qjets.xml
+' > $TARGET
 
-# show the user what was created
-cat $CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/qjets.xml
+  # commit the scram config changes
+  cd $CMSSW_BASE/src
+  scram setup qjets
+}
 
-# commit the scram config changes
-cd $CMSSW_BASE/src
-scram setup qjets
-cd -
+### Loop over PACKAGES
 
-exit 0
+for PACKAGE in $PACKAGES
+do
+  case $PACKAGE in
+    fastjet)
+      install-fastjet $FJ_VERSION
+      ;;
+    fastjet-contrib)
+      install-fastjet-contrib $FJCONTRIB_VERSION
+      ;;
+    qjets)
+      install-qjets $FJ_VERSION
+      ;;
+    *)
+      echo "Unknown external $PACKAGE"
+      exit 1
+      ;;
+  esac
+done

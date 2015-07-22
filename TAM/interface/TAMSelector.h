@@ -1,7 +1,3 @@
-//
-// $Id: TAMSelector.h,v 1.14 2009/07/17 19:18:04 loizides Exp $
-//
-
 #ifndef ROOT_TAMSelector
 #define ROOT_TAMSelector
 

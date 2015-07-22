@@ -2,8 +2,6 @@
 #include "MitAna/PhysicsMod/interface/FastJetMod.h"
 #include "MitAna/DataTree/interface/PFJetCol.h"
 
-#include "MitAna/DataTree/interface/XlSubJet.h"
-#include "MitAna/DataTree/interface/XlFatJet.h"
 #include "MitCommon/DataFormats/interface/Vect4M.h"
 #include "MitCommon/DataFormats/interface/Vect3.h"
 #include "MitCommon/DataFormats/interface/Types.h"

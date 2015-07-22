@@ -8,7 +8,7 @@
 
 #ifndef MITANA_DATATREE_JET_H
 #define MITANA_DATATREE_JET_H
- 
+
 #include "MitCommon/DataFormats/interface/Vect4M.h"
 #include "MitAna/DataTree/interface/Particle.h"
 
@@ -17,16 +17,33 @@ namespace mithep {
   public:
     enum BTagAlgo {
       kJetProbability,
+      kJetProbabilityNegative,
+      kJetProbabilityPositive,
       kJetBProbability,
+      kJetBProbabilityNegative,
+      kJetBProbabilityPositive,
       kSimpleSecondaryVertexHighEff,
+      kSimpleSecondaryVertexHighEffNegative,
       kSimpleSecondaryVertexHighPur,
+      kSimpleSecondaryVertexHighPurNegative,
       kCombinedSecondaryVertex,
       kCombinedSecondaryVertexV2,
+      kCombinedSecondaryVertexV2Positive,
+      kCombinedSecondaryVertexV2Negative,
       kCombinedSecondaryVertexSoftLepton,
       kCombinedInclusiveSecondaryVertexV2,
+      kCombinedInclusiveSecondaryVertexV2Positive,
+      kCombinedInclusiveSecondaryVertexV2Negative,
       kCombinedMVA,
       kTrackCountingHighEff,
       kTrackCountingHighPur,
+      kSoftPFMuon,
+      kSoftPFMuonNegative,
+      kSoftPFMuonPositive,
+      kSoftPFElectron,
+      kSoftPFElectronNegative,
+      kSoftPFElectronPositive,
+      kDoubleSecondaryVertex,
       nBTagAlgos
     };
 
@@ -42,8 +59,8 @@ namespace mithep {
       nBTagLegacyAlgos = nAllBTagAlgos - nBTagAlgos
     };
 
-    enum ECorr { 
-      L1 = 0, 
+    enum ECorr {
+      L1 = 0,
       L2,
       L3,
       L4,
@@ -53,7 +70,7 @@ namespace mithep {
       Custom,
       nECorrs
     };
- 
+
     Jet();
 
     FourVectorM RawMom() const { return fRawMom.V(); }
@@ -85,7 +102,7 @@ namespace mithep {
     void SetRawPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m)
     { fRawMom.Set(pt, eta, phi, m); ClearMom(); }
     void SetAlpha(Double_t val) { fAlpha = val; }
-    void SetBeta(Double_t val) { fBeta = val; } 
+    void SetBeta(Double_t val) { fBeta = val; }
     void SetMatchedMCFlavor(Int_t flavor) { fMatchedMCFlavor = flavor; }
     void SetSigmaEta(Double_t val) { fSigmaEta = val; }
     void SetSigmaPhi(Double_t val) { fSigmaPhi = val; }
@@ -106,15 +123,15 @@ namespace mithep {
     void DisableCorrections() { fCorrections.Clear(); ClearMom(); }
     void EnableCorrection(UInt_t c) { fCorrections.SetBit(c); ClearMom(); }
 
-    EObjType ObjType() const override { return kJet; } 
+    EObjType ObjType() const override { return kJet; }
     virtual Jet* MakeCopy() const { return new Jet(*this); }
 
     // backward compatibility
     Double_t JetProbabilityBJetTagsDisc() const { return BJetTagsDisc(kJetProbability); }
     Double_t JetBProbabilityBJetTagsDisc() const { return BJetTagsDisc(kJetBProbability); }
     Double_t SimpleSecondaryVertexHighEffBJetTagsDisc() const { return BJetTagsDisc(kSimpleSecondaryVertexHighEff); }
-    Double_t SimpleSecondaryVertexHighPurBJetTagsDisc() const { return BJetTagsDisc(kSimpleSecondaryVertexHighPur); } 
-    Double_t CombinedSecondaryVertexBJetTagsDisc() const { return BJetTagsDisc(kCombinedSecondaryVertex); } 
+    Double_t SimpleSecondaryVertexHighPurBJetTagsDisc() const { return BJetTagsDisc(kSimpleSecondaryVertexHighPur); }
+    Double_t CombinedSecondaryVertexBJetTagsDisc() const { return BJetTagsDisc(kCombinedSecondaryVertex); }
     Double_t CombinedSecondaryVertexMVABJetTagsDisc() const { return BJetTagsDisc(kCombinedMVA); }
     Double_t TrackCountingHighEffBJetTagsDisc() const { return BJetTagsDisc(kTrackCountingHighEff); }
     Double_t TrackCountingHighPurBJetTagsDisc() const { return BJetTagsDisc(kTrackCountingHighPur); }
@@ -169,7 +186,7 @@ mithep::Jet::GetMom() const
 {
   // Get raw momentum values from stored values and apply all enabled corrections.
 
-  fCachedMom.SetCoordinates(fRawMom.Pt(),fRawMom.Eta(),fRawMom.Phi(),fRawMom.M()); 
+  fCachedMom.SetCoordinates(fRawMom.Pt(),fRawMom.Eta(),fRawMom.Phi(),fRawMom.M());
 
   fCachedMom *= CombinedCorrectionScale();
 
