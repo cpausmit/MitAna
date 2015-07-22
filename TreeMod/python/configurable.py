@@ -79,7 +79,7 @@ class Configurable(object):
         try:
             attr = getattr(self._cppobj, name)
         except AttributeError:
-            print 'Class ' + self._clsName + ' has no attribute ' + key
+            print 'Class ' + self._clsName + ' has no attribute ' + name
             raise
 
         if type(attr) is ROOT.MethodProxy:
