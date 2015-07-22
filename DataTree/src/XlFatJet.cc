@@ -9,7 +9,7 @@ namespace mithep {
 XlFatJet::~XlFatJet() {
 }
 
-XlFatJet::ResetSubJetCol() {
+void XlFatJet::ResetSubJetCol() {
   for(unsigned int i=0; i<XlSubJet::nSubJetTypes; ++i)
     fSubJets[i].Reset();
 }

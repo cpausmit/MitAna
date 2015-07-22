@@ -180,7 +180,7 @@ inline void mithep::FatJet::Mark(UInt_t ib) const
   mithep::DataObject::Mark(ib);
   // mark my dependencies if they are there
   for (unsigned int i = 0; i!=XlSubJet::nSubJetTypes; ++i) {
-    (fSubJets[i])->Mark(ib);
+    (fSubJets[i]).Mark(ib);
   }
 }
 
