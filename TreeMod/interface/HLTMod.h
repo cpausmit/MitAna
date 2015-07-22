@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: HLTMod.h,v 1.16 2011/03/21 15:58:37 paus Exp $
-//
 // HLTMod
 //
 // This module allows to select events according to given HLT trigger bits. The trigger bits are
@@ -25,11 +23,13 @@
 #ifndef MITANA_TREEMOD_HLTMOD_H
 #define MITANA_TREEMOD_HLTMOD_H
 
-#include <string>
-#include <utility>
-#include <TString.h>
 #include "MitAna/TreeMod/interface/BaseMod.h" 
 #include "MitAna/DataTree/interface/TriggerObjectFwd.h"
+#include "MitAna/DataTree/interface/Names.h"
+
+#include "TString.h"
+
+#include <utility>
 
 namespace mithep 
 {
@@ -38,58 +38,62 @@ namespace mithep
   class TriggerMask;
 
   class HLTMod : public BaseMod {
-    public:
-      enum EObjMode { // which objects to get
-        kAll =  0,
-        kL1,
-        kHlt
-      };
+  public:
+    enum EObjMode { // which objects to get
+      kAll =  0,
+      kL1,
+      kHlt
+    };
 
-      HLTMod(const char *name="HLTMod", const char *title="High-level trigger module");
-      ~HLTMod();
+    HLTMod(const char *name="HLTMod", const char *title="High-level trigger module");
+    ~HLTMod();
 
-      void                        AddTrigger(const char *expr, UInt_t firstRun=0, UInt_t lastRun=0);
-      const char                 *GetBitsName()               const { return fBitsName;      }
-      Int_t                       GetNEvents()                const { return fNEvents;       }
-      Int_t                       GetNAccepted()              const { return fNAccepted;     }
-      Int_t                       GetNFailed()                const { return fNFailed;       }
-      const char                 *GetOutputName()             const { return fMyObjsNamePub; }
-      const char                 *GetTrigObjsName()           const { return fMyObjsNamePub; }
-      void                        SetAbortIfNotAccepted(Bool_t b)   { fAbort         = b;    }
-      void                        SetBitsName(const char *n)        { fBitsName      = n;    }
-      void                        SetIgnoreBits(Bool_t b)           { fIgnoreBits    = b;    }
-      void                        SetInputName(const char *n)       { fMyObjsNamePub = n;    }
-      void                        SetObjMode(EObjMode m )           { fObjMode       = m;    }
-      void                        SetPrintTable(Bool_t b)           { fPrintTable    = b;    }
-      void                        SetTrigObjsName(const char *n)    { fMyObjsNamePub = n;    }
+    const char* GetBitsName() const     { return fBitsName;      }
+    const char* GetOutputName() const   { return fMyObjsNamePub; }
+    const char* GetTrigObjsName() const { return fMyObjsNamePub; }
+    Int_t       GetNEvents() const      { return fNEvents;       }
+    Int_t       GetNAccepted() const    { return fNAccepted;     }
+    Int_t       GetNFailed() const      { return fNFailed;       }
 
-    protected:
-      void                        AddTrigObjs(UInt_t tid);
-      void                        BeginRun();
-      virtual void                OnAccepted()  { /* could be implemented in derived classes */ }
-      virtual void                OnFailed()    { /* could be implemented in derived classes */ }
-      void                        Process();
-      void                        SlaveBegin();
-      void                        SlaveTerminate();
+    void AddTrigger(const char *expr, UInt_t firstRun = 0, UInt_t lastRun = 0);
+    void SetAbortIfNotAccepted(Bool_t b) { fSkipMode = (b ? 0 : 1); }
+    void SetAbortIfNoData(Bool_t b)      { fSkipMode = (b ? (fSkipMode < 2 ? fSkipMode : 0) : 2); }
+    void SetBitsName(const char *n)      { fBitsName = n; }
+    void SetIgnoreBits(Bool_t b)         { fIgnoreBits = b; }
+    void SetInputName(const char *n)     { fMyObjsNamePub = n; }
+    void SetObjMode(EObjMode m )         { fObjMode = m; }
+    void SetPrintTable(Bool_t b)         { fPrintTable = b; }
+    void SetTrigObjsName(const char *n)  { fMyObjsNamePub = n; }
 
-      Bool_t                      fAbort;         //=true then abort (sub-)modules if not accepted
-      Bool_t                      fPrintTable;    //=true then print HLT trigger table in BeginRun
-      Bool_t                      fIgnoreBits;    //=true then try to get trigger objects (def=0)
-      EObjMode                    fObjMode;       //defines which objects to get (def=kHlt)
-      TString                     fBitsName;      //trigger bits branch name
-      TString                     fMyObjsNamePub; //name of exported trigger object array
-      std::vector<std::pair<std::string,std::pair<UInt_t,UInt_t> > > 
-                                  fTrigNames;     //trigger names requested for test mask with valid run range
-      const TriggerMask          *fBits;          //!trigger bits branch
-      std::vector<BitMask1024>    fTrigBitsAnd;   //!trigger bits used in mask
-      std::vector<BitMask1024>    fTrigBitsCmp;   //!trigger bits used for comparison
-      BitMask1024                 fBitsDone;      //!bits for which trigger objects are copied
-      TriggerObjectOArr          *fMyTrgObjs;     //!exported published trigger object array
-      const TriggerTable         *fTriggers;      //!imported published HLT trigger table
-      const TriggerObjectsTable  *fTrigObjs;      //!imported published HLT trigger objects table
-      Int_t                       fNEvents;       //!number of processed events
-      Int_t                       fNAccepted;     //!number of accepted events
-      Int_t                       fNFailed;       //!number of failed events
+  protected:
+    void         AddTrigObjs(TriggerObjectOArr&, BitMask1024& bitsDone, UInt_t tid);
+    virtual void OnAccepted()  { /* could be implemented in derived classes */ }
+    virtual void OnFailed()    { /* could be implemented in derived classes */ }
+    void         BeginRun() override;
+    void         Process() override;
+    void         SlaveBegin() override;
+    void         SlaveTerminate() override;
+
+    typedef std::pair<UInt_t, UInt_t> RunRange;
+    typedef std::pair<TString, RunRange> TriggerNameWithValidity;
+    typedef std::vector<TriggerNameWithValidity> TriggerNames;
+
+    Int_t        fSkipMode = 0;  //=0->Skip if triggers did not fire, 1->Keep running, 2->Keep running even if HLT data not present
+    Bool_t       fPrintTable{kFALSE};    //=true then print HLT trigger table in BeginRun
+    Bool_t       fIgnoreBits{kFALSE};    //=true then try to get trigger objects (def=0)
+    EObjMode     fObjMode{kHlt};       //defines which objects to get (def=kHlt)
+    TString      fBitsName{Names::gkHltBitBrn}; //trigger bits branch name
+    TString      fMyObjsNamePub; //name of exported trigger object array
+    TriggerNames fTrigNames{};     //trigger names requested for test mask with valid run range
+
+    Int_t fNEvents{0};       //!number of processed events
+    Int_t fNAccepted{0};     //!number of accepted events
+    Int_t fNFailed{0};       //!number of failed events
+
+    std::vector<BitMask1024>   fTrigBitsAnd{};   //!trigger bits used in mask
+    std::vector<BitMask1024>   fTrigBitsCmp{};   //!trigger bits used for comparison
+    const TriggerTable*        fTriggers = 0;      //!imported published HLT trigger table
+    const TriggerObjectsTable* fTrigObjs = 0;      //!imported published HLT trigger objects table
 
     ClassDef(HLTMod, 1) // HLT TAM module
   };

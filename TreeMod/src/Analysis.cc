@@ -32,7 +32,7 @@ using namespace mithep;
 Analysis::Analysis(Bool_t useproof) :
   fUseProof(useproof),
   fUseCacher(0),
-  fUseHLT(kTRUE),
+  fUseHLT(1),
   fUseMC(kFALSE),
   fHierarchy(kTRUE),
   fDoProxy(kFALSE),
@@ -457,10 +457,12 @@ Bool_t Analysis::Init()
 
   // create our HLT framework module
   HLTFwkMod *hltmod = 0;
-  if (fUseHLT) {
+  if (fUseHLT > 0) {
     hltmod = new HLTFwkMod;
     hltmod->SetHLTObjsName(GetHLTObjsName());
     hltmod->SetHLTTreeName(GetHLTTreeName());
+    if (fUseHLT == 2)
+      hltmod->SetAbortIfNoHLTTree(false);
     fDeleteList->Add(hltmod);
   }
 

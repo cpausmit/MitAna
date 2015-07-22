@@ -1,7 +1,4 @@
-// $Id: HLTMod.cc,v 1.22 2011/11/18 00:02:02 bendavid Exp $
-
 #include "MitAna/TreeMod/interface/HLTMod.h"
-#include "MitAna/DataTree/interface/Names.h"
 #include "MitAna/DataTree/interface/TriggerName.h"
 #include "MitAna/DataTree/interface/TriggerMask.h"
 #include "MitAna/DataTree/interface/TriggerObject.h"
@@ -15,31 +12,17 @@ ClassImp(mithep::HLTMod)
 //--------------------------------------------------------------------------------------------------
 HLTMod::HLTMod(const char *name, const char *title) : 
   BaseMod(name,title),
-  fAbort(kTRUE),
-  fPrintTable(kFALSE),
-  fIgnoreBits(kFALSE),
-  fObjMode(kHlt),
-  fBitsName(Names::gkHltBitBrn),
-  fMyObjsNamePub(Form("%sTrigObjs", name)),
-  fBits(0),
-  fMyTrgObjs(0),
-  fTriggers(0),
-  fTrigObjs(0),
-  fNEvents(0),
-  fNAccepted(0),
-  fNFailed(0)
+  fMyObjsNamePub(Form("%sTrigObjs", name))
 {
-  // Constructor. 
 }
 
 //--------------------------------------------------------------------------------------------------
 HLTMod::~HLTMod() 
 {
-  // Destructor.
 }
 
 //--------------------------------------------------------------------------------------------------
-void HLTMod::AddTrigger(const char *expr, UInt_t firstRun, UInt_t lastRun)
+void HLTMod::AddTrigger(const char *expr, UInt_t firstRun/* = 0*/, UInt_t lastRun/* = 0*/)
 {
   // Add trigger search pattern to the list of patters. Each element of the list is logically
   // "ored". The given expression can contain several trigger names logically "anded" (using "&").
@@ -51,37 +34,31 @@ void HLTMod::AddTrigger(const char *expr, UInt_t firstRun, UInt_t lastRun)
   // If you just pass the event the trigger objects would not be stored as potentially no trigger
   // would fit, thus no trigger objects would eb written.
 
-  std::string tname(expr);
+  TString tname(expr);
+  RunRange runRange(firstRun, lastRun);
 
   // deal with the special case
-  if (tname.compare(0,2,"!+") == 0) {
-    std::string subtname = tname.substr(2,tname.length()-2);  // stripping off the special characters
-    std::pair<std::string,std::pair<UInt_t,UInt_t> >
-      element1(subtname,std::pair<UInt_t,UInt_t>(firstRun,lastRun));
-    fTrigNames.push_back(element1);
+  if (tname.Index("!+") == 0) {
     // add both, trigger and its negation
-    std::pair<std::string,std::pair<UInt_t,UInt_t> >
-      element2(std::string("!")+subtname,std::pair<UInt_t,UInt_t>(firstRun,lastRun));
-    fTrigNames.push_back(element2);
+    TString subtname(tname(2, tname.Length() - 2));  // stripping off the special characters
+
+    fTrigNames.emplace_back(subtname, runRange);
+    fTrigNames.emplace_back("!" + subtname, runRange);
   }
-  else {
-    std::pair<std::string,std::pair<UInt_t,UInt_t> >
-      element(tname,std::pair<UInt_t,UInt_t>(firstRun,lastRun));
-    fTrigNames.push_back(element);
-  }
-  return;
+  else
+    fTrigNames.emplace_back(tname, runRange);
 }
 
 //--------------------------------------------------------------------------------------------------
-void HLTMod::AddTrigObjs(UInt_t tid)
+void HLTMod::AddTrigObjs(TriggerObjectOArr& myTrgObjs, BitMask1024& bitsDone, UInt_t tid)
 {
   // Add trigger objects corresponding to trigger id.
-  const BitMask1024 &ba = fTrigBitsAnd.at(tid);
-  const BitMask1024 &bm = fTrigBitsCmp.at(tid);
+  const BitMask1024 &ba(fTrigBitsAnd.at(tid));
+  const BitMask1024 &bm(fTrigBitsCmp.at(tid));
   for (UInt_t i=0; i<bm.Size(); ++i) {
     if (ba.TestBit(i)==0 && !fIgnoreBits)
       continue; // not an active trigger bit
-    if (fBitsDone.TestBit(i))
+    if (bitsDone.TestBit(i))
       continue; // objects for this bit are already obtained
     if (bm.TestBit(i)==0) 
       continue; // excluded trigger bit (ie a !trgname)
@@ -94,11 +71,11 @@ void HLTMod::AddTrigObjs(UInt_t tid)
         if (  (fObjMode == kAll)  ||
              ((fObjMode == kHlt) && (to->IsHLT())) ||
              ((fObjMode == kL1)  && (to->IsL1())) )
-          fMyTrgObjs->Add(to);    
+          myTrgObjs.Add(to);    
         to = dynamic_cast<const TriggerObject*>(iter.Next());
       }
     }
-    fBitsDone.SetBit(i);
+    bitsDone.SetBit(i);
   }
 }
  
@@ -106,6 +83,9 @@ void HLTMod::AddTrigObjs(UInt_t tid)
 void HLTMod::BeginRun()
 {
   // Get HLT tree and set branches. Compute bitmasks to be used when comparing to the HLT bits.
+
+  if (fSkipMode == -2)
+    return;
 
   fTrigBitsAnd.clear();
   fTrigBitsCmp.clear();
@@ -118,20 +98,20 @@ void HLTMod::BeginRun()
   
   UInt_t runNumber = GetEventHeader()->RunNum();
 
-  for (UInt_t i=0; i<fTrigNames.size(); ++i) {
+  for (auto& tnWithV : fTrigNames) {
+    TString& names(tnWithV.first);
+    RunRange& runRange(tnWithV.second);
     
-    UInt_t firstRun = fTrigNames.at(i).second.first;
-    UInt_t lastRun  = fTrigNames.at(i).second.second;
+    UInt_t firstRun = runRange.first;
+    UInt_t lastRun  = runRange.second;
     
     // implement run dependence of the triggers
-    if ( (!(firstRun==0 && lastRun==0)) &&
-	 ( runNumber<firstRun || runNumber>lastRun ) )
+    if (!(firstRun==0 && lastRun==0) &&
+        (runNumber < firstRun || runNumber > lastRun))
       continue;
     
     BitMask1024 tmask; // trigger mask
     BitMask1024 amask; // bitand  mask
-
-    TString names(fTrigNames.at(i).first.c_str());
 
     TObjArray *arr = names.Tokenize("&");
     if (arr) {
@@ -192,33 +172,39 @@ void HLTMod::Process()
 {
   // Process trigger bits for this event. If trigger bits pass the given bit mask, then obtain
   // and publish the corresponding trigger objects. If OnAccepted or OnFailed is implemented
-  // in a derived class, call it. Do not stop processing this event, if fAbort is kFALSE.
+  // in a derived class, call it. Do not stop processing this event, if fSkipMode > 0.
+
+  if (fSkipMode == -2)
+    return;
 
   ++fNEvents; 
-  LoadBranch(fBitsName);
+
+  auto* bits = GetObject<TriggerMask>(fBitsName);
 
   // match trigger bits to trigger mask and obtain trigger objects
-  fMyTrgObjs = new TriggerObjectOArr(0,fMyObjsNamePub);
-  fMyTrgObjs->SetOwner(kFALSE); // the objects are owned by the object table
-  fBitsDone.Clear();
+  auto* myTrgObjs = new TriggerObjectOArr(0, fMyObjsNamePub);
+  myTrgObjs->SetOwner(kFALSE); // the objects are owned by the object table
+
+  BitMask1024 bitsDone{};
+
   Bool_t accept = kFALSE;
-  for (UInt_t i = 0; i<fTrigBitsAnd.size(); ++i) {
-    BitMask1024 bitmask(fBits->Get());
-    bitmask &= fTrigBitsAnd.at(i);
-    if (bitmask==fTrigBitsCmp.at(i)) {
+  for (UInt_t iB = 0; iB != fTrigBitsAnd.size(); ++iB) {
+    BitMask1024 bitmask(bits->Get());
+    bitmask &= fTrigBitsAnd.at(iB);
+    if (bitmask == fTrigBitsCmp.at(iB)) {
       accept = kTRUE;
-      AddTrigObjs(i);
+      AddTrigObjs(*myTrgObjs, bitsDone, iB);
     }
   }
 
   // take action if failed
-  if (! accept) {
+  if (!accept) {
     ++fNFailed;
     OnFailed();
-    delete fMyTrgObjs;
-    if (fAbort) {
+    delete myTrgObjs;
+    if (fSkipMode == 0)
       SkipEvent(); // abort processing of this event by sub-modules
-    }
+
     return;
   } 
 
@@ -228,13 +214,14 @@ void HLTMod::Process()
   OnAccepted();
   // here the trigger objects are attached to the event for further analysis
   // -- NOTE: all trigger objects not just objects corresponding to your trigger(s)
-  if (! AddObjThisEvt(fMyTrgObjs)) {
+  if (!AddObjThisEvt(myTrgObjs)) {
     SendError(kAbortAnalysis, "Process", 
               "Could not add my trigger objects with name %s to event.",
-              fMyTrgObjs->GetName());
+              myTrgObjs->GetName());
+
+    delete myTrgObjs;
     return;
   }
-  fMyTrgObjs = 0;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -242,8 +229,17 @@ void HLTMod::SlaveBegin()
 {
   // Request trigger bit branch and obtain trigger table and objects.
 
-  ReqBranch(fBitsName, fBits);
-  
+  if (!HasHLTInfo()) {
+    if (fSkipMode < 2) {
+      SendError(kAbortAnalysis, "SlaveBegin", "HLT info not available.");
+      return;
+    }
+    else {
+      fSkipMode = -2; // skip all subsequent functions of this module
+      return;
+    }
+  }
+
   fTriggers = GetHLTTable();
   if (!fTriggers) {
     SendError(kAbortAnalysis, "SlaveBegin", "Could not get HLT trigger table.");

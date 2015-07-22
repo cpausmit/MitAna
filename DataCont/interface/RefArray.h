@@ -158,19 +158,19 @@ TObject *mithep::RefArray<ArrayElement>::GetObject(UInt_t idx) const
   TProcessID *pid = GetPID(idx); 
   
   if (!pid) {
-    Fatal("GetObject","Process id pointer is null!");
+    Fatal(TString::Format("RefArray<%s>::GetObject", ArrayElement::Class()->GetName()),"Process id pointer is null!");
     return 0;
   }
 
   if (!TProcessID::IsValid(pid)) {
-    Fatal("GetObject","Process id is invalid!");
+    Fatal(TString::Format("RefArray<%s>::GetObject", ArrayElement::Class()->GetName()), "Process id is invalid!");
     return 0;
   }
 
   UInt_t uid = GetUID(idx);
   TObject *obj = RefResolver::GetObjectWithID(uid,pid);
   if (!obj) {
-    Fatal("RefArray::GetObject","Null pointer for filled element!");
+    Fatal(TString::Format("RefArray<%s>::GetObject", ArrayElement::Class()->GetName()), "Null pointer for filled element!");
   }
   return obj;
 }
