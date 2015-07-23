@@ -56,8 +56,8 @@ namespace mithep
     Int_t       GetNFailed() const      { return fNFailed;       }
 
     void AddTrigger(const char *expr, UInt_t firstRun = 0, UInt_t lastRun = 0);
-    void SetAbortIfNotAccepted(Bool_t b) { fSkipMode = (b ? 0 : 1); }
-    void SetAbortIfNoData(Bool_t b)      { fSkipMode = (b ? (fSkipMode < 2 ? fSkipMode : 0) : 2); }
+    void SetAbortIfNotAccepted(Bool_t b) { fAbortIfNotAccepted = b; }
+    void SetAbortIfNoData(Bool_t b)      { fAbortIfNoData = b; }
     void SetBitsName(const char *n)      { fBitsName = n; }
     void SetIgnoreBits(Bool_t b)         { fIgnoreBits = b; }
     void SetInputName(const char *n)     { fMyObjsNamePub = n; }
@@ -78,7 +78,8 @@ namespace mithep
     typedef std::pair<TString, RunRange> TriggerNameWithValidity;
     typedef std::vector<TriggerNameWithValidity> TriggerNames;
 
-    Int_t        fSkipMode = 0;  //=0->Skip if triggers did not fire, 1->Keep running, 2->Keep running even if HLT data not present
+    Bool_t       fAbortIfNotAccepted{kTRUE};
+    Bool_t       fAbortIfNoData{kTRUE}; //set to false for e.g. private MC with no HLT info
     Bool_t       fPrintTable{kFALSE};    //=true then print HLT trigger table in BeginRun
     Bool_t       fIgnoreBits{kFALSE};    //=true then try to get trigger objects (def=0)
     EObjMode     fObjMode{kHlt};       //defines which objects to get (def=kHlt)
@@ -89,6 +90,8 @@ namespace mithep
     Int_t fNEvents{0};       //!number of processed events
     Int_t fNAccepted{0};     //!number of accepted events
     Int_t fNFailed{0};       //!number of failed events
+
+    Bool_t fSkipModule{kFALSE}; //set to true when HLTInfo is not found in SlaveBegin
 
     std::vector<BitMask1024>   fTrigBitsAnd{};   //!trigger bits used in mask
     std::vector<BitMask1024>   fTrigBitsCmp{};   //!trigger bits used for comparison
