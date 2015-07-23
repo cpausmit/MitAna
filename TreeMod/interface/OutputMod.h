@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: OutputMod.h,v 1.12 2009/07/17 20:47:42 loizides Exp $
-//
 // OutputMod
 //
 // This TAM module writes selected events and selected branches to a new output file. 
@@ -48,6 +46,7 @@ namespace mithep
       void                        SetUseBrDep(Bool_t b)         { fUseBrDep   = b; }
       void                        SetCheckTamBr(Bool_t b)       { fCheckTamBr = b; }
       void                        SetKeepTamBr(Bool_t b)        { fKeepTamBr  = b; }
+      void                        AddCondition(BaseMod* m)      { fCondition.push_back(m); }
 
     protected:
       void                        BeginRun();
@@ -111,6 +110,7 @@ namespace mithep
       Long64_t                    fLastWrittenEvt;  //!entry of last written event
       Long64_t                    fLastSeenEvt;     //!entry of last seen event
       Long64_t                    fCounter;         //!count number of events
+      std::vector<BaseMod*>       fCondition;       //write when any of the modules is active (if empty, always write)
 
       friend class Selector;
 
