@@ -70,12 +70,8 @@ Bool_t BaseMod::HasHLTInfo() const
 { 
   // Check if HLT framework module is in list of modules. 
 
-  if (fHltFwkMod) {
-    if (fHltFwkMod->HasData())
-      return kTRUE;
-    else
-      return kFALSE;
-  }
+  if (fHltFwkMod)
+    return kTRUE;
 
   if (!GetSelector() || !GetSelector()->GetTopModule()) 
     return kFALSE;
@@ -85,7 +81,7 @@ Bool_t BaseMod::HasHLTInfo() const
     return kFALSE;
 
   fHltFwkMod = dynamic_cast<const HLTFwkMod*>(tasks->FindObject(fHltFwkModName));
-  if (fHltFwkMod && fHltFwkMod->HasData())
+  if (fHltFwkMod)
     return kTRUE;
 
   return kFALSE;

@@ -1,4 +1,5 @@
 #include "MitAna/TreeMod/interface/HLTMod.h"
+#include "MitAna/TreeMod/interface/HLTFwkMod.h"
 #include "MitAna/DataTree/interface/TriggerName.h"
 #include "MitAna/DataTree/interface/TriggerMask.h"
 #include "MitAna/DataTree/interface/TriggerObject.h"
@@ -83,6 +84,21 @@ void HLTMod::AddTrigObjs(TriggerObjectOArr& myTrgObjs, BitMask1024& bitsDone, UI
 void HLTMod::BeginRun()
 {
   // Get HLT tree and set branches. Compute bitmasks to be used when comparing to the HLT bits.
+
+  if (fSkipModule)
+    return;
+
+  // HLTFwkMod must have the tree data by now
+  if (!GetHltFwkMod()->HasData()) {
+    if (fAbortIfNoData) {
+      SendError(kAbortAnalysis, "BeginRun", "HLT info not available.");
+      return;
+    }
+    else {
+      fSkipModule = true; // skip all subsequent functions of this module
+      return;
+    }
+  }
 
   if (fSkipModule)
     return;
