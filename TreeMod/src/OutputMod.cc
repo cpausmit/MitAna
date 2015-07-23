@@ -50,7 +50,6 @@ OutputMod::OutputMod(const char *name, const char *title) :
   fLastSeenEvt   (-1),
   fCounter       (0)
 {
-  // Constructor.
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -431,6 +430,16 @@ void OutputMod::Process()
   // Write out the kept branches of the current event. Make sure the meta information is 
   // correctly updated.
 
+  bool doFill = fCondition.empty();
+  // if condition is set, at least one module must be active
+  for (auto* mod : fCondition) {
+    if (mod->IsActive())
+      doFill = true;
+  }
+
+  if (fCounter != 0 && !doFill)
+    return;
+
   if (GetSel()->GetCurEvt() == fLastSeenEvt) {
     Warning("Process", "Event with %lld already seen", fLastSeenEvt);
     return;
@@ -442,7 +451,6 @@ void OutputMod::Process()
     return;
   }
   fLastWrittenEvt = GetSel()->GetCurEvt();
-  ++fCounter;
 
   // prepare for tree filling
   if (!fTreeWriter->BeginEvent(fDoReset)) {
@@ -450,7 +458,7 @@ void OutputMod::Process()
     return;
   }
 
-  if (GetNEventsProcessed() == 0 && fCheckTamBr) {
+  if (fCounter == 0 && fCheckTamBr) {
     CheckAndResolveTAMDep(fKeepTamBr);
   }
 
@@ -458,7 +466,7 @@ void OutputMod::Process()
   LoadBranches();
 
   // pass our branches to tree writer if on first event
-  if (GetNEventsProcessed() == 0) {
+  if (fCounter == 0) {
     SetupBranches(); 
   }
 
@@ -474,6 +482,10 @@ void OutputMod::Process()
       fTreeWriter->StoreObject(fBranchTable);
   }
 
+  ++fCounter;
+
+  if (!doFill)
+    return;
 
   UInt_t runnum = GetEventHeader()->RunNum();
 
@@ -601,6 +613,18 @@ void OutputMod::SetupBranches()
 //--------------------------------------------------------------------------------------------------
 void OutputMod::SlaveBegin()
 {
+  // OutputMod must be a supermodule (otherwise branches may not be written)
+  TIter smItr(GetSelector()->GetTopModule()->GetListOfTasks()->MakeIterator());
+  TObject* mod = 0;
+  while ((mod = smItr.Next())) {
+    if (mod == this)
+      break;
+  }
+  if (!mod) {
+    SendError(kAbortAnalysis, "SlaveBegin", "OutputMod must be a supermodule");
+    return;
+  }
+
   // Setup the tree writer and create branches that can already be created at this point.
 
   // setup tree writer
