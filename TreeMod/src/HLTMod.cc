@@ -1,4 +1,5 @@
 #include "MitAna/TreeMod/interface/HLTMod.h"
+#include "MitAna/TreeMod/interface/HLTFwkMod.h"
 #include "MitAna/DataTree/interface/TriggerName.h"
 #include "MitAna/DataTree/interface/TriggerMask.h"
 #include "MitAna/DataTree/interface/TriggerObject.h"
@@ -84,7 +85,22 @@ void HLTMod::BeginRun()
 {
   // Get HLT tree and set branches. Compute bitmasks to be used when comparing to the HLT bits.
 
-  if (fSkipMode == -2)
+  if (fSkipModule)
+    return;
+
+  // HLTFwkMod must have the tree data by now
+  if (!GetHltFwkMod()->HasData()) {
+    if (fAbortIfNoData) {
+      SendError(kAbortAnalysis, "BeginRun", "HLT info not available.");
+      return;
+    }
+    else {
+      fSkipModule = true; // skip all subsequent functions of this module
+      return;
+    }
+  }
+
+  if (fSkipModule)
     return;
 
   fTrigBitsAnd.clear();
@@ -172,9 +188,9 @@ void HLTMod::Process()
 {
   // Process trigger bits for this event. If trigger bits pass the given bit mask, then obtain
   // and publish the corresponding trigger objects. If OnAccepted or OnFailed is implemented
-  // in a derived class, call it. Do not stop processing this event, if fSkipMode > 0.
+  // in a derived class, call it.
 
-  if (fSkipMode == -2)
+  if (fSkipModule)
     return;
 
   ++fNEvents; 
@@ -202,7 +218,7 @@ void HLTMod::Process()
     ++fNFailed;
     OnFailed();
     delete myTrgObjs;
-    if (fSkipMode == 0)
+    if (fAbortIfNotAccepted)
       SkipEvent(); // abort processing of this event by sub-modules
 
     return;
@@ -230,12 +246,12 @@ void HLTMod::SlaveBegin()
   // Request trigger bit branch and obtain trigger table and objects.
 
   if (!HasHLTInfo()) {
-    if (fSkipMode < 2) {
+    if (fAbortIfNoData) {
       SendError(kAbortAnalysis, "SlaveBegin", "HLT info not available.");
       return;
     }
     else {
-      fSkipMode = -2; // skip all subsequent functions of this module
+      fSkipModule = true; // skip all subsequent functions of this module
       return;
     }
   }
