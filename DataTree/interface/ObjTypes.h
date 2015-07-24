@@ -73,6 +73,9 @@ namespace mithep
     kTriggerObjectBase,
     kTriggerObjectRel,
     kVertex,
+    kFatJet,
+    kXlFatJet,
+    kXlSubJet,
     kUnknown
   };
 }
