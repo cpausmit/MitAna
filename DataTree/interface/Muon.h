@@ -42,8 +42,9 @@
 //   NSegments : Number of segments in muon using Segment+Track Arbitration
 //   NChambers : Number of muon chambers traversed in propagated track
 //   NMatches  : Number of muon chambers with matches
-//   LastHit   : Returns farest (from center) station with a recorded segment
-//   LastStation  : Returns farest station using Segment+Track Arbitration
+//   NMatchedStations : Number of muon chamber stations using Segment+Track Arbitration
+//   LastHit   : Returns farthest (from center) station with a recorded segment
+//   LastStation  : Returns fartheest station using Segment+Track Arbitration
 //
 //  Muon Id Methods: Please see Muon Id Note(as of now unpublished):
 //      https://www.cmsaf.mit.edu/twiki/pub/CmsHep/HepWAnalysis/MuonID-ingo.pdf
@@ -118,6 +119,9 @@ namespace mithep {
       Double_t       PVBSCompatibility()             const { return fPVBSCompatibility;        }
       Double_t       TrkKink()                       const { return fTrkKink;                  }
       Double_t       GlbKink()                       const { return fGlbKink;                  }
+      Double_t       Chi2LocalPosition()             const { return fChi2LocalPosition;        }
+      Double_t       Chi2LocalMomentum()             const { return fChi2LocalMomentum;        }
+      Double_t       ValidFraction()                 const { return fValidFraction;            }
       Double_t       EmEnergy()                      const { return fEmEnergy;                 }
       Double_t       EmS9Energy()                    const { return fEmS9Energy;               }
       Double_t       GetDX(Int_t iStation)           const;
@@ -161,6 +165,7 @@ namespace mithep {
       UInt_t         NChambers()                     const { return fNTraversedChambers;       }
       UInt_t         NSegments()                     const { return fStationMask.NBitsSet();   }
       UInt_t         NMatches()                      const { return fNMatches;                 }
+      UInt_t         NMatchedStations()              const { return fNMatchedStations;         }
       Int_t          NTrkLayersHit()                 const { return fNTrkLayersHit;            }
       Int_t          NTrkLayersNoHit()               const { return fNTrkLayersNoHit;          }
       Int_t          NPxlLayersHit()                 const { return fNPxlLayersHit;            }
@@ -218,6 +223,8 @@ namespace mithep {
       void           SetPVBSCompatibility(Double_t x)      { fPVBSCompatibility = x;           }
       void           SetTrkKink(Double_t x)                { fTrkKink = x;                     }
       void           SetGlbKink(Double_t x)                { fGlbKink = x;                     }
+      void           SetChi2LocalPosition(Double_t x)      { fChi2LocalPosition = x;           }
+      void           SetChi2LocalMomentum(Double_t x)      { fChi2LocalMomentum = x;           }
       void           SetValidFraction(Double_t x)          { fValidFraction = x;               }
       void           SetEmEnergy(Double_t emEnergy)        { fEmEnergy = emEnergy;             }
       void           SetEmS9Energy(Double_t emS9Energy)    { fEmS9Energy = emS9Energy;         }
@@ -246,6 +253,7 @@ namespace mithep {
       void           SetNChambers(UShort_t iNTraCh)        { fNTraversedChambers = iNTraCh;    }
       void           SetNSegments(Int_t iStation, Int_t nSegments);
       void           SetNMatches(UShort_t i)               { fNMatches = i;                    }
+      void           SetNMatchedStations(UShort_t i)       { fNMatchedStations = i;            }
       void           SetNTrkLayersHit(Int_t i)             { fNTrkLayersHit = i;               }
       void           SetNTrkLayersNoHit(Int_t i)           { fNTrkLayersNoHit = i;             }
       void           SetNPxlLayersHit(Int_t i)             { fNPxlLayersHit = i;               }
@@ -259,86 +267,89 @@ namespace mithep {
       void           SetTrackDistErr(Int_t iStation, Double_t iDistErr);
 
       // Some structural tools
-      void           Mark(UInt_t i=1)                const override;
+      void           Mark(UInt_t i=1) const override;
 
     protected:
-      Double_t       GetCharge()                     const override;
-      Double_t       GetMass()                       const { return 105.658369e-3;             }
-      void           GetMom()                        const override;
+      Double_t       GetCharge() const override;
+      Double_t       GetMass()   const override { return 105.658369e-3;             }
+      void           GetMom()    const override;
 
-      Vect3C         fMom;                 //stored three-momentum
+      Vect3C         fMom{};                 //stored three-momentum
       Char_t         fCharge = -99;        //stored charge - filled with -99 when reading old files
       UChar_t        fBestTrkType = kNone;//type of best track as given by CMSSW
       UChar_t        fTunePBestTrkType = kNone; //type of best track for high-pT muons
-      Ref<Track>     fGlobalTrkRef;        //global combined track reference
-      Ref<Track>     fStaTrkRef;           //standalone muon track reference
-      Ref<Track>     fTrkTrkRef;           //tracker track reference
-      Ref<Track>     fTPFMSTrkRef;         //tracker plus first muon station (for showring high-pT muons)
-      Ref<Track>     fPickyTrkRef;         //picky fit
-      Ref<Track>     fDYTTrkRef;           //DYT fit
-      Double32_t     fIsoR03SumPt;         //[0,0,14]isolation size R=0.3 sum pt
-      Double32_t     fIsoR03EmEt;          //[0,0,14]isolation size R=0.3 em  trans energy
-      Double32_t     fIsoR03HadEt;         //[0,0,14]isolation size R=0.3 had trans energy
-      Double32_t     fIsoR03HoEt;          //[0,0,14]isolation size R=0.3 ho  trans energy
-      UShort_t       fIsoR03NTracks;       //isolation size R=0.3 number of tracks
-      UShort_t       fIsoR03NJets;         //isolation size R=0.3 number of jets
-      Double32_t     fIsoR05SumPt;         //[0,0,14]isolation size R=0.5 sum pt
-      Double32_t     fIsoR05EmEt;          //[0,0,14]isolation size R=0.5 em  trans energy
-      Double32_t     fIsoR05HadEt;         //[0,0,14]isolation size R=0.5 had trans energy
-      Double32_t     fIsoR05HoEt;          //[0,0,14]isolation size R=0.5 ho  trans energy
-      UShort_t       fIsoR05NTracks;       //isolation size R=0.5 number of tracks
-      UShort_t       fIsoR05NJets;         //isolation size R=0.5 number of jets
-      Double32_t     fEmEnergy;            //[0,0,14]energy deposit in ecal
-      Double32_t     fHadEnergy;           //[0,0,14]energy deposit in hcal
-      Double32_t     fHoEnergy;            //[0,0,14]energy deposit in outer hcal
-      Double32_t     fEmS9Energy;          //[0,0,14]energy deposit in 3x3 ecal
-      Double32_t     fHadS9Energy;         //[0,0,14]energy deposit in 3x3 hcal
-      Double32_t     fHoS9Energy;          //[0,0,14]energy deposit in 3x3 outer hcal
-      Double32_t     fD0PV;                //[0,0,14]transverse impact parameter to signal PV
-      Double32_t     fD0PVErr;             //[0,0,14]transverse impact parameter uncertainty to signal PV
-      Double32_t     fIp3dPV;              //[0,0,14]3d impact parameter to signal PV
-      Double32_t     fIp3dPVErr;           //[0,0,14]3d impact parameter uncertainty to signal PV
-      Double32_t     fD0PVBS;              //[0,0,14]transverse impact parameter to signal PV w/ bs constraint
-      Double32_t     fD0PVBSErr;           //[0,0,14]transverse impact parameter uncertainty to signal PV w/ bs constraint
-      Double32_t     fIp3dPVBS;            //[0,0,14]3d impact parameter to signal PV w/ bs constraint
-      Double32_t     fIp3dPVBSErr;         //[0,0,14]3d impact parameter uncertainty to signal PV w/ bs constraint
-      Double32_t     fPVCompatibility;     //[0,0,14]chi^2 compatibility with signal PV (ndof=2)
-      Double32_t     fPVBSCompatibility;   //[0,0,14]chi^2 compatibility with signal PV w/ bs constraint (ndof=2)
-      Double32_t     fD0PVUB;              //[0,0,14]transverse impact parameter to signal PVUB (unbiased primary vertex - refit removing lepton track)
-      Double32_t     fD0PVUBErr;           //[0,0,14]transverse impact parameter uncertainty to signal PVUB
-      Double32_t     fIp3dPVUB;            //[0,0,14]3d impact parameter to signal PVUB
-      Double32_t     fIp3dPVUBErr;         //[0,0,14]3d impact parameter uncertainty to signal PVUB
-      Double32_t     fD0PVUBBS;            //[0,0,14]transverse impact parameter to signal PVUB w/ bs constraint
-      Double32_t     fD0PVUBBSErr;         //[0,0,14]transverse impact parameter uncertainty to signal PVUB w/ bs constraint
-      Double32_t     fIp3dPVUBBS;          //[0,0,14]3d impact parameter to signal PVUB w/ bs constraint
-      Double32_t     fIp3dPVUBBSErr;       //[0,0,14]3d impact parameter uncertainty to signal PVUB w/ bs constraint
-      Double32_t     fTrkKink;             //[0,0,14]kink algorithm output (tracker track)
-      Double32_t     fGlbKink;             //[0,0,14]kink algorithm output (global track)
-      Double32_t     fValidFraction;       //valid tracker hits divided by expected tracker hits
-      UShort_t       fNValidHits;          //number of Valid hits in global fit
-      UShort_t       fNTraversedChambers;  //number of traversed chambers
-      UShort_t       fNMatches;            //number of muon chambers with matches
-      Int_t          fNTrkLayersHit;       //number of tracker layers of track
-      Int_t          fNTrkLayersNoHit;     //number of missing tracker layers of track
-      Int_t          fNPxlLayersHit;       //number of pixel layers of track
-      Int_t          fNTrkLostHitsIn;      //number of expected hits before the first hit in the trajectory
-      Int_t          fNTrkLostHitsOut;     //number of expected hits after the last hit in the trajectory
-      MuonQuality    fQuality;             //muon quality
-      BitMask8       fStationMask;         //bitmap of station with tracks, 0-3 DT, 4-7 CSCs
-      Double32_t     fDX[8];               //[0,0,14]uncertainty in x in given muon chamber
-      Double32_t     fDY[8];               //[0,0,14]uncertainty in y in given muon chamber
-      Double32_t     fPullX[8];            //[0,0,14]pull in x in given muon chamber
-      Double32_t     fPullY[8];            //[0,0,14]pull in y in given muon chamber
-      Double32_t     fTrackDist[8];        //[0,0,14]dist. to track in trans. plane in muon chamber
-      Double32_t     fTrackDistErr[8];     //[0,0,14]error of dist. to track in trans. plane
-      Int_t          fNSegments[8];        //number of segments in given muon chamber
+      Ref<Track>     fGlobalTrkRef{};        //global combined track reference
+      Ref<Track>     fStaTrkRef{};           //standalone muon track reference
+      Ref<Track>     fTrkTrkRef{};           //tracker track reference
+      Ref<Track>     fTPFMSTrkRef{};         //tracker plus first muon station (for showring high-pT muons)
+      Ref<Track>     fPickyTrkRef{};         //picky fit
+      Ref<Track>     fDYTTrkRef{};           //DYT fit
+      Double32_t     fIsoR03SumPt{};         //[0,0,14]isolation size R=0.3 sum pt
+      Double32_t     fIsoR03EmEt{};          //[0,0,14]isolation size R=0.3 em  trans energy
+      Double32_t     fIsoR03HadEt{};         //[0,0,14]isolation size R=0.3 had trans energy
+      Double32_t     fIsoR03HoEt{};          //[0,0,14]isolation size R=0.3 ho  trans energy
+      UShort_t       fIsoR03NTracks{};       //isolation size R=0.3 number of tracks
+      UShort_t       fIsoR03NJets{};         //isolation size R=0.3 number of jets
+      Double32_t     fIsoR05SumPt{};         //[0,0,14]isolation size R=0.5 sum pt
+      Double32_t     fIsoR05EmEt{};          //[0,0,14]isolation size R=0.5 em  trans energy
+      Double32_t     fIsoR05HadEt{};         //[0,0,14]isolation size R=0.5 had trans energy
+      Double32_t     fIsoR05HoEt{};          //[0,0,14]isolation size R=0.5 ho  trans energy
+      UShort_t       fIsoR05NTracks{};       //isolation size R=0.5 number of tracks
+      UShort_t       fIsoR05NJets{};         //isolation size R=0.5 number of jets
+      Double32_t     fEmEnergy{};            //[0,0,14]energy deposit in ecal
+      Double32_t     fHadEnergy{};           //[0,0,14]energy deposit in hcal
+      Double32_t     fHoEnergy{};            //[0,0,14]energy deposit in outer hcal
+      Double32_t     fEmS9Energy{};          //[0,0,14]energy deposit in 3x3 ecal
+      Double32_t     fHadS9Energy{};         //[0,0,14]energy deposit in 3x3 hcal
+      Double32_t     fHoS9Energy{};          //[0,0,14]energy deposit in 3x3 outer hcal
+      Double32_t     fD0PV{};                //[0,0,14]transverse impact parameter to signal PV
+      Double32_t     fD0PVErr{};             //[0,0,14]transverse impact parameter uncertainty to signal PV
+      Double32_t     fIp3dPV{};              //[0,0,14]3d impact parameter to signal PV
+      Double32_t     fIp3dPVErr{};           //[0,0,14]3d impact parameter uncertainty to signal PV
+      Double32_t     fD0PVBS{};              //[0,0,14]transverse impact parameter to signal PV w/ bs constraint
+      Double32_t     fD0PVBSErr{};           //[0,0,14]transverse impact parameter uncertainty to signal PV w/ bs constraint
+      Double32_t     fIp3dPVBS{};            //[0,0,14]3d impact parameter to signal PV w/ bs constraint
+      Double32_t     fIp3dPVBSErr{};         //[0,0,14]3d impact parameter uncertainty to signal PV w/ bs constraint
+      Double32_t     fPVCompatibility{};     //[0,0,14]chi^2 compatibility with signal PV (ndof=2)
+      Double32_t     fPVBSCompatibility{};   //[0,0,14]chi^2 compatibility with signal PV w/ bs constraint (ndof=2)
+      Double32_t     fD0PVUB{};              //[0,0,14]transverse impact parameter to signal PVUB (unbiased primary vertex - refit removing lepton track)
+      Double32_t     fD0PVUBErr{};           //[0,0,14]transverse impact parameter uncertainty to signal PVUB
+      Double32_t     fIp3dPVUB{};            //[0,0,14]3d impact parameter to signal PVUB
+      Double32_t     fIp3dPVUBErr{};         //[0,0,14]3d impact parameter uncertainty to signal PVUB
+      Double32_t     fD0PVUBBS{};            //[0,0,14]transverse impact parameter to signal PVUB w/ bs constraint
+      Double32_t     fD0PVUBBSErr{};         //[0,0,14]transverse impact parameter uncertainty to signal PVUB w/ bs constraint
+      Double32_t     fIp3dPVUBBS{};          //[0,0,14]3d impact parameter to signal PVUB w/ bs constraint
+      Double32_t     fIp3dPVUBBSErr{};       //[0,0,14]3d impact parameter uncertainty to signal PVUB w/ bs constraint
+      Double32_t     fTrkKink{};             //[0,0,14]kink algorithm output (tracker track)
+      Double32_t     fGlbKink{};             //[0,0,14]kink algorithm output (global track)
+      Double32_t     fChi2LocalPosition{};   //chi2 of tracker-standalone matching in position
+      Double32_t     fChi2LocalMomentum{};   //chi2 of tracker-standalone matching in momentum
+      Double32_t     fValidFraction{};       //valid tracker hits divided by expected tracker hits
+      UShort_t       fNValidHits{};          //number of Valid hits in global fit
+      UShort_t       fNTraversedChambers{};  //number of traversed chambers
+      UShort_t       fNMatches{};            //number of muon chambers with matches
+      UShort_t       fNMatchedStations{};    //number of muon stations with matches
+      Int_t          fNTrkLayersHit{};       //number of tracker layers of track
+      Int_t          fNTrkLayersNoHit{};     //number of missing tracker layers of track
+      Int_t          fNPxlLayersHit{};       //number of pixel layers of track
+      Int_t          fNTrkLostHitsIn{};      //number of expected hits before the first hit in the trajectory
+      Int_t          fNTrkLostHitsOut{};     //number of expected hits after the last hit in the trajectory
+      MuonQuality    fQuality{};             //muon quality
+      BitMask8       fStationMask{};         //bitmap of station with tracks, 0-3 DT, 4-7 CSCs
+      Double32_t     fDX[8] = {};               //[0,0,14]uncertainty in x in given muon chamber
+      Double32_t     fDY[8] = {};               //[0,0,14]uncertainty in y in given muon chamber
+      Double32_t     fPullX[8] = {};            //[0,0,14]pull in x in given muon chamber
+      Double32_t     fPullY[8] = {};            //[0,0,14]pull in y in given muon chamber
+      Double32_t     fTrackDist[8] = {};        //[0,0,14]dist. to track in trans. plane in muon chamber
+      Double32_t     fTrackDistErr[8] = {};     //[0,0,14]error of dist. to track in trans. plane
+      Int_t          fNSegments[8] = {};        //number of segments in given muon chamber
       Bool_t         fIsGlobalMuon = kFALSE;      //GlobalMuon algo flag
       Bool_t         fIsTrackerMuon = kFALSE;     //TrackerMuon algo flag
       Bool_t         fIsStandaloneMuon = kFALSE;  //StandaloneMuon algo flag
       Bool_t         fIsPFMuon = kFALSE;          //particle flow muon flag
       Bool_t         fIsCaloMuon = kFALSE;        //CaloMuon algo flag
 
-    ClassDef(Muon, 11) // Muon class
+    ClassDef(Muon, 13) // Muon class
   };
 }
 
