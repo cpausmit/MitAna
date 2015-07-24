@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: FastJetMod.h,v 1.9 2011/03/01 17:27:22 mzanetti Exp $
-//
 // FastJetMod 
 //
 // This module process a collection of input PFCandidates, cluster them
@@ -32,10 +30,10 @@ namespace mithep
                    const char *title = "FastJet module");
       ~FastJetMod();
 
-      const char *GetOutputJetsName()     const { return fOutputJetsName;     }
+      const char *GetOutputJetsName() const { return fOutputJetsName;     }
 
-      UInt_t GetJetAlgorithm()		const					{ return fJetAlgorithm; 			}
-      void SetJetAlgorithm(UInt_t n)						{ fJetAlgorithm = n; 					}	
+      UInt_t GetJetAlgorithm() const        { return fJetAlgorithm;       }
+      void SetJetAlgorithm(UInt_t n)        { fJetAlgorithm = n;          }
       
       void GetMatchBtag(Bool_t b)               { fGetMatchBtag = b;          }
       void UseBambuJets(Bool_t b)               { fUseBambuJets = b;          }
@@ -65,9 +63,9 @@ namespace mithep
       void FillPFJet (PFJet *pPFJet, fastjet::PseudoJet &fjJet);    
 
       enum JetAlgorithms {
-      	kCA,
-      	kKT,
-      	kAK
+        kCA,
+        kKT,
+        kAK
       };
         
     private:

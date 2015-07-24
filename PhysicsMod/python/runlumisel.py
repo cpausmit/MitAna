@@ -2,7 +2,7 @@ from MitAna.TreeMod.bambu import mithep
 import os
 import sys
 
-def goodLumiFilter(fileName, jsonDir = None):
+def goodLumiFilter(fileName = None, jsonDir = None):
     """
     Find the good lumi list JSON file and return a RunLumiSelectionMod instance.
     """
@@ -14,7 +14,9 @@ def goodLumiFilter(fileName, jsonDir = None):
             print 'goodLumiFilter requires environment MIT_JSON_DIR to be set.'
             sys.exit(1)
 
-    if type(fileName) is str:
+    if not fileName:
+        fileNames = []
+    elif type(fileName) is str:
         fileNames = [fileName]
     elif type(fileName) is list:
         fileNames = fileName
