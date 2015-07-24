@@ -9,6 +9,7 @@
 #include "MitAna/PhysicsMod/interface/TrackToPartMod.h"
 #include "MitAna/PhysicsMod/interface/MCProcessSelectionMod.h"
 #include "MitAna/PhysicsMod/interface/FastJetMod.h"
+#include "MitAna/PhysicsMod/interface/MaskCollectionMod.h"
 #endif
 
 #ifdef __CLING__
@@ -28,4 +29,5 @@
 #pragma link C++ class mithep::RunLumiSelectionMod+;
 #pragma link C++ class mithep::MCProcessSelectionMod+;
 #pragma link C++ class mithep::FastJetMod+;
+#pragma link C++ class mithep::MaskCollectionMod+;
 #endif
