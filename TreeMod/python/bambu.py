@@ -116,8 +116,16 @@ class Namespace(object):
             ret = Configurable.Generator(cls, clsName, configurable)
 
         elif issubclass(type(cls), ROOT.PyRootType):
-            # this is a namespace
-            ret = Namespace(cls, name, self._superspaces + [self._name])
+            # for now, all PyRootType that have MethodProxy attributes are treated as Configurable
+            # would be nice in future to check for non-const methods (otherwise e.g. TMath is a Configurable)
+            for attr in cls.__dict__.values():
+                if type(attr) is ROOT.MethodProxy:
+                    ret = Configurable.Generator(cls, clsName, Configurable)
+                    break
+
+            else:
+                # no MethodProxy -> this is a namespace
+                ret = Namespace(cls, name, self._superspaces + [self._name])
 
         else:
             # this is a simple variable
