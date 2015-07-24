@@ -204,6 +204,9 @@ void HLTFwkMod::Process()
 {
   // Read trigger objects and relation branch and fill our object table.
 
+  if (!fHLTTree)
+    return;
+
   fTrigObjs.Clear();
   fTrigObjArr.Reset();
 
