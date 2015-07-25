@@ -97,6 +97,12 @@ class Namespace(object):
                 print 'No class "' + name + '" found in namespace mithep. Perhaps a missing library?'
                 sys.exit(1)
 
+        # class full name with all namespaces
+        clsName = ''
+        for sup in self._superspaces:
+            clsName += sup + '.'
+        clsName += self._name + '.' + name
+
         try:
             tclass = cls.Class()
         except AttributeError:
@@ -107,11 +113,6 @@ class Namespace(object):
             configurable = Configurable
             if tclass.InheritsFrom(ROOT.mithep.BaseMod.Class()):
                 configurable = Module
-
-            clsName = ''
-            for sup in self._superspaces:
-                clsName += sup + '.'
-            clsName += self._name + '.' + name
 
             ret = Configurable.Generator(cls, clsName, configurable)
 
