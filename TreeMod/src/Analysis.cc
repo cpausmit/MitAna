@@ -21,6 +21,7 @@
 #include "MitAna/TreeMod/interface/AnaFwkMod.h"
 #include "MitAna/TreeMod/interface/HLTFwkMod.h"
 #include "MitAna/TreeMod/interface/MCFwkMod.h"
+#include "MitAna/TreeMod/interface/OutputMod.h"
 #include "MitAna/Catalog/interface/Catalog.h"
 #include "MitAna/Catalog/interface/Dataset.h"
 
@@ -288,7 +289,27 @@ void Analysis::AddSuperModule(TAModule *mod)
 {
   // Add a top-level module to list of top-level (super) modules.
 
+  if (dynamic_cast<OutputMod*>(mod)) {
+    AddOutputMod(static_cast<OutputMod*>(mod));
+    return;
+  }
+
+  for (auto* sm : *fSuperMods) {
+    if (dynamic_cast<OutputMod*>(sm)) {
+      fSuperMods->AddBefore(sm, mod);
+      return;
+    }
+  }
+
   fSuperMods->Add(mod);
+}
+
+//--------------------------------------------------------------------------------------------------
+void Analysis::AddOutputMod(OutputMod *mod)
+{
+  // Add an output module, which must be at the top level.
+
+  fSuperMods->AddLast(mod);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -481,13 +502,8 @@ Bool_t Analysis::Init()
     if (mcmod)
       fProof->AddInput(mcmod);
 
-    TIter iter(fSuperMods->MakeIterator());
-    while (1) {
-      TAModule *next = dynamic_cast<TAModule*>(iter.Next());
-      if (!next)
-	break;
-      fProof->AddInput(next);
-    }
+    for (auto* mod : *fSuperMods)
+      fProof->AddInput(static_cast<TAModule*>(mod));
 
     fLoaders->SetName("TAM_LOADERS");
     fProof->AddInput(fLoaders);
@@ -495,41 +511,38 @@ Bool_t Analysis::Init()
   } else {
 
     // when not running Proof, we must make a selector
-    Selector *sel = new Selector;
-    sel->SetCacheSize(fCacheSize);
-    sel->SetDoProxy(fDoProxy);
-    sel->SetDoObjTabClean(fDoObjTabClean);
-    sel->SetDoRunInfo(kTRUE);
-    sel->SetAllEvtHdrBrn(GetAllEvtHdrBrn());
-    sel->SetAllEvtTreeName(GetAllEvtTreeName());
-    sel->SetEvtHdrName(GetEvtHdrName());
-    sel->SetLAHdrName(GetLAHdrName());
-    sel->SetLATreeName(GetLATreeName());
-    sel->SetRunInfoName(GetRunInfoName());
-    sel->SetRunTreeName(GetRunTreeName());
-    sel->AddInput(anamod);
-    fSelector = sel;
+    fSelector = new Selector;
+    fSelector->SetCacheSize(fCacheSize);
+    fSelector->SetDoProxy(fDoProxy);
+    fSelector->SetDoObjTabClean(fDoObjTabClean);
+    fSelector->SetDoRunInfo(kTRUE);
+    fSelector->SetAllEvtHdrBrn(GetAllEvtHdrBrn());
+    fSelector->SetAllEvtTreeName(GetAllEvtTreeName());
+    fSelector->SetEvtHdrName(GetEvtHdrName());
+    fSelector->SetLAHdrName(GetLAHdrName());
+    fSelector->SetLATreeName(GetLATreeName());
+    fSelector->SetRunInfoName(GetRunInfoName());
+    fSelector->SetRunTreeName(GetRunTreeName());
+    fSelector->AddInput(anamod);
 
     if (hltmod)
       fSelector->AddInput(hltmod);
     if (mcmod)
       fSelector->AddInput(mcmod);
 
-    TIter iter(fSuperMods->MakeIterator());
-    while (1) {
-      TAModule *next = dynamic_cast<TAModule*>(iter.Next());
-      if (!next)
-	break;
-      fSelector->AddInput(next);
+    for (auto* mod : *fSuperMods) {
+      fSelector->AddInput(static_cast<TAModule*>(mod));
+      // if an output mod, register to the Selector
+      if (dynamic_cast<OutputMod*>(mod))
+        fSelector->AddOutputMod(static_cast<OutputMod*>(mod));
     }
 
     MDB(kAnalysis, 2)
       fSelector->SetVerbosity(1);
 
     // pass loaders to selector
-    TIter next(fLoaders);
-    while (TAMVirtualLoader *l = dynamic_cast<TAMVirtualLoader*>(next()))
-      fSelector->AddLoader(l);
+    for (auto* loader : *fLoaders)
+      fSelector->AddLoader(static_cast<TAMVirtualLoader*>(loader));
   }
 
   fState = kInit;

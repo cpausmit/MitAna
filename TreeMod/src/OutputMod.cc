@@ -57,7 +57,7 @@ void OutputMod::BeginRun()
 {
   // Create HLT tree if HLTFwkMod is being run.
 
-  if (!HasHLTInfo())
+  if (!HasHLTInfo() || !GetHltFwkMod()->HasData())
     return;
 
   if (!fHltTree) {
@@ -276,14 +276,14 @@ void OutputMod::FillAllEventHeader(Bool_t isremoved)
   if (fSkimmedIn) { // copy alread skimmed headers if any there
     const UInt_t n = fSkimmedIn->GetEntries();
     for (UInt_t i=0; i<n; ++i) {
-      const EventHeader  *eh = fSkimmedIn->At(i);
+      const EventHeader *eh = fSkimmedIn->At(i);
       *fAllEventHeader = *eh;
       fAllEventHeader->SetSkimmed(eh->Skimmed()+1);
       fAllTree->Fill();
     }
   }
 
-  const EventHeader  *eh = GetEventHeader();
+  const EventHeader *eh = GetEventHeader();
   *fAllEventHeader = *eh;
   if (isremoved) {
     fAllEventHeader->SetRunEntry(-1);
@@ -498,42 +498,34 @@ void OutputMod::Process()
   // fill event header
   *fEventHeader = *GetEventHeader();
 
+  // look-up if entry is in map
+  auto&& riter(fRunmap.find(runnum));
+  if (riter == fRunmap.end()) {
+    // fill new run info
+    riter = fRunmap.emplace(runnum, fRunEntries).first;
+    ++fRunEntries;
+
+    fRunInfo->SetRunNum(runnum);
+
+    Int_t hltEntry = fHltEntries;
+    FillHltInfo();
+    if (hltEntry < fHltEntries)
+      fRunInfo->SetHltEntry(hltEntry);
+    else
+      fRunInfo->SetHltEntry(hltEntry-1);
+  
+    fRunTree->Fill();
+  }
+
+  fEventHeader->SetRunEntry(riter->second);
+
   // fill all event header
   FillAllEventHeader(kFALSE);
 
-  // look-up if entry is in map
-  map<UInt_t,Int_t>::iterator riter = fRunmap.find(runnum);
-  if (riter != fRunmap.end()) { // found existing run info
-    Int_t runEntry = riter->second;
-    fEventHeader->SetRunEntry(runEntry);
-
-    IncNEventsProcessed();
-    fTreeWriter->EndEvent(fDoReset);
-    return;
-  }
-
-  // fill new run info
-  Int_t runEntry = fRunEntries;
-  ++fRunEntries;
-  fEventHeader->SetRunEntry(runEntry);
-  fRunmap.insert(pair<UInt_t,Int_t>(runnum,runEntry));
-  fRunInfo->SetRunNum(runnum);
-
-  Int_t hltEntry = fHltEntries;
-  FillHltInfo();
-  if (hltEntry < fHltEntries)
-    fRunInfo->SetHltEntry(hltEntry);
-  else
-    fRunInfo->SetHltEntry(hltEntry-1);
-  
-  fRunTree->Fill();
- 
   IncNEventsProcessed();
 
-  if (!fTreeWriter->EndEvent(fDoReset)) {
+  if (!fTreeWriter->EndEvent(fDoReset))
     SendError(kAbortAnalysis, "Process", "End event failed!");
-    return;
-  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -614,7 +606,8 @@ void OutputMod::SetupBranches()
 void OutputMod::SlaveBegin()
 {
   // OutputMod must be a supermodule (otherwise branches may not be written)
-  TIter smItr(GetSelector()->GetTopModule()->GetListOfTasks()->MakeIterator());
+  // Add to the Analysis object either by AddSuperModule or AddOutputMod (preferred)
+  TIter smItr(GetSelector()->GetTopModule()->GetSubModules()->MakeIterator());
   TObject* mod = 0;
   while ((mod = smItr.Next())) {
     if (mod == this)
@@ -663,7 +656,7 @@ void OutputMod::SlaveBegin()
   fTreeWriter->SetAutoFill(tname, 0);
 
   // get pointer to all event headers
-  fSkimmedIn = GetObject<EventHeaderCol>(Names::gkSkimmedHeaders);
+  fSkimmedIn = GetPublicObj<EventHeaderCol>(Names::gkSkimmedHeaders);
 
   // create TObject space for TAM
   fBranches = new TObject*[fNBranchesMax + fAddList.size()];       

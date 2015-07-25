@@ -33,14 +33,16 @@ class TChain;
 class TDSet;
 class TString;
 class TAModule;
-class TAMSelector;
 class TAMVirtualLoader;
 class TObjArray;
 class TProof;
 
 namespace mithep 
 {
+  class Selector;
   class Dataset;
+  class OutputMod;
+
   class Analysis : public TObject 
   {
     public:
@@ -54,6 +56,7 @@ namespace mithep
       void                      AddPackage(const char *name);
       void                      AddPackages(TList *list);
       void                      AddSuperModule(TAModule *mod);
+      void                      AddOutputMod(OutputMod* mod);
       const char               *GetAllEvtTreeName()           const { return fAllEvtTreeName;     }
       const char               *GetAllEvtHdrBrn()             const { return fAllEvtHdrBrn;       }
       const char               *GetAnaOutputName()            const { return fAnaOutput;          }
@@ -138,7 +141,7 @@ namespace mithep
       TList                    *fPackages;        //list of package names for PROOF upload
       TList                    *fLoaders;         //list of loaders
       TList                    *fSuperMods;       //top level TAM module(s) (not owned)
-      TAMSelector              *fSelector;        //selector for non-PROOF usage
+      Selector                 *fSelector;        //selector for non-PROOF usage
       TChain                   *fChain;           //trees or friend trees for non-PROOF usage
       TDSet                    *fSet;             //set of trees or friend trees for PROOF usage
       TList                    *fDeleteList;      //list of objects to be deleted on Terminate()

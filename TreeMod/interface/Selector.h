@@ -42,6 +42,7 @@ namespace mithep {
     const char*          GetMCRunInfoName()         const { return fMCRunInfoName;         }
     const RunInfo*       GetRunInfo()               const { return fRunInfo;               }
     const MCRunInfo*     GetMCRunInfo()             const { return fMCRunInfo;             }
+    const TList&         GetOutputMods()            const { return fOutputMods;            }
     template <class T>
     T*                   GetObject(char const* name, Bool_t warn);
     Bool_t               ValidRunInfo()             const;
@@ -56,6 +57,7 @@ namespace mithep {
     void                 SetRunInfoName(const char* n)    { fRunInfoName    = n; }
     void                 SetMCRunInfoName(const char* n)  { fMCRunInfoName  = n; }
     void                 SetRunTreeName(const char* n)    { fRunTreeName    = n; }
+    void                 AddOutputMod(OutputMod*);
 
     class ObjInfo : public TNamed {
     // Helper class to associate an object name with its source type and class type.
@@ -138,8 +140,6 @@ namespace mithep {
     THashTable           fObjInfoStore;   //!single-point pointer store for GetObject function
 
   private:
-    void                 SearchOutputMods(const TAModule* mod);
-
     friend class OutputMod;
 
     ClassDef(Selector, 1) // Customized selector class
