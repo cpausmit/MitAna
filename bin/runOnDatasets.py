@@ -61,6 +61,7 @@ def setupTask(env):
         configArgs.config = env.inMacroPath
         configArgs.flatConfig = False
         configArgs.goodlumiFile = ''
+        configArgs.realData = env.realData
         mithep, analysis = configureSequence(configArgs)
     
         with open(env.taskDir + '/' + env.macro, 'w') as macro:
@@ -380,6 +381,7 @@ if __name__ == '__main__':
     argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset')
     argParser.add_argument('--filesets', '-s', metavar = 'FILESETS', dest = 'filesets', nargs = '*', default = [])
     argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', default = '')
+    argParser.add_argument('--data', '-D', action = 'store_true', dest = 'realData', help = 'Process real data (sets the real-data flag on various modules).')
     argParser.add_argument('--analysis', '-a', metavar = 'ANALYSIS', dest = 'macro', help = 'Analysis python script that sets up the execution sequence of the modules.')
     argParser.add_argument('--name', '-n', metavar = 'NAME', dest = 'taskName', default = '', help = 'Workspace name. If not given, set to the configuration file name if applicable, otherwise to current epoch time.')
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
@@ -426,6 +428,7 @@ if __name__ == '__main__':
             env.taskName = str(int(time.time()))
 
     env.inMacroPath = args.macro
+    env.realData = args.realData
     env.update = args.update
     env.noSubmit = args.noSubmit
 
