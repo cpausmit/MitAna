@@ -85,9 +85,6 @@ void HLTMod::BeginRun()
 {
   // Get HLT tree and set branches. Compute bitmasks to be used when comparing to the HLT bits.
 
-  if (fSkipModule)
-    return;
-
   // HLTFwkMod must have the tree data by now
   if (!GetHltFwkMod()->HasData()) {
     if (fAbortIfNoData) {
@@ -99,9 +96,6 @@ void HLTMod::BeginRun()
       return;
     }
   }
-
-  if (fSkipModule)
-    return;
 
   fTrigBitsAnd.clear();
   fTrigBitsCmp.clear();
@@ -246,14 +240,8 @@ void HLTMod::SlaveBegin()
   // Request trigger bit branch and obtain trigger table and objects.
 
   if (!HasHLTInfo()) {
-    if (fAbortIfNoData) {
-      SendError(kAbortAnalysis, "SlaveBegin", "HLT info not available.");
-      return;
-    }
-    else {
-      fSkipModule = true; // skip all subsequent functions of this module
-      return;
-    }
+    SendError(kAbortAnalysis, "SlaveBegin", "HLTFwkMod not available.");
+    return;
   }
 
   fTriggers = GetHLTTable();
@@ -262,7 +250,7 @@ void HLTMod::SlaveBegin()
     return;
   }
   fTrigObjs = GetHLTObjectsTable();
-  if (! fTrigObjs) {
+  if (!fTrigObjs) {
     SendError(kAbortAnalysis, "SlaveBegin", "Could not get HLT trigger objects table.");
     return;
   }

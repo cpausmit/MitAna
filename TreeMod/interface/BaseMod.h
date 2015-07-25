@@ -59,7 +59,7 @@ namespace mithep
     const MCRunInfo            *GetMCRunInfo()        const { return GetSel()->GetMCRunInfo();   }
     const TriggerTable         *GetTriggerTable(ETrigType t)    const;
     const Selector             *GetSel()              const;
-    Bool_t                      HasHLTInfo()          const;
+    Bool_t                      HasHLTInfo()          const; // true only means HLTFwkMod is loaded to the Selector
     void                        IncNEventsProcessed()       { ++fNEventsProc;                    }
     template <class T> T*       GetObject(char const* name, Bool_t warn = kTRUE);
     template <class T> Bool_t   LoadEventObject(char const* name, T const*&, Bool_t warn = kTRUE);
