@@ -63,7 +63,7 @@ void AnaFwkMod::BeginRun()
 
     // get all event header tree
     fAllHeadTree = dynamic_cast<TTree*>(file->Get(fAllHeadTreeName));
-    if (! fAllHeadTree) {
+    if (!fAllHeadTree) {
       MDB(kTreeIO, 3)
 	Info("BeginRun",
 	     "Cannot find tree '%s' in file '%s'",fAllHeadTreeName.Data(),file->GetName());
