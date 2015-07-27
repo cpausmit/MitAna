@@ -70,7 +70,7 @@ Bool_t BaseMod::HasHLTInfo() const
 { 
   // Check if HLT framework module is in list of modules. 
 
-  if (fHltFwkMod) 
+  if (fHltFwkMod)
     return kTRUE;
 
   if (!GetSelector() || !GetSelector()->GetTopModule()) 
