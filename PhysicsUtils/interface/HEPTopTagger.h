@@ -169,7 +169,6 @@ void HEPTopTagger::store_topsubjets(const vector<PseudoJet>& top_subs){
   double m12=(top_subs[0]+top_subs[1]).m();
   double m13=(top_subs[0]+top_subs[2]).m();
   double m23=(top_subs[1]+top_subs[2]).m();
-  double m123=(top_subs[0]+top_subs[1]+top_subs[2]).m();
   double dm12=abs(m12-_mwmass);
   double dm13=abs(m13-_mwmass);
   double dm23=abs(m23-_mwmass);
@@ -218,24 +217,24 @@ bool HEPTopTagger::check_mass_criteria(const vector<PseudoJet> & top_subs) const
 ////////// Top-TAGGER: /////////////////////////////////////////////////////////////////
 HEPTopTagger::HEPTopTagger(const fastjet::ClusterSequence & cs,
 			   const fastjet::PseudoJet & jet) : 
+  debugg(false),
   _cs(&cs), _jet(jet), _mtmass(172.3), _mwmass(80.4), 
   _mass_drop_threshold(0.8), _max_subjet_mass(30.),
   _mtmin(172.3 - 25.),_mtmax(172.3 + 25.), _rmin(0.85*80.4/172.3),_rmax(1.15*80.4/172.3),
   _m23cut(0.35),_m13cutmin(0.2),_m13cutmax(1.3),
-  _nfilt(5),_jet_algorithm(cambridge_algorithm),_jet_algorithm_recluster(cambridge_algorithm),
-  debugg(false)
+  _nfilt(5),_jet_algorithm(cambridge_algorithm),_jet_algorithm_recluster(cambridge_algorithm)
 {}
 
 HEPTopTagger::HEPTopTagger(const fastjet::ClusterSequence & cs,
 			   const fastjet::PseudoJet & jet,
 			   double mtmass,double mwmass
 			   ) : 
+  debugg(false),
   _cs(&cs), _jet(jet), _mtmass(mtmass), _mwmass(mwmass), 
   _mass_drop_threshold(0.8), _max_subjet_mass(30.),
   _mtmin(mtmass - 25.),_mtmax(mtmass + 25.), _rmin(0.85*mwmass/mtmass),_rmax(1.15*mwmass/mtmass),
   _m23cut(0.35),_m13cutmin(0.2),_m13cutmax(1.3),
-  _nfilt(5),_jet_algorithm(cambridge_algorithm),_jet_algorithm_recluster(cambridge_algorithm),
-  debugg(false)
+  _nfilt(5),_jet_algorithm(cambridge_algorithm),_jet_algorithm_recluster(cambridge_algorithm)
 {}
 
 
