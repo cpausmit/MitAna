@@ -119,8 +119,12 @@ namespace mithep {
       Double_t       PVBSCompatibility()             const { return fPVBSCompatibility;        }
       Double_t       TrkKink()                       const { return fTrkKink;                  }
       Double_t       GlbKink()                       const { return fGlbKink;                  }
+      Double_t       TrkRelChi2()                    const { return fTrkRelChi2;               }
+      Double_t       StaRelChi2()                    const { return fStaRelChi2;               }
       Double_t       Chi2LocalPosition()             const { return fChi2LocalPosition;        }
       Double_t       Chi2LocalMomentum()             const { return fChi2LocalMomentum;        }
+      Double_t       GlbTrackProbability()           const { return fGlbTrackProbability;      }
+      Bool_t         TightMatch()                    const { return fTightMatch;               }
       Double_t       ValidFraction()                 const { return fValidFraction;            }
       Double_t       EmEnergy()                      const { return fEmEnergy;                 }
       Double_t       EmS9Energy()                    const { return fEmS9Energy;               }
@@ -223,8 +227,12 @@ namespace mithep {
       void           SetPVBSCompatibility(Double_t x)      { fPVBSCompatibility = x;           }
       void           SetTrkKink(Double_t x)                { fTrkKink = x;                     }
       void           SetGlbKink(Double_t x)                { fGlbKink = x;                     }
+      void           SetTrkRelChi2(Double_t x)             { fTrkRelChi2 = x;                  }
+      void           SetStaRelChi2(Double_t x)             { fStaRelChi2 = x;                  }
       void           SetChi2LocalPosition(Double_t x)      { fChi2LocalPosition = x;           }
       void           SetChi2LocalMomentum(Double_t x)      { fChi2LocalMomentum = x;           }
+      void           SetGlbTrackProbability(Double_t x)    { fGlbTrackProbability = x;         }
+      void           SetTightMatch(Bool_t b)               { fTightMatch = b;                  }
       void           SetValidFraction(Double_t x)          { fValidFraction = x;               }
       void           SetEmEnergy(Double_t emEnergy)        { fEmEnergy = emEnergy;             }
       void           SetEmS9Energy(Double_t emS9Energy)    { fEmS9Energy = emS9Energy;         }
@@ -322,8 +330,12 @@ namespace mithep {
       Double32_t     fIp3dPVUBBSErr{};       //[0,0,14]3d impact parameter uncertainty to signal PVUB w/ bs constraint
       Double32_t     fTrkKink{};             //[0,0,14]kink algorithm output (tracker track)
       Double32_t     fGlbKink{};             //[0,0,14]kink algorithm output (global track)
+      Double32_t     fTrkRelChi2{};          //chi2 for the inner track stub with respect to the global track
+      Double32_t     fStaRelChi2{};          //chi2 for the outer track stub with respect to the global track
       Double32_t     fChi2LocalPosition{};   //chi2 of tracker-standalone matching in position
       Double32_t     fChi2LocalMomentum{};   //chi2 of tracker-standalone matching in momentum
+      Double32_t     fGlbTrackProbability{}; //tail probability (-ln(P)) of the global fit 
+      Bool_t         fTightMatch{};          //if the STA-TK matching passed the tighter matching criteria
       Double32_t     fValidFraction{};       //valid tracker hits divided by expected tracker hits
       UShort_t       fNValidHits{};          //number of Valid hits in global fit
       UShort_t       fNTraversedChambers{};  //number of traversed chambers
