@@ -20,57 +20,57 @@ namespace mithep {
   class FatJet : public PFJet {
   public:
     struct TrackData { // per track
-      double length;
-      double dist;
-      double dxy;
-      double dz;
-      double IP2D;
-      double IP2Dsig;
-      double IP;
-      double IPsig;
-      double IP2Derr;
-      double IPerr;
-      double prob;
-      double pt;
-      double eta;
-      double phi;
-      double PVWeight;
-      double SVWeight;
+      float length;
+      float dist;
+      float dxy;
+      float dz;
+      float IP2D;
+      float IP2Dsig;
+      float IP;
+      float IPsig;
+      float IP2Derr;
+      float IPerr;
+      float prob;
+      float pt;
+      float eta;
+      float phi;
+      float PVWeight;
+      float SVWeight;
       int PV;
       int fromSV;
       int SV;
     };
 
     struct SVData { // per SV
-      double flight;
-      double flightErr;
-      double deltaRJet;
-      double deltaRSumJet;
-      double deltaRSumDir;
-      double flight2D;
-      double flight2DErr;
-      double totCharge;
-      double vtxDistJetAxis;
+      float flight;
+      float flightErr;
+      float deltaRJet;
+      float deltaRSumJet;
+      float deltaRSumDir;
+      float flight2D;
+      float flight2DErr;
+      float totCharge;
+      float vtxDistJetAxis;
       int nTrk;
-      double mass;
-      double energyRatio;
-      double pt;
-      double eta;
-      double phi;
-      double dirX;
-      double dirY;
-      double dirZ;
+      float mass;
+      float energyRatio;
+      float pt;
+      float eta;
+      float phi;
+      float dirX;
+      float dirY;
+      float dirZ;
     };
 
     struct LeptonData {
-      double pt;
-      double eta;
-      double phi;
-      double ptRel;
-      double ratio;
-      double ratioRel;
-      double IP;
-      double IP2D;
+      float pt;
+      float eta;
+      float phi;
+      float ptRel;
+      float ratio;
+      float ratioRel;
+      float IP;
+      float IP2D;
     };
 
     FatJet() : PFJet() {}
