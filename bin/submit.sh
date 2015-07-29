@@ -197,7 +197,7 @@ do
 
   # check whether file is already submitted to condor
 
-  pattern="$script $runMacro $catalogDir $book $dataset $skim $fileset $outputName $outputDir $runTypeIndex"
+  pattern="$script $runMacro catalog $book $dataset $skim $fileset $outputName $outputDir $runTypeIndex"
   pattern=`echo $pattern| sed 's/ *$//'`
   inQueue=`grep "$pattern" /tmp/condorQueue.$$`
   if [ "$inQueue" != "" ]
@@ -216,7 +216,7 @@ do
   if [ "$process" == "true" ]
   then
 
-    echo -n "   $script $runMacro $catalogDir $book $dataset $skim $fileset"
+    echo -n "   $script $runMacro catalog $book $dataset $skim $fileset"
     echo    " $outputName $outputDir $runTypeIndex"
 
     # An exit hook to avoid reprocessing without looking at the log first
@@ -239,7 +239,7 @@ Requirements            = (UidDomain == "cmsaf.mit.edu" || UidDomain == "mit.edu
                           OpSysMajorVer == 6
 Notification            = Error
 Executable              = $script
-Arguments               = $runMacro $catalogDir $book $dataset $skim $fileset $outputName $outputDir $runTypeIndex
+Arguments               = $runMacro catalog $book $dataset $skim $fileset $outputName $outputDir $runTypeIndex
 Rank                    = Mips
 GetEnv                  = False
 Input                   = /dev/null

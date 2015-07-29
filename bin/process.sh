@@ -152,7 +152,7 @@ then
     for fileset in `cat $filesets | cut -d' ' -f1 `
     do
       echo "$MIT_PROD_MACRO $MIT_CATALOG $BOOK $DATASET $SKIM $fileset $MIT_PROD_CFG $MIT_PROD_HIST \
-            '' " > $workDir/arguments.list
+            '' " >> $workDir/arguments.list
     done
   done    
 fi
