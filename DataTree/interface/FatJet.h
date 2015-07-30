@@ -83,7 +83,7 @@ namespace mithep {
     float Tau1IVF() const               { return fTau1IVF; }
     float Tau2IVF() const               { return fTau2IVF; }
     float Tau3IVF() const               { return fTau3IVF; }
-    Vect3    GetTauIVFAxis(UInt_t i) const { return fTauIVFAxes.at(i); }
+    Vect3    const & GetTauIVFAxis(UInt_t i) const { return fTauIVFAxes.at(i); }
     float tauDot() const                { return fTauDot; }
     float zRatio() const                { return fZRatio; }
 
@@ -121,7 +121,7 @@ namespace mithep {
     float         fTau3IVF{-1.};         //3-subjettiness
     std::vector<Vect3> fTauIVFAxes{};
 
-    std::vector<float> fSubjetBtags;
+    std::vector<float> fSubjetBtags; // ordered by decreasing subjet pT
 
 
     // IVF variables

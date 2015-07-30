@@ -44,10 +44,10 @@ namespace mithep {
     float Tau3() const                  { return fTau3; }
     float Tau4() const                  { return fTau4; }
     float QJetVol() const               { return fQJetVol; }
-    
+
     Bool_t   HasSubJet(XlSubJet const* s, XlSubJet::ESubJetType t) const
     { return fSubJets[t].HasObject(s); }
-    
+
     RefArray<XlSubJet> const& GetSubJets(XlSubJet::ESubJetType t) const { return fSubJets[t]; }
 
     Jet* MakeCopy() const override { return new XlFatJet(*this); }
@@ -106,6 +106,7 @@ namespace mithep {
     Double32_t         fQJetVol{0.};      //QJets volatility
     Vect4M             fPrunedP{};
     Vect4M             fTrimmedP{};
+    Vect4M             fSoftDropP{};
 
     RefArray<XlSubJet> fSubJets[XlSubJet::nSubJetTypes];      //sub jets in the jet
 
