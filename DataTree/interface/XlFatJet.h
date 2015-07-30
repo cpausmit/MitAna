@@ -77,7 +77,9 @@ namespace mithep {
     void SetQJetVol(float t)         { fQJetVol     = t; }
     void SetPrunedP(Vect4M p)           { fPrunedP = p; }
     void SetTrimmedP(Vect4M p)          { fTrimmedP = p; }
-    void AddSubJet(XlSubJet const*, XlSubJet::ESubJetType = XlSubJet::nSubJetTypes);
+    void SetTrimmedP(Vect4M p)          { fSoftDropP = p; }
+    void AddSubJet(XlSubJet const*, XlSubJet::ESubJetType);
+    void AddSubJet(XlSubJet const*);
 
 
   protected:
@@ -117,12 +119,19 @@ namespace mithep {
 
 inline
 void
-mithep::XlFatJet::AddSubJet(XlSubJet const* subjet, XlSubJet::ESubJetType type/* = XlSubJet::nSubJetTypes*/)
+mithep::XlFatJet::AddSubJet(XlSubJet const* subjet, XlSubJet::ESubJetType type)
 {
   if (type == XlSubJet::nSubJetTypes)
     fSubJets[subjet->SubJetType()].Add(subjet);
   else
     fSubJets[type].Add(subjet);
+}
+
+inline
+void
+mithep::XlFatJet::AddSubJet(XlSubJet const* subjet)
+{
+  AddSubJet(subjet,subjet->SubJetType);
 }
 
 //--------------------------------------------------------------------------------------------------
