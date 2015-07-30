@@ -64,18 +64,18 @@ mithep::Ref<ArrayElement>::GetObject() const
   
   TProcessID* pid = fPID.Pid(); 
   if (!pid) {
-    Fatal("GetObject", "Process id pointer is null!");
+    Fatal(TString::Format("GetObject<%s>::GetObject", ArrayElement::Class()->GetName()), "Process id pointer is null!");
     return 0;
   }
 
   if (!TProcessID::IsValid(pid)) {
-    Fatal("GetObject", "Process id is invalid!");
+    Fatal(TString::Format("Ref<%s>::GetObject", ArrayElement::Class()->GetName()), "Process id is invalid!");
     return 0;
   }
 
   TObject* obj = RefResolver::GetObjectWithID(fUID, pid);
   if (!obj) {
-    Fatal("Ref::GetObject","Null pointer for valid ref!");
+    Fatal(TString::Format("Ref<%s>::GetObject", ArrayElement::Class()->GetName()), "Null pointer for valid ref!");
   }
   
   return obj;
