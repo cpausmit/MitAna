@@ -31,9 +31,9 @@ eval $(cd $CMSSW_RELEASE; scram runtime -sh)
 
 ls -l
 
-if [ "$JSONLIST" ]
+if [ "$JSON" ] && [ "$JSON" != "~" ]
 then
-  JSONARG="--goodlumi $JSONLIST"
+  JSONARG="--goodlumi $JSON"
 fi
 
 echo "./analysis.py sequence.py --flat --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG"

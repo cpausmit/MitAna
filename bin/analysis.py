@@ -41,7 +41,7 @@ def configureSequence(args):
                     if sm.Class() != mithep.RunLumiSelectionMod.Class():
                         continue
 
-                    sm.AddJSONFile(jsonDir + '/' + goodlumiFile)
+                    sm.AddJSONFile(jsonDir + '/' + args.goodlumiFile)
 
             except:
                 print 'Lumi list configuration failed.'
@@ -50,7 +50,7 @@ def configureSequence(args):
     else:
         from MitAna.TreeMod.bambu import analysis, mithep
 
-        if args.realData or args.goodlumiFile is not None:
+        if args.realData or (args.goodlumiFile is not None):
             analysis.isRealData = True
 
         execfile(args.config)

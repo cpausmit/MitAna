@@ -60,8 +60,12 @@ def setupTask(env):
         configArgs = Env()
         configArgs.config = env.inMacroPath
         configArgs.flatConfig = False
-        configArgs.goodlumiFile = ''
         configArgs.realData = env.realData
+        if env.realData:
+            configArgs.goodlumiFile = ''
+        else:
+            configArgs.goodlumiFile = None
+
         mithep, analysis = configureSequence(configArgs)
     
         with open(env.taskDir + '/' + env.macro, 'w') as macro:
@@ -185,19 +189,7 @@ def writeDatasetList(fileName, datasets):
         else:
             fileContent.append((book, dataset, json))
 
-    addNewLine = False
-    with open(fileName, 'r') as configFile:
-        try:
-            # seek to the last character of the file
-            configFile.seek(-1, 2)
-            addNewLine = (configFile.read(1) != '\n')
-        except IOError:
-            pass
-
-    with open(fileName, 'a') as configFile:
-        if addNewLine:
-            configFile.write('\n')
-
+    with open(fileName, 'w') as configFile:
         for book, dataset, json in fileContent:
             configFile.write(book + ' ' + dataset + ' ' + json + '\n')
 
@@ -327,13 +319,13 @@ def submitJobs(env, condorConfig, datasets, allFilesets, runningJobs):
                 remapDefs = map(str.strip, condorConfig['transfer_output_remaps'].strip('"').split(';'))
         
                 for remapDef in remapDefs:
-                    source, eq, target = map(str.strip, remap.partition('='))
+                    source, eq, target = map(str.strip, remapDef.partition('='))
                     outPaths[source] = target
         
             for output in outputs:
                 if output not in outPaths:
                     outPaths[output] = env.outDir + '/{book}/{dataset}/' + os.path.basename(output)
-   
+
         if not env.noSubmit:        
             # loop over filesets and do actual submission
             for fileset in allFilesets[(book, dataset)]:
@@ -348,6 +340,9 @@ def submitJobs(env, condorConfig, datasets, allFilesets, runningJobs):
                 # skip fileset if at least one fileset has a non-zero output
                 outputExists = False
                 for outPath in map(formatCfg, outPaths.values()):
+                    if not os.path.isdir(os.path.dirname(outPath)):
+                        os.makedirs(os.path.dirname(outPath))
+
                     if os.path.exists(outPath) and os.stat(outPath).st_size != 0:
                         print ' Output exists:', book, dataset, fileset
                         outputExists = True
@@ -423,7 +418,7 @@ if __name__ == '__main__':
     env.taskName = args.taskName
     if not env.taskName:
         if args.configFileName:
-            env.taskName = args.configFileName[:args.configFileName.find('.')]
+            env.taskName = os.path.basename(args.configFileName[:args.configFileName.find('.')])
         else:
             env.taskName = str(int(time.time()))
 
@@ -542,6 +537,6 @@ if __name__ == '__main__':
             sys.exit(1)
     
     condorConfig = makeCondorConf(args.condorTemplateName, env)
-    
+
     # loop over datasets to submit
     submitJobs(env, condorConfig, datasets, allFilesets, runningJobs)
