@@ -14,16 +14,13 @@ ClassImp(mithep::FastJetMod)
 //--------------------------------------------------------------------------------------------------
 FastJetMod::FastJetMod(const char *name, const char *title) :
   BaseMod (name,title),
-  fGetMatchBtag (kTRUE),
+  fGetMatchBtag (kFALSE),
   fUseBambuJets (kFALSE),
   fBtaggedJetsName (Names::gkPFJetBrn),
-  fBtaggedJetsFromBranch (kTRUE),
   fBtaggedJets (0),
   fJetsName (Names::gkPFJetBrn),
-  fJetsFromBranch (kTRUE),
   fJets (0),
   fPfCandidatesName (Names::gkPFCandidatesBrn),
-  fPfCandidatesFromBranch(kTRUE),
   fPfCandidates (0),
   fOutputJetsName ("CA8FJCHS"),
   fOutputJets (0),
@@ -54,20 +51,20 @@ void FastJetMod::Process()
   
   // Get input collections
   if (fGetMatchBtag) {
-    LoadEventObject(fBtaggedJetsName,fBtaggedJets,fBtaggedJetsFromBranch);
+    fBtaggedJets = GetObject<PFJetCol>(fBtaggedJetsName);
     if (!fBtaggedJets) {
       SendError(kAbortModule,"Process","Pointer to input b-tagged jet collection %s null.",fBtaggedJetsName.Data());
       return;
     }
   }
   if (fUseBambuJets) {
-    LoadEventObject(fJetsName,fJets,fJetsFromBranch);
+    fJets = GetObject<PFJetCol>(fJetsName);
     if (!fJets) {
       SendError(kAbortModule,"Process","Pointer to input jet collection %s null.",fJetsName.Data());
       return;
     }
   }
-  LoadEventObject(fPfCandidatesName,fPfCandidates,fPfCandidatesFromBranch);
+  fPfCandidates = GetObject<PFCandidateCol>(fPfCandidatesName);
   if (!fPfCandidates) {
     SendError(kAbortModule,"Process","Pointer to input PF Cands collection %s null.",fPfCandidatesName.Data());
     return;
@@ -143,13 +140,6 @@ void FastJetMod::Process()
 //--------------------------------------------------------------------------------------------------
 void FastJetMod::SlaveBegin()
 {
-  // Run startup code on the computer (slave) doing the actual analysis. 
-  if (fGetMatchBtag)
-    ReqEventObject(fBtaggedJetsName,fBtaggedJets,fBtaggedJetsFromBranch);
-  if (fUseBambuJets)
-    ReqEventObject(fJetsName,fJets,fJetsFromBranch);
-  ReqEventObject(fPfCandidatesName,fPfCandidates,fPfCandidatesFromBranch);
-    
   // Jet definition constructor
   if (fJetAlgorithm == kKT)
     fJetDef = new fastjet::JetDefinition(fastjet::kt_algorithm, fJetConeSize);
