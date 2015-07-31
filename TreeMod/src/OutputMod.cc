@@ -3,7 +3,7 @@
 #include "MitAna/DataTree/interface/Names.h"
 #include "MitAna/DataTree/interface/BranchTable.h"
 #include "MitAna/DataTree/interface/EventHeaderCol.h"
-#include "MitAna/DataTree/interface/PhotonCol.h"
+#include "MitAna/DataTree/interface/MCEventInfo.h"
 #include "MitAna/TreeMod/interface/TreeBranchLoader.h"
 #include "MitAna/TreeMod/interface/OutputMod.h"
 #include "MitAna/TreeMod/interface/HLTFwkMod.h"
@@ -290,8 +290,18 @@ void OutputMod::FillAllEventHeader(Bool_t isremoved)
     fAllEventHeader->SetSkimmed(eh->Skimmed()+1);
   }
   else {
-    fAllEventHeader->SetRunEntry(eh->RunEntry());
+    // isremoved == false called from Process()
+    // fEventHeader has the correct run entry of the output file
+    fAllEventHeader->SetRunEntry(fEventHeader->RunEntry());
     fAllEventHeader->SetSkimmed(eh->Skimmed());
+  }
+
+  if (eh->IsMC()) {
+    // Need to record MC event weight of the potentially skipped event
+    // Will be needed for certain NLO MC scheme where event weight can be negative
+    auto* mcInfo = GetObject<MCEventInfo>(Names::gkMCEvtInfoBrn, false);
+    if (mcInfo)
+      fAllEventHeader->SetWeight(mcInfo->Weight());
   }
 
   fAllTree->Fill();
