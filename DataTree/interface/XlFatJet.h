@@ -39,8 +39,19 @@ namespace mithep {
     Double_t PullAngle() const    { return fPullAngle; }
     Double_t chi() const          { return fChi; }
     Int_t    nMicrojets() const   { return fNMicrojets; }
+    float Tau1() const                  { return fTau1; }
+    float Tau2() const                  { return fTau2; }
+    float Tau3() const                  { return fTau3; }
+    float Tau4() const                  { return fTau4; }
+    float QJetVol() const               { return fQJetVol; }
+
+    Bool_t   HasSubJet(XlSubJet const* s, XlSubJet::ESubJetType t) const
+    { return fSubJets[t].HasObject(s); }
+
+    RefArray<XlSubJet> const& GetSubJets(XlSubJet::ESubJetType t) const { return fSubJets[t]; }
 
     Jet* MakeCopy() const override { return new XlFatJet(*this); }
+    void Mark(UInt_t i=1) const override;
 
     void SetQGTag(Double_t t)        { fQGTag = t; }
     void SetC2b0(Double_t t)         { fC2b0 = t; }
@@ -59,6 +70,15 @@ namespace mithep {
     void SetPullAngle(Double_t t)    { fPullAngle = t; }
     void SetChi(Double_t t)          { fChi = t; }
     void SetNMicrojets(Int_t t)      { fNMicrojets = t; }
+    void SetTau1(float t)            { fTau1        = t; }
+    void SetTau2(float t)            { fTau2        = t; }
+    void SetTau3(float t)            { fTau3        = t; }
+    void SetTau4(float t)            { fTau4        = t; }
+    void SetQJetVol(float t)         { fQJetVol     = t; }
+    void SetPrunedP(Vect4M p)           { fPrunedP = p; }
+    void SetTrimmedP(Vect4M p)          { fTrimmedP = p; }
+    void AddSubJet(XlSubJet const*, XlSubJet::ESubJetType = XlSubJet::nSubJetTypes);
+
 
   protected:
     Double32_t fQGTag{0.};        //QG tagging
@@ -79,9 +99,42 @@ namespace mithep {
     //either choose 2-prong or 3-prong subclustering!
     Double32_t fChi{-999.};          // shower deconstruction probability
     Int_t      fNMicrojets{0};
+    Double32_t         fTau1{-1.};         //1-subjettiness
+    Double32_t         fTau2{-1.};         //2-subjettiness
+    Double32_t         fTau3{-1.};         //3-subjettiness
+    Double32_t         fTau4{-1.};         //4-subjettiness
+    Double32_t         fQJetVol{0.};      //QJets volatility
+    Vect4M             fPrunedP{};
+    Vect4M             fTrimmedP{};
+    Vect4M             fSoftDropP{};
 
-    ClassDef(XlFatJet, 5) // XlFatJet class
+    RefArray<XlSubJet> fSubJets[XlSubJet::nSubJetTypes];      //sub jets in the jet
+
+    ClassDef(XlFatJet, 6) // XlFatJet class
   };
 
 }
+
+inline
+void
+mithep::XlFatJet::AddSubJet(XlSubJet const* subjet, XlSubJet::ESubJetType type/* = XlSubJet::nSubJetTypes*/)
+{
+  if (type == XlSubJet::nSubJetTypes)
+    fSubJets[subjet->SubJetType()].Add(subjet);
+  else
+    fSubJets[type].Add(subjet);
+}
+
+//--------------------------------------------------------------------------------------------------
+inline
+void
+mithep::XlFatJet::Mark(UInt_t ib) const
+{
+  // mark myself
+  mithep::DataObject::Mark(ib);
+  // mark my dependencies if they are there
+  for (auto& subjet : fSubJets)
+    subjet.Mark(ib);
+}
+
 #endif
