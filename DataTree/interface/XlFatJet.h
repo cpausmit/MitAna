@@ -39,11 +39,14 @@ namespace mithep {
     Double_t PullAngle() const    { return fPullAngle; }
     Double_t chi() const          { return fChi; }
     Int_t    nMicrojets() const   { return fNMicrojets; }
-    float Tau1() const                  { return fTau1; }
-    float Tau2() const                  { return fTau2; }
-    float Tau3() const                  { return fTau3; }
-    float Tau4() const                  { return fTau4; }
-    float QJetVol() const               { return fQJetVol; }
+    Double_t Tau1() const                  { return fTau1; }
+    Double_t Tau2() const                  { return fTau2; }
+    Double_t Tau3() const                  { return fTau3; }
+    Double_t Tau4() const                  { return fTau4; }
+    Double_t QJetVol() const               { return fQJetVol; }
+    Vect4M  const& PrunedP() const      { return fPrunedP; }
+    Vect4M  const& TrimmedP() const      { return fTrimmedP; }
+    Vect4M  const& SoftDropP() const      { return fSoftDropP; }
 
     Bool_t   HasSubJet(XlSubJet const* s, XlSubJet::ESubJetType t) const
     { return fSubJets[t].HasObject(s); }
@@ -77,8 +80,9 @@ namespace mithep {
     void SetQJetVol(float t)         { fQJetVol     = t; }
     void SetPrunedP(Vect4M p)           { fPrunedP = p; }
     void SetTrimmedP(Vect4M p)          { fTrimmedP = p; }
-    void AddSubJet(XlSubJet const*, XlSubJet::ESubJetType = XlSubJet::nSubJetTypes);
-
+    void SetSoftDropP(Vect4M p)          { fSoftDropP = p; }
+    void AddSubJet(XlSubJet const*, XlSubJet::ESubJetType);
+    void AddSubJet(XlSubJet const*);
 
   protected:
     Double32_t fQGTag{0.};        //QG tagging
@@ -117,12 +121,19 @@ namespace mithep {
 
 inline
 void
-mithep::XlFatJet::AddSubJet(XlSubJet const* subjet, XlSubJet::ESubJetType type/* = XlSubJet::nSubJetTypes*/)
+mithep::XlFatJet::AddSubJet(XlSubJet const* subjet, XlSubJet::ESubJetType type)
 {
   if (type == XlSubJet::nSubJetTypes)
     fSubJets[subjet->SubJetType()].Add(subjet);
   else
     fSubJets[type].Add(subjet);
+}
+
+inline
+void
+mithep::XlFatJet::AddSubJet(XlSubJet const* subjet)
+{
+  AddSubJet(subjet,subjet->SubJetType());
 }
 
 //--------------------------------------------------------------------------------------------------

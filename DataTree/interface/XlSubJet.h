@@ -57,7 +57,7 @@ namespace mithep {
     Double32_t fQGAxis2{0.};    //QG tagging Axis2
     Double32_t fQGMult{0.};     //QG tagging Multiplicity
 
-    ESubJetType fSubJetType{kSoftDrop}; //subjet type
+    ESubJetType fSubJetType{nSubJetTypes}; //subjet type
 
     ClassDef(XlSubJet, 2) // XlFatJet class
   };
