@@ -122,7 +122,7 @@ inline ArrayElement *mithep::RefArray<ArrayElement>::At(UInt_t idx)
   if (idx<Entries())  
      return static_cast<ArrayElement*>(GetObject(idx));
 
-  Fatal("At", "Given index (%u) is larger than array size (%u)", idx, Entries());
+  Fatal(TString::Format("RefArray<%s>::At", ArrayElement::Class()->GetName()), "Given index (%u) is larger than array size (%u)", idx, Entries());
   return 0;
 }
 
@@ -135,7 +135,7 @@ inline const ArrayElement *mithep::RefArray<ArrayElement>::At(UInt_t idx) const
   if (idx<Entries())  
      return static_cast<const ArrayElement*>(GetObject(idx));
 
-  Fatal("At", "Given index (%u) is larger than array size (%u)", idx, Entries());
+  Fatal(TString::Format("At<%s>::At", ArrayElement::Class()->GetName()), "Given index (%u) is larger than array size (%u)", idx, Entries());
   return 0;
 }
 
