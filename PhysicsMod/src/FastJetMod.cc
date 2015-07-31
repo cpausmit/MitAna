@@ -73,7 +73,6 @@ void FastJetMod::Process()
   // Create output collections
   fOutputJets = new JetOArr;
   fOutputJets->SetName(fOutputJetsName);
-  fOutputJets->SetOwner(kTRUE);
     
   std::vector<fastjet::PseudoJet> fjParts;
   // Push all particle flow candidates of the input PFjet into fastjet particle collection
@@ -95,16 +94,6 @@ void FastJetMod::Process()
   // Produce a new set of jets based on the fastjet particle collection and the defined clustering
   // Cut off fat jets with pt < fJetMinPt GeV
   std::vector<fastjet::PseudoJet> fjOutJets = sorted_by_pt(fjClustering->inclusive_jets(fJetMinPt)); 
-  // Check that the output collection size is non-null, otherwise nothing to be done further
-  if (fjOutJets.size() < 1) {
-    printf(" FastJetMod - WARNING - input PFCands produces null reclustering output!\n");
-
-    if (fjOutJets.size() > 0) 
-      fjClustering->delete_self_when_unused();
-    delete fjClustering;
-
-    return;
-  }
 
   // Now loop over PFJets and fill the output collection
   for (UInt_t j=0; j<fjOutJets.size(); ++j) {

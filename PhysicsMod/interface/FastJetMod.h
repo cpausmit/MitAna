@@ -65,7 +65,7 @@ namespace mithep
         
     private:
 
-      UInt_t fJetAlgorithm = kCA;
+      UInt_t fJetAlgorithm = kAK;
       Bool_t fGetMatchBtag;                //=true if b-tag obtained by match with standard jets (AK5)
       Bool_t fUseBambuJets;                //=true if input small jets already present in bambu
       Bool_t fUseBambuFatJets;             //=true if input large jets already present in bambu
