@@ -39,13 +39,8 @@ namespace mithep
       void UseBambuJets(Bool_t b)               { fUseBambuJets = b;          }
 
       void SetBtaggedJetsName(const char *n)    { fBtaggedJetsName = n;       }
-      void SetBtaggedJetsFromBranch(Bool_t b)   { fBtaggedJetsFromBranch = b; }
-                                                                                                                                                  
       void SetJetsName(const char *n)           { fJetsName = n;              }
-      void SetJetsFromBranch(Bool_t b)          { fJetsFromBranch = b;        }
-                                                                              
       void SetPfCandidatesName(const char *n)   { fPfCandidatesName = n;      }
-      void SetPfCandidatesFromBranch(Bool_t b)  { fPfCandidatesFromBranch = b;}
 
       void SetOutputJetsName(const char *n)     { fOutputJetsName = n;        }
                                                                     
@@ -70,21 +65,18 @@ namespace mithep
         
     private:
 
-      UInt_t fJetAlgorithm = kCA;
+      UInt_t fJetAlgorithm = kAK;
       Bool_t fGetMatchBtag;                //=true if b-tag obtained by match with standard jets (AK5)
       Bool_t fUseBambuJets;                //=true if input small jets already present in bambu
       Bool_t fUseBambuFatJets;             //=true if input large jets already present in bambu
 
       TString fBtaggedJetsName;            //(i) name of input btagged jets
-      Bool_t fBtaggedJetsFromBranch;       //are input btagged jets from Branch?
       const PFJetCol *fBtaggedJets;        //input btagged jets
       
       TString fJetsName;                   //(i) name of input jets
-      Bool_t fJetsFromBranch;              //are input jets from Branch?
       const PFJetCol *fJets;               //input jets
 
       TString fPfCandidatesName;           //(i) name of PF candidates coll
-      Bool_t fPfCandidatesFromBranch;      //are PF candidates from Branch?
       const PFCandidateCol *fPfCandidates; //particle flow candidates coll handle
  
       TString fOutputJetsName;             //name of output jets collection
