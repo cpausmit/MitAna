@@ -127,7 +127,7 @@ namespace mithep
       };
 
       Bool_t                    fUseProof;        //=true if PROOF is to be used (def=0)
-      Bool_t                    fUseCacher;       //=1 use file caching (def=0)
+      Int_t                     fUseCacher;       //=1 use file caching, =2 use full-local caching (def=0)
       UInt_t                    fUseHLT;          //=1 if HLTFwkMod is to be used, 2 to process input with no HLT info (def=1)
       Bool_t                    fUseMC;           //=true if MCFwkMod is to be used (def=false)
       Bool_t                    fHierarchy;       //=true if module hierachy to be stored (def=1)

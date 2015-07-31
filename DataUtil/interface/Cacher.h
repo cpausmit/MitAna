@@ -20,22 +20,24 @@ namespace mithep
   class Cacher
   {
   public:
-    Cacher(const TList *list);
+    Cacher(const TList *list, Bool_t fullLocal);
     virtual ~Cacher() {}
     
     Bool_t               InitialCaching();
     Bool_t               NextCaching();
     Bool_t               Exists(const char* file);
     void                 CleanCache();
+    void                 SetNFilesAhead(Int_t n) { fNFilesAhead = n; }
     
   protected:
     
   private:
-    Bool_t               SubmitCacheRequest(const char* file);
+    Bool_t               SubmitCacheRequest(const char* file, Bool_t initial);
     void                 RemoveTemporaryFile(int idx);
 
     const TList         *fInputList;          //in bambu several input files can be handled in
                                               //parallel we do not (yet) implement this here
+    Bool_t               fFullLocal;          //when true, call cache request command with special options
     Int_t                fCurrentFileIdx;     //index of currently processing file
     Int_t                fCachedFileIdx;      //index of last cached file
     Int_t                fNFilesAhead;        //number of files to cache ahead of running job

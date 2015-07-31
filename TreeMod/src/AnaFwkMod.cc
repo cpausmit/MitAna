@@ -160,7 +160,7 @@ Bool_t AnaFwkMod::Notify()
   // Make sure to get the new "AllEvents" tree when the file changes.
 
   // make sure to keep files cached
-  if (fUseCacher > 0 && fCacher)
+  if (fCacher)
     fCacher->NextCaching();
 
   fReload = kTRUE;
@@ -255,7 +255,8 @@ void AnaFwkMod::Process()
 //--------------------------------------------------------------------------------------------------
 void AnaFwkMod::SetInputLists(const TList *l) {
   fInputLists = l;
-  fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)));
+  if (fUseCacher > 0)
+    fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)), fUseCacher == 2); // 2: full-local caching
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -264,7 +265,7 @@ void AnaFwkMod::SlaveBegin()
   // Book our histogram and start the stop watches.
 
   // perfrom initial caching before we get rolling
-  if (fUseCacher > 0 && fCacher)
+  if (fCacher)
     fCacher->InitialCaching();
 
   // set the stop watches
@@ -303,7 +304,7 @@ void AnaFwkMod::SlaveTerminate()
   RetractObj(fAllHeaders.GetName());
 
   // Clean leftovers in cache
-  if (fUseCacher > 0 && fCacher) {
+  if (fCacher) {
     fCacher->CleanCache();
     delete fCacher;
   }

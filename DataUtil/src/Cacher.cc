@@ -6,8 +6,9 @@ using namespace std;
 using namespace mithep;
 
 //--------------------------------------------------------------------------------------------------
-Cacher::Cacher(const TList *list) :
-  fInputList(list), 
+Cacher::Cacher(const TList *list, Bool_t fullLocal) :
+  fInputList(list),
+  fFullLocal(fullLocal),
   fCurrentFileIdx(-1),
   fCachedFileIdx(-1),
   fNFilesAhead(2),
@@ -32,7 +33,7 @@ Bool_t Cacher::InitialCaching()
     MDB(kTreeIO, 1)
       Info("Cacher::InitialCaching","cache file: %s",fInputList->At(i)->GetName());
     // here we need to submit the caching request
-    status = (status && SubmitCacheRequest(fInputList->At(i)->GetName()));
+    status = (status && SubmitCacheRequest(fInputList->At(i)->GetName(), true));
     // keep track of the book keeping
     fCachedFileIdx++;
     fCacheStatus[i] = 1;
@@ -43,7 +44,7 @@ Bool_t Cacher::InitialCaching()
   // Need to wait for download completion of first two files to get going
   while (kTRUE) {                                  // potential deadlock - needs exist strategy
     Bool_t complete = kTRUE;
-    for (Int_t i=0; i<min(2,fInputList->GetEntries()); i++) {
+    for (Int_t i=0; i<min(fNFilesAhead,fInputList->GetEntries()); i++) {
       if (Exists(fInputList->At(i)->GetName()))
 	fCacheStatus[i] = 2;
       else
@@ -82,7 +83,7 @@ Bool_t Cacher::NextCaching()
   if (fCachedFileIdx<fInputList->GetEntries()) {
     MDB(kTreeIO, 1)
       Info("Cacher::NextCaching","cache file: %s",fInputList->At(fCachedFileIdx)->GetName());
-    status = SubmitCacheRequest(fInputList->At(fCachedFileIdx)->GetName());
+    status = SubmitCacheRequest(fInputList->At(fCachedFileIdx)->GetName(), false);
     fCacheStatus[fCachedFileIdx] = 1;
   }
   else {
@@ -114,7 +115,7 @@ Bool_t Cacher::NextCaching()
 }
 
 //--------------------------------------------------------------------------------------------------
-Bool_t Cacher::SubmitCacheRequest(const char* file)
+Bool_t Cacher::SubmitCacheRequest(const char* file, Bool_t initial)
 {
   // Submit a Cache request for the specified file
 
@@ -123,6 +124,13 @@ Bool_t Cacher::SubmitCacheRequest(const char* file)
 
   TString cmd = TString(gSystem->Getenv("CMSSW_BASE"))+TString("/src/MitAna/bin/requestFile.sh ")
                +TString(file);
+
+  if (fFullLocal) {
+    if (initial)
+      cmd += " -L"; // make a symbolic link under ./store/...
+    else
+      cmd += " -C"; // copy the file over to ./store/...
+  }
 
   // Execute the system command
   int rc = gSystem->Exec(cmd.Data());
