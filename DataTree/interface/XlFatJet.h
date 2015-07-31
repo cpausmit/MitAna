@@ -80,7 +80,7 @@ namespace mithep {
     void SetQJetVol(float t)         { fQJetVol     = t; }
     void SetPrunedP(Vect4M p)           { fPrunedP = p; }
     void SetTrimmedP(Vect4M p)          { fTrimmedP = p; }
-    void SetTrimmedP(Vect4M p)          { fSoftDropP = p; }
+    void SetSoftDropP(Vect4M p)          { fSoftDropP = p; }
     void AddSubJet(XlSubJet const*, XlSubJet::ESubJetType);
     void AddSubJet(XlSubJet const*);
 
@@ -133,7 +133,7 @@ inline
 void
 mithep::XlFatJet::AddSubJet(XlSubJet const* subjet)
 {
-  AddSubJet(subjet,subjet->SubJetType);
+  AddSubJet(subjet,subjet->SubJetType());
 }
 
 //--------------------------------------------------------------------------------------------------
