@@ -5,7 +5,6 @@
 BOOK=$1
 DATASET=$2
 FILESET=$3
-JSON=$4
 
 if ! [ -d /cvmfs/cms.cern.ch ] || ! [ -d /cvmfs/cvmfs.cmsaf.mit.edu ]
 then
@@ -13,10 +12,13 @@ then
   exit 1
 fi
 
+if [ -e x509up ]
+then
+  export X509_USER_PROXY=x509up
+fi
+
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 source env.sh
-
-env
 
 scram project CMSSW $CMSSW_RELEASE
 tar xzf *.lib.tar.gz -C $CMSSW_RELEASE
@@ -29,13 +31,9 @@ echo $HOSTNAME
 
 eval $(cd $CMSSW_RELEASE; scram runtime -sh)
 
-ls -l
+env
 
-if [ "$JSON" ] && [ "$JSON" != "~" ]
-then
-  JSONARG="--goodlumi $JSON"
-fi
+ls -lR
 
-echo "./analysis.py sequence.py --flat --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG"
-echo ""
-./analysis.py sequence.py --flat --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG
+echo "python $BOOK/$DATASET/run.py $FILESET"
+python $BOOK/$DATASET/run.py $FILESET
