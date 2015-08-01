@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: CatalogingMod.h,v 1.5 2009/03/23 22:15:13 loizides Exp $
-//
 // CatalogingMod
 //
 // This TAM module analyzes the given files and writes out all metafile information necessary to
@@ -21,8 +19,6 @@
 
 namespace mithep
 {
-  class TriggerTable;
-
   class CatalogingMod : public BaseMod
   {
     public:
@@ -55,8 +51,6 @@ namespace mithep
       Bool_t                   fCurrentFileIsSkim;   // the file currently considered is a skim
       UInt_t                   fLastLumiSec;         //!last active lumi section
       BaseMetaData             fMetaData;            //!meta data info
-
-      const TriggerTable      *fTriggers;            //!imported published HLT trigger table
 
       ClassDef(CatalogingMod, 1) // Cataloging module
   };
