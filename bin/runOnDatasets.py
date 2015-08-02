@@ -832,6 +832,10 @@ if __name__ == '__main__':
             message = ' New task was requested but some jobs are running.\n'
             message += ' Kill jobs?'
             kill = yes(message)
+            if not kill:
+                print ' Cannot continue while jobs are running. Exit.'
+                sys.exit(1)
+
         elif args.kill:
             kill = True
         else:
@@ -845,12 +849,8 @@ if __name__ == '__main__':
 
             runningJobs = {}
     
-        else:
-            print ' Cannot continue while jobs are running. Exit.'
-            sys.exit(1)
-
-        if args.kill:
-            sys.exit(0)
+    if args.kill:
+        sys.exit(0)
 
     # loop over datasets to submit
     submitJobs(env, datasets, allFilesets, runningJobs)
