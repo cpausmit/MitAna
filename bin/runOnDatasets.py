@@ -433,7 +433,7 @@ def writeMacros(datasets, env):
 
 
 def getRunningJobs(iwdParent):
-    proc = subprocess.Popen(['condor_q', '-submitter', os.environ['USER'], '-long', '-attributes', 'ClusterId,ProcId,Iwd,Args,Arguments'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    proc = subprocess.Popen(['condor_q', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     out, err = proc.communicate()
 
     running = {}
@@ -441,11 +441,11 @@ def getRunningJobs(iwdParent):
     block = {}
     for line in out.split('\n'):
         if line.strip() == '':
+            # one job block ended
             if len(block) == 0:
                 continue
 
-            # one job block ended
-            if not block['Iwd'].strip('"').startswith(iwdParent):
+            if block['Owner'].strip('"') != os.environ['USER'] or not block['Iwd'].strip('"').startswith(iwdParent):
                 block = {}
                 continue
     
