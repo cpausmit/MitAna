@@ -125,7 +125,7 @@ def setupWorkspace(env):
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.libPack, '-C', env.cmsswbase, 'lib')
 
     copyLibPack = False
-    if not os.path.exist(env.workspace + '/' + env.libPack) or \
+    if not os.path.exists(env.workspace + '/' + env.libPack) or \
             os.path.getmtime(env.cmsswdir + '/' + env.libPack) > os.path.getmtime(env.workspace + '/' + env.libPack):
         copyLibPack = True
         shutil.copy2(env.cmsswdir + '/' + env.libPack, env.workspace + '/' + env.libPack)
