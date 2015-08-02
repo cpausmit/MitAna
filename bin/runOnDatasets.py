@@ -820,9 +820,6 @@ if __name__ == '__main__':
 
         writeCondorConf(path, env)
 
-    if args.noSubmit:
-        sys.exit(0)
-
     print ' Checking for running jobs..'
     
     runningJobs = getRunningJobs(env.outDir)
@@ -849,7 +846,7 @@ if __name__ == '__main__':
 
             runningJobs = {}
     
-    if args.kill:
+    if args.kill or args.noSubmit:
         sys.exit(0)
 
     # loop over datasets to submit
