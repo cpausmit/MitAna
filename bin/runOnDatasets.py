@@ -803,11 +803,11 @@ if __name__ == '__main__':
         writeDatasetList(env.workspace + '/datasets.list', datasets)
         setupDatasetDirs(datasets, env)
 
+    allFilesets = getFilesets(env, datasets, args.filesets)
+
     if updateDatasetList or (env.update and env.inMacroPath):
         writeMacros(datasets, env)
-
-    allFilesets = getFilesets(env, datasets, args.filesets)
-    
+   
     if len(allFilesets) == 0:
         print ' No valid fileset found.'
         sys.exit(1)
