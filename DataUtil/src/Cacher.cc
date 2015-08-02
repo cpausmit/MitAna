@@ -124,7 +124,7 @@ Bool_t Cacher::NextCaching()
 }
 
 //--------------------------------------------------------------------------------------------------
-Bool_t Cacher::SubmitCacheRequest(const char* file, Bool_t initial)
+Bool_t Cacher::SubmitCacheRequest(const char* file, Bool_t initial) const
 {
   // Submit a Cache request for the specified file
 
@@ -171,7 +171,7 @@ Bool_t Cacher::NextFileReady() const
 }
 
 //--------------------------------------------------------------------------------------------------
-void Cacher::RemoveTemporaryFile(int idx)
+void Cacher::RemoveTemporaryFile(int idx) const
 {
   // Remove completed file if it was a temporary download
   if (idx > -1 && idx < fInputList->GetEntries()) {
@@ -185,7 +185,7 @@ void Cacher::RemoveTemporaryFile(int idx)
 }
 
 //--------------------------------------------------------------------------------------------------
-void Cacher::CleanCache()
+void Cacher::CleanCache() const
 {
   // there is nothing really do delete in terms of objects but the potential local file
   // copies need to be removed

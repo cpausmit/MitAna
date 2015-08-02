@@ -34,8 +34,8 @@ namespace mithep
   protected:
     
   private:
-    Bool_t               SubmitCacheRequest(const char* file, Bool_t initial);
-    void                 RemoveTemporaryFile(int idx);
+    Bool_t               SubmitCacheRequest(const char* file, Bool_t initial) const;
+    void                 RemoveTemporaryFile(int idx) const;
 
     TList               *fInputList;          //in bambu several input files can be handled in
                                               //parallel we do not (yet) implement this here
