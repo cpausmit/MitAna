@@ -25,8 +25,10 @@ namespace mithep
     
     Bool_t               InitialCaching();
     Bool_t               NextCaching();
-    Bool_t               Exists(const char* file);
-    void                 CleanCache();
+    Bool_t               Exists(const char* file) const;
+    Bool_t               NextFileReady() const;
+    void                 CleanCache() const;
+    void                 Wait();
     void                 SetNFilesAhead(Int_t n) { fNFilesAhead = n; }
     
   protected:

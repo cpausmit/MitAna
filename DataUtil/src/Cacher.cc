@@ -117,8 +117,7 @@ Bool_t Cacher::NextCaching()
 
     MDB(kTreeIO, 2)
       Info("Cacher::NextCaching","waiting for completion (10 sec)");
-    fNSecWait += 10;
-    sleep(10); // wait 10 seconds
+    Wait();
   }
 
   return status;
@@ -149,7 +148,7 @@ Bool_t Cacher::SubmitCacheRequest(const char* file, Bool_t initial)
 }
 
 //--------------------------------------------------------------------------------------------------
-Bool_t Cacher::Exists(const char* file)
+Bool_t Cacher::Exists(const char* file) const
 {
   // Check if the specified file exists
 
@@ -160,6 +159,15 @@ Bool_t Cacher::Exists(const char* file)
 	 gSystem->GetPathInfo(file,id,size,flags,mt));
 
   return (gSystem->GetPathInfo(file,id,size,flags,mt) == 0);
+}
+
+//--------------------------------------------------------------------------------------------------
+Bool_t Cacher::NextFileReady() const
+{
+  if (fCurrentFileIdx == fInputList->GetEntries() - 1)
+    return true;
+
+  return Exists(fInputList->At(fCurrentFileIdx + 1)->GetName());
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -189,4 +197,11 @@ void Cacher::CleanCache()
   // Give a summary of the cache waiting time
   Info("Cacher::CleanCache","\n         total waiting time for caching %d sec (%f min)\n\n",
        fNSecWait,fNSecWait/60.);
+}
+
+//--------------------------------------------------------------------------------------------------
+void Cacher::Wait()
+{
+  fNSecWait += 10;
+  sleep(10); // wait 10 seconds
 }

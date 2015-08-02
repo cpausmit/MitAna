@@ -152,6 +152,12 @@ Bool_t Selector::Process(Long64_t entry)
     }
   }
 
+  if (fCacher && fTree && fTree->GetTree()->GetReadEntry() == fTree->GetTree()->GetEntries() - 1) {
+    // process has reached the end of the current file
+    while (!fCacher->NextFileReady()) // potential deadlock similar to Cacher::NextCaching
+      fCacher->Wait();
+  }
+
   return ret;
 }
 
