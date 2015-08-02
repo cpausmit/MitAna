@@ -128,7 +128,7 @@ def setupWorkspace(env):
     if not os.path.exists(env.workspace + '/' + env.libPack) or \
             os.path.getmtime(env.cmsswdir + '/' + env.libPack) > os.path.getmtime(env.workspace + '/' + env.libPack):
         copyLibPack = True
-        shutil.copy2(env.cmsswdir + '/' + env.libPack, env.workspace + '/' + env.libPack)
+        shutil.copyfile(env.cmsswdir + '/' + env.libPack, env.workspace + '/' + env.libPack)
 
     # (create and) copy the headers tarball
     # header files needed until ROOT 6 libraries become position independent
@@ -162,7 +162,7 @@ def setupWorkspace(env):
     if not os.path.exists(env.workspace + '/' + env.hdrPack) or \
             os.path.getmtime(env.cmsswdir + '/' + env.hdrPack) > os.path.getmtime(env.workspace + '/' + env.hdrPack):
         copyHdrPack = True
-        shutil.copy2(env.cmsswdir + '/' + env.hdrPack, env.workspace + '/' + env.hdrPack)
+        shutil.copyfile(env.cmsswdir + '/' + env.hdrPack, env.workspace + '/' + env.hdrPack)
 
     # (create and) copy the MitAna/bin tarball
     if os.path.exists(env.cmsswdir + '/' + env.binPack):
@@ -183,7 +183,7 @@ def setupWorkspace(env):
     if not os.path.exists(env.workspace + '/' + env.binPack) or \
             os.path.getmtime(env.cmsswdir + '/' + env.binPack) > os.path.getmtime(env.workspace + '/' + env.binPack):
         copyBinPack = True
-        shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
+        shutil.copyfile(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
 
     if copyLibPack or copyHdrPack or copyBinPack:
         print ' Packing tarballs up.'
@@ -501,7 +501,7 @@ def writeCondorConf(inTemplatePath, env):
     readCondorConf(inTemplatePath, condorConfig)
 
     if 'executable' not in condorConfig:
-        condorConfig['executable'] = env.cmsswbase + '/src/MitAna/bin/start.sh'
+        condorConfig['executable'] = os.environ['HOME'] + '/cms/cmssw/' + env.mitTag + '/' + env.cmsswname + '/src/MitAna/bin/start.sh'
 
     if 'transfer_input_files' not in condorConfig:
         inputList = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
@@ -664,6 +664,7 @@ if __name__ == '__main__':
     env.condorTemplatePath = args.condorTemplatePath
 
     env.cmsswdir = os.path.dirname(env.cmsswbase)
+    env.mitTag = os.path.basename(env.cmsswdir)
     env.cmsswname = os.path.basename(env.cmsswbase)
     env.cmsswPack = env.cmsswname + '.tar.gz'
     env.libPack = env.cmsswname + '.lib.tar.gz'
