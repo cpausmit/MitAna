@@ -433,7 +433,7 @@ def writeMacros(datasets, env):
 
 
 def getRunningJobs(iwdParent):
-    proc = subprocess.Popen(['condor_q', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    proc = subprocess.Popen(['condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     out, err = proc.communicate()
 
     running = {}
