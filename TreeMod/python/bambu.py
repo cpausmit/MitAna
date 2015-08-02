@@ -37,13 +37,18 @@ class _Analysis(Configurable):
                 
             modNames.append(mod._name)
 
-        self._sequence.build()
+        self._sequence.build(nodelist = [])
 
         for mod in self._sequence.headNodes:
             self.AddSuperModule(mod)
 
     def reset(self, *args, **kwargs):
+        if self._sequence:
+            # reset isBuilt status of all modules
+            self._sequence.unbuild()
+
         Configurable.reset(self, *args, **kwargs)
+
         self._sequence = None
         self._outputMods = []
         self.isRealData = False
@@ -66,7 +71,7 @@ class _Analysis(Configurable):
             code += '\n'
 
         for mod in self._sequence:
-            for nextNode in mod.nextNodes:
+            for nextNode in mod._nextNodes:
                 code += mod._name + '.Add(' + nextNode._name + ')\n'
 
         code += '\n'

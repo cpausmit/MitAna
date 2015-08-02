@@ -36,6 +36,9 @@ class Sequenceable(object):
 
         self.isBuilt = True
 
+    def unbuild(self):
+        self.isBuilt = False
+
 
 class Node(Sequenceable):
     """
@@ -59,7 +62,7 @@ class Node(Sequenceable):
         Sequenceable.__init__(self)
         self._core = obj
         self._name = name
-        self.nextNodes = None
+        self._nextNodes = None
         self.headNodes = [self]
         self.tailNodes = [self]
 
@@ -75,14 +78,18 @@ class Node(Sequenceable):
             print 'Module ' + self._name + ' used multiple times in the analysis sequence'
             sys.exit(1)
 
-        self.nextNodes = []
+        self._nextNodes = []
 
         nodelist.append(self._core)
 
         self.isBuilt = True
 
+    def unbuild(self):
+        self._nextNodes = None
+        self.isBuilt = False
+
     def connect(self, nextNode):
-        self.nextNodes.append(nextNode)
+        self._nextNodes.append(nextNode)
 
 
 class Chain(Sequenceable):
@@ -134,7 +141,7 @@ class Chain(Sequenceable):
 
             # There should be only one tail node for each
             # element unless it is the last one. Taking the
-            # last here but can be first too
+            # last here but can as well use elem.tailNodes[0]
             tail = elem.tailNodes[-1]
 
             if len(self.headNodes) == 0:
@@ -143,6 +150,14 @@ class Chain(Sequenceable):
         self.tailNodes = [tail]
 
         self.isBuilt = True
+
+    def unbuild(self):
+        for elem in self._elems:
+            elem.unbuild()
+
+        self.headNodes = []
+        self.tailNodes = []
+        self.isBuilt = False
 
 
 class Bundle(Sequenceable):
@@ -194,3 +209,11 @@ class Bundle(Sequenceable):
             self.tailNodes += chain.tailNodes
 
         self.isBuilt = True
+
+    def unbuild(self):
+        for chain in self._chains:
+            chain.unbuild()
+            
+        self.headNodes = []
+        self.tailNodes = []
+        self.isBuilt = False

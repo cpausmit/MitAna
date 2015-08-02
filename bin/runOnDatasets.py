@@ -9,21 +9,33 @@ import glob
 import shutil
 import socket
 
-def yes(message):
+def yes(message, options = []):
     """
     Print the message and return true if the response is y.
     """
 
     print message
-    print ' [y/N]:'
+
+    if len(options) == 0:
+        prompt = ' [y/N]:'
+        print prompt
+        optvals = {'y': True, 'N': False}
+    else:
+        optvals = {}
+        prompt = []
+        for opt, val in options:
+            print (' (%s)' % opt[0]) + opt[1:]
+            optvals[opt[0]] = val
+            prompt.append(opt[0])
+
+        prompt = ' [%s]:' % ('/'.join(prompt))
+
     while True:
         response = sys.stdin.readline().strip()
-        if response == 'y':
-            return True
-        elif response == 'N':
-            return False
-        else:
-            print ' [y/N]:'
+        try:
+            return optvals[response]
+        except KeyError:
+            print prompt
 
 
 def runSubproc(*args, **kwargs):
@@ -68,6 +80,7 @@ def setupWorkspace(env):
             os.makedirs(env.workspace)
             os.makedirs(env.outDir)
             os.makedirs(env.logDir)
+
         except OSError:
             try:
                 shutil.rmtree(env.workspace)
@@ -83,8 +96,15 @@ def setupWorkspace(env):
         with open(env.workspace + '/env.sh', 'w') as envFile:
             envFile.write('export SCRAM_ARCH="' + env.scramArch + '"\n')
             envFile.write('export CMSSW_RELEASE="' + env.release + '"\n')
+            envFile.write('export CMSSW_NAME="' + env.cmsswname + '"\n')
             envFile.write('export MIT_DATA="' + env.mitdata + '"\n')
-            envFile.write('export MIT_JSON_DIR="' + env.jsondir + '"\n')
+
+        # write out the list of directories related to this job
+        # will be updated in submitJobs() if transfer_output_remaps is used
+        with open(env.workspace + '/directories', 'w') as dirList:
+            dirList.write(env.workspace + '\n')
+            dirList.write(env.outDir + '\n')
+            dirList.write(env.logDir + '\n')
 
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
@@ -153,6 +173,14 @@ def setupWorkspace(env):
     
     shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
 
+    if remakeLibPack or remakeHdrPack or remakeBinPack:
+        # decompress the packages, concatenate them into one package, and compress again
+        shutil.copyfile(env.workspace + '/' + env.libPack, env.workspace + '/' + env.cmsswPack)
+        runSubproc('gunzip', env.workspace + '/' + env.cmsswPack, env.workspace + '/' + env.hdrPack, env.workspace + '/' + env.binPack)
+        runSubproc('tar', 'Af', env.workspace + '/' + env.cmsswPack[:env.cmsswPack.rfind('.')], env.workspace + '/' + env.hdrPack[:env.hdrPack.rfind('.')])
+        runSubproc('tar', 'Af', env.workspace + '/' + env.cmsswPack[:env.cmsswPack.rfind('.')], env.workspace + '/' + env.binPack[:env.binPack.rfind('.')])
+        runSubproc('gzip', env.workspace + '/' + env.cmsswPack[:env.cmsswPack.rfind('.')])
+
     if not env.update:
         # create an empty dataset list file
         open(env.workspace + '/datasets.list', 'w').close()
@@ -169,19 +197,23 @@ def readDatasetList(fileName):
 
     with open(fileName) as configFile:
         for line in configFile:
-            matches = re.match('([^ ]+) +([^ ]+)( +[^ ]+)*', line.strip())
+            matches = re.match('([^#][^ ]*) +([^ ]+) +([^ ]+)( +[^ ]+)*', line.strip())
             if not matches:
                 continue
 
             book = matches.group(1)
             dataset = matches.group(2)
-            # third paren captures the last column, which is currently assigned to JSON
-            if matches.group(3):
-                json = matches.group(3).strip()
+            skim = matches.group(3)
+            # fourth paren captures the last column, which is currently assigned to JSON
+            if matches.group(4):
+                json = matches.group(4).strip()
             else:
                 json = ''
 
-            datasets.append((book, dataset, json))
+            if skim == 'noskim':
+                skim = '-'
+
+            datasets.append((book, dataset, skim, json))
 
     return datasets
 
@@ -194,25 +226,26 @@ def writeDatasetList(fileName, datasets):
     fileContent = readDatasetList(fileName)
 
     diff = []
-    for book, dataset, json in datasets:
-        for exBook, exDataset, exJson in fileContent:
+    for book, dataset, skim, json in datasets:
+        for exBook, exDataset, exSkim, exJson in fileContent:
             if book == exBook and dataset == exDataset:
-                if json != exJson:
-                    message = ' Specified JSON file for ' + book + '/' + dataset + ' does not match the existing.\n'
+                if skim != exSkim or json != exJson:
+                    message = ' Specified skim/JSON configuration for ' + book + '/' + dataset + ' does not match the existing.\n'
                     message += ' Update configuration?\n'
+                    message += ' ' + exSkim + ' -> ' + skim + '\n'
                     message += ' ' + exJson + ' -> ' + json
                     if yes(message):
-                        fileContent.remove((exBook, exDataset, exJson))
-                        fileContent.append((book, dataset, json))
+                        fileContent.remove((exBook, exDataset, exSkim, exJson))
+                        fileContent.append((book, dataset, skim, json))
                 
                 break
 
         else:
-            fileContent.append((book, dataset, json))
+            fileContent.append((book, dataset, skim, json))
 
     with open(fileName, 'w') as configFile:
-        for book, dataset, json in fileContent:
-            configFile.write(book + ' ' + dataset + ' ' + json + '\n')
+        for book, dataset, skim, json in fileContent:
+            configFile.write(book + ' ' + dataset + ' ' + skim + ' ' + json + '\n')
 
 
 def setupDatasetDirs(datasets, env):
@@ -220,7 +253,7 @@ def setupDatasetDirs(datasets, env):
     Create a directory for each dataset under log and output directories.
     """
 
-    for book, dataset, json in datasets:
+    for book, dataset, skim, json in datasets:
         jobOutDirName = env.outDir + '/' + book + '/' + dataset
         jobLogDirName = env.logDir + '/' + book + '/' + dataset
         jobConfDirName = env.workspace + '/' + book + '/' + dataset
@@ -246,17 +279,23 @@ def getFilesets(env, datasets, limitTo = []):
 
     allFilesets = {}
 
-    for book, dataset, json in datasets:
+    for book, dataset, skim, json in datasets:
         catalogSrc = env.catalogDir + '/' + book + '/' + dataset
+        if skim != '-':
+            catalogSrc += '/' + skim
         catalogDst = env.workspace + '/' + book + '/' + dataset
 
         if not os.path.exists(catalogDst + '/Files'):
             # original catalog is not created yet. Copy or write
             set0size = 0
-            with open(catalogSrc + '/Files') as fileList:
-                for line in fileList:
-                    if line.split()[0] == '0000':
-                        set0size += 1
+            try:
+                with open(catalogSrc + '/Files') as fileList:
+                    for line in fileList:
+                        if line.split()[0] == '0000':
+                            set0size += 1
+            except IOError:
+                print ' Could not open catalog ' + catalogSrc + '. Skipping dataset.'
+                continue
     
             if env.numFiles == 0 or env.numFiles >= set0size:
                 # using default fileset size
@@ -314,7 +353,7 @@ def writeMacros(datasets, env):
     # read from the orignal catalog created in workspace
     catalog = mithep.Catalog(env.workspace)
 
-    for book, dataset, json in datasets:
+    for book, dataset, skim, json in datasets:
         fileName = env.workspace + '/' + book + '/' + dataset + '/run.py'
 
         if os.path.exists(fileName) and noOverwrite:
@@ -330,7 +369,7 @@ def writeMacros(datasets, env):
 
         execfile(env.workspace + '/macro.py')
 
-        if json and (json != '~' or json != '-'):
+        if json and json != '~' and json != '-':
             analysis._sequence = goodLumiFilter(json) * analysis._sequence
 
         analysis.buildSequence()
@@ -415,13 +454,15 @@ def getRunningJobs(iwdParent):
 def readCondorConf(path, condorConfig = {}):
     with open(path) as confFile:
         for line in confFile:
-            if not re.match('#', line.strip()):
-                key, eq, value = line.partition('=')
-                if key in condorConfig:
-                    print ' Ignoring key ' + key + ' found in condor template.'
-                    continue
+            if not line.strip() or line.strip().startswith('#'):
+                continue
 
-                condorConfig[key.strip().lower()] = value.strip()
+            key, eq, value = line.partition('=')
+            if key in condorConfig:
+                print ' Ignoring key ' + key + ' found in condor template.'
+                continue
+
+            condorConfig[key.strip().lower()] = value.strip()
 
     return condorConfig
 
@@ -446,7 +487,11 @@ def writeCondorConf(inTemplatePath, env):
         condorConfig['executable'] = env.cmsswbase + '/src/MitAna/bin/start.sh'
 
     if 'transfer_input_files' not in condorConfig:
-        condorConfig['transfer_input_files'] = env.workspace + '/'
+        inputList = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
+        if os.path.exists(env.workspace + '/x509up'):
+            inputList.append('x509up')
+
+        condorConfig['transfer_input_files'] = ','.join(map(lambda x: env.workspace + '/' + x, inputList))
 
     with open(env.workspace + '/condor.jdl', 'w') as jdlFile:
         for key, value in condorConfig.items():
@@ -458,7 +503,15 @@ def writeCondorConf(inTemplatePath, env):
 def submitJobs(env, datasets, allFilesets, runningJobs):
     condorConfig = readCondorConf(env.workspace + '/condor.jdl')
 
-    for book, dataset, json in datasets:
+    # list of output / log directories for this task
+    # (update if remap is used)
+    directories = []
+    updateDirectories = False
+    with open(env.workspace + '/directories') as dirList:
+        for line in dirList:
+            directories.append(line.strip())
+
+    for book, dataset, skim, json in datasets:
         outPaths = {}
         if 'transfer_output_files' in condorConfig:
             outputs = map(str.strip, condorConfig['transfer_output_files'].split(','))
@@ -469,13 +522,14 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
                 for remapDef in remapDefs:
                     source, eq, target = map(str.strip, remapDef.partition('='))
                     outPaths[source] = target
+
+                    if os.path.dirname(target) not in directories:
+                        directories.append(os.path.dirname(target))
+                        updateDirectories = True
         
             for output in outputs:
                 if output not in outPaths:
                     outPaths[output] = env.outDir + '/{book}/{dataset}/' + os.path.basename(output)
-
-        if env.noSubmit:
-            return
 
         # loop over filesets and do actual submission
         for fileset in allFilesets[(book, dataset)]:
@@ -506,6 +560,11 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
             jdlCommand = '\n'.join([key + ' = ' + formatCfg(value) for key, value in condorConfig.items()]) + '\nqueue\n'
             runSubproc('condor_submit', stdin = jdlCommand)
 
+    if updateDirectories:
+        with open(env.workspace + '/directories', 'w') as dirList:
+            for directory in directories:
+                dirList.write(directory + '\n')
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser, RawTextHelpFormatter
@@ -524,6 +583,7 @@ if __name__ == '__main__':
     argParser.add_argument('--cfg', '-c', metavar = 'FILE', dest = 'configFileName', help = 'A plain text file listing the book, the dataset, and the json file per row.')
     argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/042')
     argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset')
+    argParser.add_argument('--skim', '-k', metavar = 'SKIM', dest = 'skim', default = '-')
     argParser.add_argument('--filesets', '-s', metavar = 'FILESET', dest = 'filesets', nargs = '*', default = [])
     argParser.add_argument('--num-files', '-i', metavar = 'N', dest = 'numFiles', type = int, default = 0, help = 'Process N files per job (Job creation time only). Set to 0 for default value.')
     argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', default = '')
@@ -573,7 +633,6 @@ if __name__ == '__main__':
         env.release = os.path.basename(os.environ['CMSSW_RELEASE_BASE'])
 
         env.mitdata = os.environ['MIT_DATA']
-        env.jsondir = os.environ['MIT_JSON_DIR']
 
         env.catalogDir = os.environ['MIT_CATALOG']
     
@@ -585,11 +644,11 @@ if __name__ == '__main__':
     env.realData = args.realData
     env.numFiles = args.numFiles
     env.update = args.update
-    env.noSubmit = args.noSubmit
     env.condorTemplatePath = args.condorTemplatePath
 
     env.cmsswdir = os.path.dirname(env.cmsswbase)
     env.cmsswname = os.path.basename(env.cmsswbase)
+    env.cmsswPack = env.cmsswname + '.tar.gz'
     env.libPack = env.cmsswname + '.lib.tar.gz'
     env.hdrPack = env.cmsswname + '.inc.tar.gz'
     env.binPack = env.cmsswname + '.MitAna-bin.tar.gz'
@@ -600,15 +659,45 @@ if __name__ == '__main__':
         if args.recreate:
             message = ' Task ' + env.taskName + ' already exists.\n'
             message += ' You are requesting this to be a new production task. All existing files will be cleared.\n'
-            message += ' Wanna save existing task? Do like:  moveOutput.sh ' + env.taskName + ' ' + env.taskName + '-last.\n'
-            message += ' Do you wish to continue?'
-            if not yes(message):
+            message += ' Clear and continue?'
+            resp = yes(message, [('yes', 1), ('no, save existing', 2), ('quit', 0)])
+            if resp == 0:
                 print ' Exiting.'
                 sys.exit(0)
-    
-            shutil.rmtree(env.workspace)
-            shutil.rmtree(env.outDir)
-            shutil.rmtree(env.logDir)
+
+            elif resp == 1:
+                try:
+                    directories = []
+                    with open(env.workspace + '/directories') as dirList:
+                        for line in dirList:
+                            directories.append(dirList.strip())
+                except:
+                    directories = [env.workspace, env.outDir, env.logDir]
+
+                print ' Removing directories:'
+                for directory in directories:
+                    print '  ' + directory
+                    try:
+                        shutil.rmtree(directory)
+                    except:
+                        pass
+
+            elif resp == 2:
+                print ' Existing output will be moved to tag (default \'last\'):'
+                tag = sys.stdin.readline().strip()
+                if tag == '':
+                    tag = 'last'
+
+                print ' Moving directories'
+                for directory in directories:
+                    print '  ' + directory
+                print ' to'
+                for directory in directories:
+                    print '  ' + directory + '-' + tag
+
+                for directory in directories:
+                    os.rename(directory, directory + '-' + tag)
+
 
         elif args.update:
             message = ' Updating ' + env.taskName + ' to the latest:\n'
@@ -650,7 +739,7 @@ if __name__ == '__main__':
     if args.configFileName:
         datasets = readDatasetList(args.configFileName)
     elif args.book and args.dataset:
-        datasets = [(args.book, args.dataset, args.goodlumiFile)]
+        datasets = [(args.book, args.dataset, args.skim, args.goodlumiFile)]
     else:
         datasets = readDatasetList(env.workspace + '/datasets.list')
 
@@ -694,4 +783,5 @@ if __name__ == '__main__':
         writeCondorConf(path, env)
 
     # loop over datasets to submit
-    submitJobs(env, datasets, allFilesets, runningJobs)
+    if not args.noSubmit:
+        submitJobs(env, datasets, allFilesets, runningJobs)

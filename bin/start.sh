@@ -20,20 +20,15 @@ fi
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 source env.sh
 
-scram project CMSSW $CMSSW_RELEASE
-tar xzf *.lib.tar.gz -C $CMSSW_RELEASE
-tar xzf *.inc.tar.gz -C $CMSSW_RELEASE
-tar xzf *.MitAna-bin.tar.gz -C $CMSSW_RELEASE
-
-export MIT_CATALOG=catalog
+scram project -n $CMSSW_NAME CMSSW $CMSSW_RELEASE
+tar xzf $CMSSW_NAME.tar.gz -C $CMSSW_RELEASE
 
 echo $HOSTNAME
 
-eval $(cd $CMSSW_RELEASE; scram runtime -sh)
+eval $(cd $CMSSW_NAME; scram runtime -sh)
 
 env
 
 ls -lR
 
-echo "python $BOOK/$DATASET/run.py $FILESET"
-python $BOOK/$DATASET/run.py $FILESET
+python run.py $FILESET

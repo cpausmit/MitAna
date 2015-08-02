@@ -13,6 +13,10 @@ class Module(Configurable, Node):
         Configurable.__init__(self, cppcls, clsName, *args, **kwargs)
         Node.__init__(self, self._cppobj, self._cppobj.GetName())
 
+    def unbuild(self):
+        self._cppobj.GetListOfTasks().Clear()
+        Node.unbuild(self)
+
     def connect(self, nextNode):
         """
         Overriding Node.connect which gets called when building a sequence
