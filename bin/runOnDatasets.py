@@ -173,16 +173,15 @@ def setupWorkspace(env):
     
     shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
 
-    if remakeLibPack or remakeHdrPack or remakeBinPack:
-        # decompress the packages, concatenate them into one package, and compress again
-        cmsswTar = env.cmsswPack[:env.cmsswPack.rfind('.')]
-        hdrTar = env.hdrPack[:env.hdrPack.rfind('.')]
-        binTar = env.hdrPack[:env.binPack.rfind('.')]
-        shutil.copyfile(env.workspace + '/' + env.libPack, env.workspace + '/' + env.cmsswPack)
-        runSubproc('gunzip', env.workspace + '/' + env.cmsswPack, env.workspace + '/' + env.hdrPack, env.workspace + '/' + env.binPack)
-        runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar)
-        runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + binTar)
-        runSubproc('gzip', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar, env.workspace + '/' + binTar)
+    # decompress the packages, concatenate them into one package, and compress again
+    cmsswTar = env.cmsswPack[:env.cmsswPack.rfind('.')]
+    hdrTar = env.hdrPack[:env.hdrPack.rfind('.')]
+    binTar = env.binPack[:env.binPack.rfind('.')]
+    shutil.copyfile(env.workspace + '/' + env.libPack, env.workspace + '/' + env.cmsswPack)
+    runSubproc('gunzip', env.workspace + '/' + env.cmsswPack, env.workspace + '/' + env.hdrPack, env.workspace + '/' + env.binPack)
+    runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar)
+    runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + binTar)
+    runSubproc('gzip', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar, env.workspace + '/' + binTar)
 
     if not env.update:
         # create an empty dataset list file
