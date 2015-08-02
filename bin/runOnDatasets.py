@@ -182,7 +182,7 @@ def setupWorkspace(env):
     copyBinPack = False
     if not os.path.exists(env.workspace + '/' + env.binPack) or \
             os.path.getmtime(env.cmsswdir + '/' + env.binPack) > os.path.getmtime(env.workspace + '/' + env.binPack):
-        coypBinPack = True
+        copyBinPack = True
         shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
 
     if copyLibPack or copyHdrPack or copyBinPack:
