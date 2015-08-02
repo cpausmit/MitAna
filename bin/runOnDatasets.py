@@ -125,7 +125,8 @@ def setupWorkspace(env):
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.libPack, '-C', env.cmsswbase, 'lib')
 
     copyLibPack = False
-    if os.path.getmtime(env.cmsswdir + '/' + env.libPack) > os.path.getmtime(env.workspace + '/' + env.libPack):
+    if not os.path.exist(env.workspace + '/' + env.libPack) or \
+            os.path.getmtime(env.cmsswdir + '/' + env.libPack) > os.path.getmtime(env.workspace + '/' + env.libPack):
         copyLibPack = True
         shutil.copy2(env.cmsswdir + '/' + env.libPack, env.workspace + '/' + env.libPack)
 
@@ -158,7 +159,8 @@ def setupWorkspace(env):
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.hdrPack, '-C', env.cmsswbase, *tuple(headerPaths))
 
     copyHdrPack = False
-    if os.path.getmtime(env.cmsswdir + '/' + env.hdrPack) > os.path.getmtime(env.workspace + '/' + env.hdrPack):
+    if not os.path.exists(env.workspace + '/' + env.hdrPack) or \
+            os.path.getmtime(env.cmsswdir + '/' + env.hdrPack) > os.path.getmtime(env.workspace + '/' + env.hdrPack):
         copyHdrPack = True
         shutil.copy2(env.cmsswdir + '/' + env.hdrPack, env.workspace + '/' + env.hdrPack)
 
@@ -178,7 +180,8 @@ def setupWorkspace(env):
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.binPack, '-C', env.cmsswbase, 'src/MitAna/bin')
 
     copyBinPack = False
-    if os.path.getmtime(env.cmsswdir + '/' + env.binPack) > os.path.getmtime(env.workspace + '/' + env.binPack):
+    if not os.path.exists(env.workspace + '/' + env.binPack) or \
+            os.path.getmtime(env.cmsswdir + '/' + env.binPack) > os.path.getmtime(env.workspace + '/' + env.binPack):
         coypBinPack = True
         shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
 
