@@ -27,7 +27,6 @@ namespace mithep
       AnaFwkMod(const char *name="AnaFwkMod", 
                 const char *title="Analysis framework module");
 
-      void             SetInputLists(const TList *l);
       Long64_t         GetPrintScale()            const { return fPrintScale;  }
       Long64_t         GetSkipNEvents()           const { return fSkipNEvents; }
       void             SetPrintScale(UInt_t n)          { fPrintScale  = n;    }
@@ -43,7 +42,6 @@ namespace mithep
 
       TString          fAllHeadTreeName;   //all events tree name
       TString          fAllHeadBrName;     //all event headers branch name
-      const TList     *fInputLists;        //input lists (cannot be changed)
       Long64_t         fSkipNEvents;       //number of events to skip from beginning (def=0)
       UInt_t           fPrintScale;        //scale of when to print event number/timings (def=100)
       TStopwatch      *fSWtotal;           //!stop watch for overall timing

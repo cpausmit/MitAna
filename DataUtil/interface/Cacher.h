@@ -21,7 +21,7 @@ namespace mithep
   {
   public:
     Cacher(const TList *list, Bool_t fullLocal);
-    virtual ~Cacher() {}
+    virtual ~Cacher();
     
     Bool_t               InitialCaching();
     Bool_t               NextCaching();
@@ -35,7 +35,7 @@ namespace mithep
     Bool_t               SubmitCacheRequest(const char* file, Bool_t initial);
     void                 RemoveTemporaryFile(int idx);
 
-    const TList         *fInputList;          //in bambu several input files can be handled in
+    TList               *fInputList;          //in bambu several input files can be handled in
                                               //parallel we do not (yet) implement this here
     Bool_t               fFullLocal;          //when true, call cache request command with special options
     Int_t                fCurrentFileIdx;     //index of currently processing file

@@ -17,7 +17,6 @@ AnaFwkMod::AnaFwkMod(const char *name, const char *title) :
   BaseMod(name,title),
   fAllHeadTreeName(Names::gkAllEvtTreeName),
   fAllHeadBrName(Names::gkAllEvtHeaderBrn),
-  fInputLists(0),
   fSkipNEvents(0),
   fPrintScale(1),
   fSWtotal(0),
@@ -244,11 +243,6 @@ void AnaFwkMod::Process()
          fSWevent->CpuTime()/nProcessed);
     fSWevent->Start();
   }
-}
-
-//--------------------------------------------------------------------------------------------------
-void AnaFwkMod::SetInputLists(const TList *l) {
-  fInputLists = l;
 }
 
 //--------------------------------------------------------------------------------------------------

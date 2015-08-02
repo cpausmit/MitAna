@@ -470,7 +470,6 @@ Bool_t Analysis::Init()
 
   // create our ana framework module
   AnaFwkMod *anamod = new AnaFwkMod;
-  anamod->SetInputLists(fList);
   anamod->SetSkipNEvents(fSkipNEvents);
   anamod->SetPrintScale(fPrintScale);
   fDeleteList->Add(anamod);

@@ -5,6 +5,7 @@
 #include <TProcessID.h>
 #include <TFile.h>
 #include <TTree.h>
+#include <TChain.h>
 #include <TROOT.h>
 
 #include <stdexcept>
@@ -162,10 +163,18 @@ void Selector::SlaveBegin(TTree *tree)
 
   // perfrom initial caching before we get rolling
   if (fUseCacher > 0) {
-    fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)), fUseCacher == 2); // 2: full-local caching
-    if (fUseCacher == 2)
-      fCacher->SetNFilesAhead(1); // do not download too many files locally
-    fCacher->InitialCaching();
+    TChain* chain = dynamic_cast<TChain*>(tree);
+    if (chain) {
+      TList inputList;
+      inputList.SetOwner();
+      for (TObject* obj : *chain->GetListOfFiles())
+        inputList.Add(new TObjString(obj->GetTitle()));
+
+      fCacher = new Cacher(&inputList, fUseCacher == 2); // 2: full-local caching
+      if (fUseCacher == 2)
+        fCacher->SetNFilesAhead(1); // do not download too many files locally
+      fCacher->InitialCaching();
+    }
   }
 
   if (fDoRunInfo)

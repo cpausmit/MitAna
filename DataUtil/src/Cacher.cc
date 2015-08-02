@@ -7,7 +7,7 @@ using namespace mithep;
 
 //--------------------------------------------------------------------------------------------------
 Cacher::Cacher(const TList *list, Bool_t fullLocal) :
-  fInputList(list),
+  fInputList(new TList),
   fFullLocal(fullLocal),
   fCurrentFileIdx(-1),
   fCachedFileIdx(-1),
@@ -15,12 +15,21 @@ Cacher::Cacher(const TList *list, Bool_t fullLocal) :
   fNSecWait(0)
 {
   // Constructor
+  fInputList->SetOwner();
+  // deep clone the input list
+  for (TObject* objStr : *list)
+    fInputList->Add(new TObjString(objStr->GetName()));
 
   // create the synchronized cache status vector
   for (Int_t i=0; i<fInputList->GetEntries(); i++) {
     int status = 0;
     fCacheStatus.push_back(status);
   }
+}
+
+Cacher::~Cacher()
+{
+  delete fInputList;
 }
 
 //--------------------------------------------------------------------------------------------------
