@@ -27,7 +27,7 @@ Dataset *Catalog::FindDataset(const char *book, const char *dataset, const char 
   //       =2 - translate them into local files, no caching wait for Cacher mechanism
   //       =3 - translate them into local files under PWD
 
-  printf(" Catalog: %s, Book: %s, Dataset: %s, Fileset: %s",fLocation.Data(),book,dataset,fileset);
+  printf(" Catalog: %s, Book: %s, Dataset: %s, Fileset: %s\n",fLocation.Data(),book,dataset,fileset);
 
   TString slash        = "/";
   TString fullDir      = fLocation +slash+ TString(book) +slash+ TString(dataset);
