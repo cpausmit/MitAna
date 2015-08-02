@@ -124,7 +124,10 @@ def setupWorkspace(env):
         print ' Creating library tarball.'
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.libPack, '-C', env.cmsswbase, 'lib')
 
-    shutil.copy2(env.cmsswdir + '/' + env.libPack, env.workspace + '/' + env.libPack)
+    copyLibPack = False
+    if os.path.getmtime(env.cmsswdir + '/' + env.libPack) > os.path.getmtime(env.workspace + '/' + env.libPack):
+        copyLibPack = True
+        shutil.copy2(env.cmsswdir + '/' + env.libPack, env.workspace + '/' + env.libPack)
 
     # (create and) copy the headers tarball
     # header files needed until ROOT 6 libraries become position independent
@@ -154,7 +157,10 @@ def setupWorkspace(env):
         print ' Creating headers tarball.'
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.hdrPack, '-C', env.cmsswbase, *tuple(headerPaths))
 
-    shutil.copy2(env.cmsswdir + '/' + env.hdrPack, env.workspace + '/' + env.hdrPack)
+    copyHdrPack = False
+    if os.path.getmtime(env.cmsswdir + '/' + env.hdrPack) > os.path.getmtime(env.workspace + '/' + env.hdrPack):
+        copyHdrPack = True
+        shutil.copy2(env.cmsswdir + '/' + env.hdrPack, env.workspace + '/' + env.hdrPack)
 
     # (create and) copy the MitAna/bin tarball
     if os.path.exists(env.cmsswdir + '/' + env.binPack):
@@ -170,20 +176,24 @@ def setupWorkspace(env):
     if remakeBinPack:
         print ' Creating MitAna/bin tarball.'
         runSubproc('tar', 'czf', env.cmsswdir + '/' + env.binPack, '-C', env.cmsswbase, 'src/MitAna/bin')
+
+    copyBinPack = False
+    if os.path.getmtime(env.cmsswdir + '/' + env.binPack) > os.path.getmtime(env.workspace + '/' + env.binPack):
+        coypBinPack = True
+        shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
+
+    if copyLibPack or copyHdrPack or copyBinPack:
+        print ' Packing tarballs up.'
     
-    shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
-
-    print ' Packing tarballs up.'
-
-    # decompress the packages, concatenate them into one package, and compress again
-    cmsswTar = env.cmsswPack[:env.cmsswPack.rfind('.')]
-    hdrTar = env.hdrPack[:env.hdrPack.rfind('.')]
-    binTar = env.binPack[:env.binPack.rfind('.')]
-    shutil.copyfile(env.workspace + '/' + env.libPack, env.workspace + '/' + env.cmsswPack)
-    runSubproc('gunzip', env.workspace + '/' + env.cmsswPack, env.workspace + '/' + env.hdrPack, env.workspace + '/' + env.binPack)
-    runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar)
-    runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + binTar)
-    runSubproc('gzip', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar, env.workspace + '/' + binTar)
+        # decompress the packages, concatenate them into one package, and compress again
+        cmsswTar = env.cmsswPack[:env.cmsswPack.rfind('.')]
+        hdrTar = env.hdrPack[:env.hdrPack.rfind('.')]
+        binTar = env.binPack[:env.binPack.rfind('.')]
+        shutil.copyfile(env.workspace + '/' + env.libPack, env.workspace + '/' + env.cmsswPack)
+        runSubproc('gunzip', env.workspace + '/' + env.cmsswPack, env.workspace + '/' + env.hdrPack, env.workspace + '/' + env.binPack)
+        runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar)
+        runSubproc('tar', 'Af', env.workspace + '/' + cmsswTar, env.workspace + '/' + binTar)
+        runSubproc('gzip', env.workspace + '/' + cmsswTar, env.workspace + '/' + hdrTar, env.workspace + '/' + binTar)
 
     if not env.update:
         # create an empty dataset list file
@@ -585,12 +595,12 @@ if __name__ == '__main__':
     argParser = ArgumentParser(description = description, formatter_class = RawTextHelpFormatter)
     
     argParser.add_argument('--cfg', '-c', metavar = 'FILE', dest = 'configFileName', help = 'A plain text file listing the book, the dataset, and the json file per row.')
-    argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/042')
+    argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = '')
     argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset')
     argParser.add_argument('--skim', '-k', metavar = 'SKIM', dest = 'skim', default = '-')
     argParser.add_argument('--filesets', '-s', metavar = 'FILESET', dest = 'filesets', nargs = '*', default = [])
     argParser.add_argument('--num-files', '-i', metavar = 'N', dest = 'numFiles', type = int, default = 0, help = 'Process N files per job (Job creation time only). Set to 0 for default value.')
-    argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', default = '')
+    argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', default = '~')
     argParser.add_argument('--data', '-D', action = 'store_true', dest = 'realData', help = 'Process real data (sets the real-data flag on various modules).')
     argParser.add_argument('--analysis', '-a', metavar = 'ANALYSIS', dest = 'macro', help = 'Analysis python script that sets up the execution sequence of the modules.')
     argParser.add_argument('--name', '-n', metavar = 'NAME', dest = 'taskName', default = '', help = 'Workspace name. If not given, set to the configuration file name if applicable, otherwise to current epoch time.')
@@ -708,6 +718,7 @@ if __name__ == '__main__':
             message += ' . Binaries\n'
             message += ' . Headers\n'
             message += ' . MitAna/bin\n'
+            message += ' . List of datasets\n'
             if env.inMacroPath:
                 message += ' . ' + env.inMacroPath + '\n'
             message += ' The output of the task may become inconsistent with the existing ones after this operation.\n'
@@ -741,14 +752,45 @@ if __name__ == '__main__':
    
     # datasets: list of tuples (book, dataset, json)
     if args.configFileName:
-        datasets = readDatasetList(args.configFileName)
-    elif args.book and args.dataset:
-        datasets = [(args.book, args.dataset, args.skim, args.goodlumiFile)]
-    else:
-        datasets = readDatasetList(env.workspace + '/datasets.list')
+        if not newTask and not env.update:
+            print ' A dataset list was given, but we are not updating the workspace. Use --update flag to append new datasets.'
+            sys.exit(1)
 
-    # write updates to the list of datasets
-    writeDatasetList(env.workspace + '/datasets.list', datasets)
+        datasets = readDatasetList(args.configFileName)
+    else:
+        currentList = readDatasetList(env.workspace + '/datasets.list')
+        if args.dataset:
+            datasets = []
+            for entry in currentList:
+                if entry[1] == args.dataset:
+                    datasets.append(entry)
+
+            if len(datasets) == 0:
+                if not newTask and not env.update:
+                    print ' A dataset was given, but we are not updating the workspace. Use --update flag to append new datasets.'
+                    sys.exit(1)
+
+                if args.book == '':
+                    print ' Specify a book to add the dataset from.'
+                    sys.exit(1)
+
+                message = ' Add dataset config?\n'
+                message += '  book    = ' + args.book + '\n'
+                message += '  dataset = ' + args.dataset + '\n'
+                message += '  skim    = ' + args.skim + '\n'
+                message += '  json    = ' + args.goodlumiFile
+
+                if yes(message):
+                    datasets.append((args.book, args.dataset, args.skim, args.goodlumiFile))
+                else:
+                    sys.exit(0)
+
+        else:
+            datasets = currentList
+
+    if newTask or env.update:
+        # write updates to the list of datasets
+        writeDatasetList(env.workspace + '/datasets.list', datasets)
 
     setupDatasetDirs(datasets, env)
 
