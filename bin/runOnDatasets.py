@@ -832,9 +832,10 @@ if __name__ == '__main__':
             message = ' New task was requested but some jobs are running.\n'
             message += ' Kill jobs?'
             kill = yes(message)
-
         elif args.kill:
             kill = True
+        else:
+            kill = False
 
         if kill:
             print ' Killing jobs:'
