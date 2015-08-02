@@ -445,7 +445,7 @@ def getRunningJobs(iwdParent):
             if len(block) == 0:
                 continue
 
-            if block['Owner'].strip('"') != os.environ['USER'] or not block['Iwd'].strip('"').startswith(iwdParent):
+            if block['Owner'].strip('"') != os.environ['USER'] or not block['Iwd'].strip('"').startswith(iwdParent + '/'):
                 block = {}
                 continue
     
@@ -609,6 +609,7 @@ if __name__ == '__main__':
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
+    argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
     
     args = argParser.parse_args()
     sys.argv = []
@@ -826,10 +827,16 @@ if __name__ == '__main__':
     
     runningJobs = getRunningJobs(env.outDir)
 
-    if newTask and len(runningJobs) != 0:
-        message = ' New task was requested but some jobs are running.\n'
-        message += ' Kill jobs?'
-        if yes(message):
+    if len(runningJobs) != 0:
+        if newTask:
+            message = ' New task was requested but some jobs are running.\n'
+            message += ' Kill jobs?'
+            kill = yes(message)
+
+        elif args.kill:
+            kill = True
+
+        if kill:
             print ' Killing jobs:'
             for book, dataset, fileset in sorted(runningJobs.keys()):
                 print ' ', book, dataset, fileset
@@ -840,6 +847,9 @@ if __name__ == '__main__':
         else:
             print ' Cannot continue while jobs are running. Exit.'
             sys.exit(1)
+
+        if args.kill:
+            sys.exit(0)
 
     # loop over datasets to submit
     submitJobs(env, datasets, allFilesets, runningJobs)
