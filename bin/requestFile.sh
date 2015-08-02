@@ -91,7 +91,7 @@ then
   fi
 elif [ "$localopt" = "copy" ] && [ -e $cache ]
 then
-  hdfs dfs -get $cache $file &
+  hdfs dfs -get /cms$lfn $file &
   exit 0
 fi
 
