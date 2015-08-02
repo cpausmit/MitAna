@@ -16,6 +16,8 @@ ClassImp(mithep::Selector)
 //--------------------------------------------------------------------------------------------------
 Selector::Selector() : 
   fDoRunInfo     (kTRUE),
+  fUseCacher     (0),
+  fCacher        (0),
   fEvtHdrName    (Names::gkEvtHeaderBrn),
   fRunTreeName   (Names::gkRunTreeName),
   fRunInfoName   (Names::gkRunInfoBrn),
@@ -104,8 +106,12 @@ Bool_t Selector::EndRun()
 //--------------------------------------------------------------------------------------------------
 Bool_t Selector::Notify()
 {
-  // The Notify() function is called when a new file is opened.  Here, we check for a new run info
-  // tree.
+  // The Notify() function is called when a new file is opened.  Here, we take care of file caching and
+  // check for a new run info tree.
+
+  // make sure to keep files cached
+  if (fCacher)
+    fCacher->NextCaching();
 
   if (!GetCurrentFile()) 
     return kTRUE;
@@ -154,10 +160,30 @@ void Selector::SlaveBegin(TTree *tree)
   // The SlaveBegin() function is called after the Begin() function and can be used to setup
   // analysis on the slaves. Here, we request the event header branch.
 
+  // perfrom initial caching before we get rolling
+  if (fUseCacher > 0) {
+    fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)), fUseCacher == 2); // 2: full-local caching
+    if (fUseCacher == 2)
+      fCacher->SetNFilesAhead(1); // do not download too many files locally
+    fCacher->InitialCaching();
+  }
+
   if (fDoRunInfo)
     ReqBranch(fEvtHdrName, fEventHeader);
 
   TAMSelector::SlaveBegin(tree);
+}
+
+//--------------------------------------------------------------------------------------------------
+void Selector::SlaveTerminate()
+{
+  // Clean leftovers in cache
+  if (fCacher) {
+    fCacher->CleanCache();
+    delete fCacher;
+  }
+
+  TAMSelector::SlaveTerminate();
 }
 
 //--------------------------------------------------------------------------------------------------

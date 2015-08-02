@@ -18,8 +18,6 @@ AnaFwkMod::AnaFwkMod(const char *name, const char *title) :
   fAllHeadTreeName(Names::gkAllEvtTreeName),
   fAllHeadBrName(Names::gkAllEvtHeaderBrn),
   fInputLists(0),
-  fUseCacher(0),
-  fCacher(0),
   fSkipNEvents(0),
   fPrintScale(1),
   fSWtotal(0),
@@ -159,10 +157,6 @@ Bool_t AnaFwkMod::Notify()
 {
   // Make sure to get the new "AllEvents" tree when the file changes.
 
-  // make sure to keep files cached
-  if (fCacher)
-    fCacher->NextCaching();
-
   fReload = kTRUE;
   return kTRUE;
 }
@@ -262,14 +256,6 @@ void AnaFwkMod::SlaveBegin()
 {
   // Book our histogram and start the stop watches.
 
-  // perfrom initial caching before we get rolling
-  if (fUseCacher > 0) {
-    fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)), fUseCacher == 2); // 2: full-local caching
-    if (fUseCacher == 2)
-      fCacher->SetNFilesAhead(1); // do not download too many files locally
-    fCacher->InitialCaching();
-  }
-
   // set the stop watches
   fSWtotal = new TStopwatch;
   fSWevent = new TStopwatch;
@@ -304,12 +290,6 @@ void AnaFwkMod::SlaveTerminate()
   // Fill event histogram and printout timing information.
 
   RetractObj(fAllHeaders.GetName());
-
-  // Clean leftovers in cache
-  if (fCacher) {
-    fCacher->CleanCache();
-    delete fCacher;
-  }
 
   SaveNEventsProcessed();
   TH1D *hDAllEvents = new TH1D("hDAllEvents","Sum of processed and skimmed events",1,-0.5,0.5);

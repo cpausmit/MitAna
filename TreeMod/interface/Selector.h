@@ -12,6 +12,7 @@
 #include "MitAna/TAM/interface/TAModule.h" 
 #include "MitAna/TAM/interface/TAMSelector.h" 
 #include "MitAna/TAM/interface/TAMVirtualBranchLoader.h" 
+#include "MitAna/DataUtil/interface/Cacher.h" 
 #include "MitAna/DataCont/interface/BaseCollection.h"
 #include "MitAna/DataCont/interface/ObjArray.h"
 #include "MitAna/DataTree/interface/EventHeader.h" 
@@ -57,6 +58,7 @@ namespace mithep {
     void                 SetRunInfoName(const char* n)    { fRunInfoName    = n; }
     void                 SetMCRunInfoName(const char* n)  { fMCRunInfoName  = n; }
     void                 SetRunTreeName(const char* n)    { fRunTreeName    = n; }
+    void                 SetUseCacher(Int_t i)            { fUseCacher      = i; }
     void                 AddOutputMod(OutputMod*);
 
     class ObjInfo : public TNamed {
@@ -112,6 +114,7 @@ namespace mithep {
     Bool_t               Notify() override;
     Bool_t               Process(Long64_t entry) override;
     void                 SlaveBegin(TTree* tree) override;
+    void                 SlaveTerminate() override;
     void                 UpdateRunInfo();
     void                 UpdateRunInfoTree();
     TObject*             GetObjectImpl(TClass const*, char const* name, Bool_t warn);
@@ -120,6 +123,8 @@ namespace mithep {
                                            char const* name, Bool_t warn);
 
     Bool_t               fDoRunInfo;      //=true then get RunInfo (def=1)
+    Int_t                fUseCacher;      //switch on caching of files
+    Cacher              *fCacher;         //caching tool
     TString              fEvtHdrName;     //name of event header branch
     TString              fRunTreeName;    //name of run info tree
     TString              fRunInfoName;    //name of run info branch
