@@ -514,8 +514,6 @@ def writeCondorConf(inTemplatePath, env):
         for key, value in condorConfig.items():
             jdlFile.write(key + ' = ' + value + '\n')
 
-        jdlFile.write('queue\n')
-
 
 def submitJobs(env, datasets, allFilesets, runningJobs):
     condorConfig = readCondorConf(env.workspace + '/condor.jdl')
