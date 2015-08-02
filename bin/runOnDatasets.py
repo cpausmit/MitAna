@@ -718,9 +718,13 @@ if __name__ == '__main__':
             message += ' . Binaries\n'
             message += ' . Headers\n'
             message += ' . MitAna/bin\n'
-            message += ' . List of datasets\n'
             if env.inMacroPath:
                 message += ' . ' + env.inMacroPath + '\n'
+            if args.configFileName or args.dataset:
+                message += ' . List of datasets\n'
+            if args.condorTemplatePath:
+                message += ' . Condor job description\n'
+
             message += ' The output of the task may become inconsistent with the existing ones after this operation.\n'
             message += ' Do you wish to continue?'
             if not yes(message):
@@ -751,11 +755,14 @@ if __name__ == '__main__':
             sys.exit(0)
    
     # datasets: list of tuples (book, dataset, json)
+    updateDatasetList = False
+
     if args.configFileName:
         if not newTask and not env.update:
             print ' A dataset list was given, but we are not updating the workspace. Use --update flag to append new datasets.'
             sys.exit(1)
 
+        updateDatasetList = True
         datasets = readDatasetList(args.configFileName)
     else:
         currentList = readDatasetList(env.workspace + '/datasets.list')
@@ -781,6 +788,7 @@ if __name__ == '__main__':
                 message += '  json    = ' + args.goodlumiFile
 
                 if yes(message):
+                    updateDatasetList = True
                     datasets.append((args.book, args.dataset, args.skim, args.goodlumiFile))
                 else:
                     sys.exit(0)
@@ -788,11 +796,11 @@ if __name__ == '__main__':
         else:
             datasets = currentList
 
-    if newTask or env.update:
+    if updateDatasetList:
         # write updates to the list of datasets
         writeDatasetList(env.workspace + '/datasets.list', datasets)
-
-    setupDatasetDirs(datasets, env)
+        setupDatasetDirs(datasets, env)
+        writeMacros(datasets, env)
 
     allFilesets = getFilesets(env, datasets, args.filesets)
     
@@ -800,9 +808,7 @@ if __name__ == '__main__':
         print ' No valid fileset found.'
         sys.exit(1)
 
-    writeMacros(datasets, env)
-
-    if newTask or args.condorTemplatePath:
+    if newTask or (args.update and args.condorTemplatePath):
         path = args.condorTemplatePath
         if not path:
             path = env.cmsswbase + '/src/MitAna/config/condor_template.jdl'
