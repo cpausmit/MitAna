@@ -110,10 +110,6 @@ Bool_t Selector::Notify()
   // The Notify() function is called when a new file is opened.  Here, we take care of file caching and
   // check for a new run info tree.
 
-  // make sure to keep files cached
-  if (fCacher)
-    fCacher->NextCaching();
-
   if (!GetCurrentFile()) 
     return kTRUE;
 
@@ -130,6 +126,14 @@ Bool_t Selector::Notify()
 
   if (fDoRunInfo) 
     UpdateRunInfoTree();
+
+  // make sure to keep files cached
+  if (fCacher) {
+    if (!fCacher->NextCaching()) {
+      Error("Notify", "File caching failed.");
+      return kFALSE;
+    }
+  }
     
   return TAMSelector::Notify();
 }
@@ -154,8 +158,10 @@ Bool_t Selector::Process(Long64_t entry)
 
   if (fCacher && fTree && fTree->GetTree()->GetReadEntry() == fTree->GetTree()->GetEntries() - 1) {
     // process has reached the end of the current file
-    while (!fCacher->NextFileReady()) // potential deadlock similar to Cacher::NextCaching
-      fCacher->Wait();
+    if (!fCacher->WaitForNextFile()) {
+      Error("Process", "Next file could not be cached.");
+      return kFALSE;
+    }
   }
 
   return ret;
@@ -179,7 +185,10 @@ void Selector::SlaveBegin(TTree *tree)
       fCacher = new Cacher(&inputList, fUseCacher == 2); // 2: full-local caching
       if (fUseCacher == 2)
         fCacher->SetNFilesAhead(1); // do not download too many files locally
-      fCacher->InitialCaching();
+      if (!fCacher->InitialCaching()) {
+        Error("SlaveBegin", "Initial cache failed.");
+        throw std::exception();
+      }
     }
   }
 
