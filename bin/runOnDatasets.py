@@ -428,7 +428,7 @@ def writeMacros(datasets, env):
             macro.write('for f in files[fileset]:\n')
             macro.write('    analysis.AddFile(f)\n\n')
             macro.write('analysis.SetOutputName(fileset + \'.root\')\n\n')
-            macro.write(analysis.dumpPython(varName = 'analysis', withCtor = False))
+            macro.write(analysis.dumpPython(varName = 'analysis', withCtor = False, objects = {}))
             macro.write('\nanalysis.Run(False)\n')
 
 
@@ -802,6 +802,8 @@ if __name__ == '__main__':
         # write updates to the list of datasets
         writeDatasetList(env.workspace + '/datasets.list', datasets)
         setupDatasetDirs(datasets, env)
+
+    if updateDatasetList or (env.update and env.inMacroPath):
         writeMacros(datasets, env)
 
     allFilesets = getFilesets(env, datasets, args.filesets)
