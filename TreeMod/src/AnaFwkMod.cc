@@ -255,8 +255,6 @@ void AnaFwkMod::Process()
 //--------------------------------------------------------------------------------------------------
 void AnaFwkMod::SetInputLists(const TList *l) {
   fInputLists = l;
-  if (fUseCacher > 0)
-    fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)), fUseCacher == 2); // 2: full-local caching
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -265,8 +263,12 @@ void AnaFwkMod::SlaveBegin()
   // Book our histogram and start the stop watches.
 
   // perfrom initial caching before we get rolling
-  if (fCacher)
+  if (fUseCacher > 0) {
+    fCacher = new Cacher(dynamic_cast<TList*>(fInputLists->At(0)), fUseCacher == 2); // 2: full-local caching
+    if (fUseCacher == 2)
+      fCacher->SetNFilesAhead(1); // do not download too many files locally
     fCacher->InitialCaching();
+  }
 
   // set the stop watches
   fSWtotal = new TStopwatch;
