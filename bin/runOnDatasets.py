@@ -173,6 +173,8 @@ def setupWorkspace(env):
     
     shutil.copy2(env.cmsswdir + '/' + env.binPack, env.workspace + '/' + env.binPack)
 
+    print ' Packing tarballs up.'
+
     # decompress the packages, concatenate them into one package, and compress again
     cmsswTar = env.cmsswPack[:env.cmsswPack.rfind('.')]
     hdrTar = env.hdrPack[:env.hdrPack.rfind('.')]
@@ -758,6 +760,16 @@ if __name__ == '__main__':
 
     writeMacros(datasets, env)
 
+    if newTask or args.condorTemplatePath:
+        path = args.condorTemplatePath
+        if not path:
+            path = env.cmsswbase + '/src/MitAna/config/condor_template.jdl'
+
+        writeCondorConf(path, env)
+
+    if args.noSubmit:
+        return
+
     print ' Checking for running jobs..'
     
     runningJobs = getRunningJobs(env.outDir)
@@ -777,13 +789,5 @@ if __name__ == '__main__':
             print ' Cannot continue while jobs are running. Exit.'
             sys.exit(1)
 
-    if newTask or args.condorTemplatePath:
-        path = args.condorTemplatePath
-        if not path:
-            path = env.cmsswbase + '/src/MitAna/config/condor_template.jdl'
-
-        writeCondorConf(path, env)
-
     # loop over datasets to submit
-    if not args.noSubmit:
-        submitJobs(env, datasets, allFilesets, runningJobs)
+    submitJobs(env, datasets, allFilesets, runningJobs)

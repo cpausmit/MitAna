@@ -29,6 +29,7 @@ eval $(cd $CMSSW_NAME; scram runtime -sh)
 
 env
 
-ls -lR
+ls -l
+ls -l $CMSSW_NAME/lib/$SCRAM_ARCH
 
 python run.py $FILESET
