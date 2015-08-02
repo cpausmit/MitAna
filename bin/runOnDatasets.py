@@ -384,9 +384,9 @@ def writeMacros(datasets, env):
                     filesPerFileset += 1
 
         with open(fileName, 'w') as macro:
-            macro.write('import os\n')
+            macro.write('import sys\n')
             macro.write('import ROOT\n\n')
-            macro.write('fileset = os.argv[1]\n\n')
+            macro.write('fileset = sys.argv[1]\n\n')
             for lib in mithep.loadedLibs:
                 macro.write('ROOT.gSystem.Load(\'' + lib + '\')\n')
 
