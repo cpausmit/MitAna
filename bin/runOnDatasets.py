@@ -768,7 +768,7 @@ if __name__ == '__main__':
         writeCondorConf(path, env)
 
     if args.noSubmit:
-        return
+        sys.exit(0)
 
     print ' Checking for running jobs..'
     
