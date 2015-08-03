@@ -626,6 +626,10 @@ if __name__ == '__main__':
         if args.dataset or args.goodlumiFile:
             print ' Configuration file name is given. --dataset and --goodlumi options are ignored.'
 
+    if args.update and not args.taskName:
+        print ' Specify the task name to update.'
+        sys.exit(1)
+
     # create a struct to hold various directory and file names
     class Env(object):
         pass
@@ -773,7 +777,13 @@ if __name__ == '__main__':
             datasets = []
             for entry in currentList:
                 if entry[1] == args.dataset:
-                    datasets.append(entry)
+                    book = args.book if args.book else entry[0]
+                    skim = args.skim if args.skim else entry[2]
+                    json = args.goodlumiFile if args.goodlumiFile else entry[3]
+                    newEntry = (book, args.dataset, skim, json)
+                    datasets.append(newEntry)
+                    if newEntry != entry:
+                        updateDatasetList = True
 
             if len(datasets) == 0:
                 if not newTask and not env.update:
