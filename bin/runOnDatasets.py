@@ -242,7 +242,9 @@ def writeDatasetList(fileName, datasets):
 
     fileContent = readDatasetList(fileName)
 
-    diff = []
+    append = []
+    remove = []
+
     for book, dataset, skim, json in datasets:
         for exBook, exDataset, exSkim, exJson in fileContent:
             if book == exBook and dataset == exDataset:
@@ -252,17 +254,28 @@ def writeDatasetList(fileName, datasets):
                     message += ' ' + exSkim + ' -> ' + skim + '\n'
                     message += ' ' + exJson + ' -> ' + json
                     if yes(message):
-                        fileContent.remove((exBook, exDataset, exSkim, exJson))
-                        fileContent.append((book, dataset, skim, json))
+                        remove.append((exBook, exDataset, exSkim, exJson))
+                        append.append((book, dataset, skim, json))
                 
                 break
 
         else:
-            fileContent.append((book, dataset, skim, json))
+            append.append((book, dataset, skim, json))
 
-    with open(fileName, 'w') as configFile:
-        for book, dataset, skim, json in fileContent:
-            configFile.write(book + ' ' + dataset + ' ' + skim + ' ' + json + '\n')
+    if len(append) != 0 or len(remove) != 0:
+        for d in remove:
+            fileContent.remove(d)
+        for d in append:
+            fileContent.append(d)
+
+        with open(fileName, 'w') as configFile:
+            for book, dataset, skim, json in fileContent:
+                configFile.write(book + ' ' + dataset + ' ' + skim + ' ' + json + '\n')
+
+        return True
+    else:
+        # no actual update took place
+        return False
 
 
 def setupDatasetDirs(datasets, env):
@@ -811,7 +824,9 @@ if __name__ == '__main__':
 
     if updateDatasetList:
         # write updates to the list of datasets
-        writeDatasetList(env.workspace + '/datasets.list', datasets)
+        updateDatasetList = writeDatasetList(env.workspace + '/datasets.list', datasets)
+
+    if updateDatasetList:
         setupDatasetDirs(datasets, env)
 
     allFilesets = getFilesets(env, datasets, args.filesets)
