@@ -899,7 +899,7 @@ if __name__ == '__main__':
 
     # if pilot is desired, update allFilesets with the pilot information
     if args.pilot != 0:
-        allFilesets = dict([key, ['pilot-' + str(args.pilot)] for key in allFilesets.keys()])
+        allFilesets = dict([(key, ['pilot-' + str(args.pilot)]) for key in allFilesets.keys()])
 
     # loop over datasets to submit
     submitJobs(env, datasets, allFilesets, runningJobs)
