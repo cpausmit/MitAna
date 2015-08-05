@@ -423,7 +423,7 @@ def writeMacros(datasets, env):
             macro.write('import ROOT\n\n')
             macro.write('fileset = sys.argv[1]\n')
             macro.write('if len(sys.argv) > 2:\n')
-            macro.write('    nentries = int(sys.argv[2])')
+            macro.write('    nentries = int(sys.argv[2])\n')
             macro.write('else:\n')
             macro.write('    nentries = -1\n\n')
 
