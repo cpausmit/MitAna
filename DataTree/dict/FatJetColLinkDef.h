@@ -20,6 +20,13 @@
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace mithep;
 
+#pragma link C++ class mithep::FatJet::TrackData+;
+#pragma link C++ class std::vector<mithep::FatJet::TrackData>+;
+#pragma link C++ class mithep::FatJet::SVData+;
+#pragma link C++ class std::vector<mithep::FatJet::SVData>+;
+#pragma link C++ class mithep::FatJet::LeptonData+;
+#pragma link C++ class std::vector<mithep::FatJet::LeptonData>+;
+#pragma link C++ class std::vector<mithep::Vect3>+;
 #pragma link C++ class mithep::FatJet+;
 #pragma link C++ class mithep::Collection<mithep::FatJet>+;
 #pragma link C++ class mithep::Array<mithep::FatJet>+;
