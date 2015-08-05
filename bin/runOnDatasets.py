@@ -434,7 +434,7 @@ def writeMacros(datasets, env):
 
             macro.write('\nfiles = {\n')
             # first file for pilot job submission
-            macro.write('    \'pilot\': [' + firstFile + '],\n')
+            macro.write('    \'pilot\': [\'' + firstFile + '\'],\n')
 
             iFile = 0
             for iFileset in range(ds.NFiles() / filesPerFileset + 1):
