@@ -391,7 +391,7 @@ def writeMacros(datasets, env):
 
         # get the dataset file list
         ds = catalog.FindDataset(book, dataset, '', 1)
-        firstFile = ds.FileUrl(0)
+        firstFile = str(ds.FileUrl(0))
         if firstFile == '':
             print ' Dataset ' + book + '/' + dataset + ' appears to be empty.'
             continue
