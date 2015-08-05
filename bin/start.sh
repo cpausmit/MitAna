@@ -5,6 +5,7 @@
 BOOK=$1
 DATASET=$2
 FILESET=$3
+NENTRIES=$4 # usually empty; set in pilot jobs
 
 if ! [ -d /cvmfs/cms.cern.ch ] || ! [ -d /cvmfs/cvmfs.cmsaf.mit.edu ]
 then
@@ -32,6 +33,6 @@ env
 ls -l
 ls -l $CMSSW_NAME/lib/$SCRAM_ARCH
 
-python run.py $FILESET
+python run.py $FILESET $NENTRIES
 
 ls -l

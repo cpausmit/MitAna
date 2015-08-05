@@ -389,6 +389,13 @@ def writeMacros(datasets, env):
         if os.path.exists(fileName) and noOverwrite:
             continue
 
+        # get the dataset file list
+        ds = catalog.FindDataset(book, dataset, '', 1)
+        firstFile = ds.FileUrl(0)
+        if fistFile == '':
+            print ' Dataset ' + book + '/' + dataset + ' appears to be empty.'
+            continue
+
         print ' Writing analysis macro for ' + book + '/' + dataset
 
         # reset and build the analysis
@@ -403,9 +410,7 @@ def writeMacros(datasets, env):
             analysis._sequence = goodLumiFilter(json) * analysis._sequence
 
         analysis.buildSequence()
-
-        # get the dataset file list
-        ds = catalog.FindDataset(book, dataset, '', 1)
+            
         # would be much nicer if mithep.Dataset had an interface that exposes fileset names
         filesPerFileset = 0
         with open(env.workspace + '/' + book + '/' + dataset + '/Files') as fileList:
@@ -416,11 +421,19 @@ def writeMacros(datasets, env):
         with open(fileName, 'w') as macro:
             macro.write('import sys\n')
             macro.write('import ROOT\n\n')
-            macro.write('fileset = sys.argv[1]\n\n')
+            macro.write('fileset = sys.argv[1]\n')
+            macro.write('if len(sys.argv) > 2:\n')
+            macro.write('    nentries = int(sys.argv[2])')
+            macro.write('else:\n')
+            macro.write('    nentries = -1\n\n')
+
             for lib in mithep.loadedLibs:
                 macro.write('ROOT.gSystem.Load(\'' + lib + '\')\n')
 
             macro.write('\nfiles = {\n')
+            # first file for pilot job submission
+            macro.write('    \'pilot\': [' + firstFile + '],\n')
+
             iFile = 0
             for iFileset in range(ds.NFiles() / filesPerFileset + 1):
                 macro.write('    \'%04d\': [\n' % iFileset)
@@ -441,6 +454,8 @@ def writeMacros(datasets, env):
             macro.write('for f in files[fileset]:\n')
             macro.write('    analysis.AddFile(f)\n\n')
             macro.write('analysis.SetOutputName(fileset + \'.root\')\n\n')
+            macro.write('if nentries > 0:\n')
+            macro.write('    analysis.SetProcessNEvents(nentries)\n\n')
             macro.write(analysis.dumpPython(varName = 'analysis', withCtor = False, objects = {}))
             macro.write('\nanalysis.Run(False)\n')
 
@@ -564,12 +579,16 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
             def formatCfg(s):
                 return s.format(task = env.taskName, book = book, dataset = dataset, fileset = fileset)
 
+            if fileset.startswith('pilot'):
+                fileset = 'pilot'
+                nentries = int(fileset[fileset.find('-') + 1:])
+
             # skip fileset if a job is running
             if (book, dataset, fileset) in runningJobs:
                 print ' Running: ', book, dataset, fileset, '(' + runningJobs[(book, dataset, fileset)] + ')'
                 continue
 
-            # skip fileset if at least one fileset has a non-zero output
+            # skip fileset if at least one output has non-zero size
             outputExists = False
             for outPath in map(formatCfg, outPaths.values()):
                 if not os.path.isdir(os.path.dirname(outPath)):
@@ -584,6 +603,9 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
                 continue
 
             print ' Submitting:', book, dataset, fileset
+
+            if fileset == 'pilot':
+                condorConfig['arguments'] += ' ' + str(nentries)
     
             jdlCommand = '\n'.join([key + ' = ' + formatCfg(value) for key, value in condorConfig.items()]) + '\nqueue\n'
             runSubproc('condor_submit', stdin = jdlCommand)
@@ -621,6 +643,7 @@ if __name__ == '__main__':
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
+    argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
     
@@ -873,6 +896,10 @@ if __name__ == '__main__':
     
     if args.kill or args.noSubmit:
         sys.exit(0)
+
+    # if pilot is desired, update allFilesets with the pilot information
+    if args.pilot != 0:
+        allFilesets = dict([key, ['pilot-' + str(args.pilot)] for key in allFilesets.keys()])
 
     # loop over datasets to submit
     submitJobs(env, datasets, allFilesets, runningJobs)

@@ -61,8 +61,7 @@ if __name__ == '__main__':
         analysis.SetProcessNEvents(args.nentries)
 
     # set up output (histogram file) format
-    if args.hierarchy:
-        analysis.SetKeepHierarchy(True)
+    analysis.SetKeepHierarchy(args.hierarchy)
 
     # set up data / MC
     if args.realData or args.goodlumiFile:
