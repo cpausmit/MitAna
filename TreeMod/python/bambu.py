@@ -17,6 +17,8 @@ class _Analysis(Configurable):
         self._sequence = None
         self._outputMods = []
         self.isRealData = False
+        self.book = ''
+        self.dataset = ''
 
     def setSequence(self, seq):
         self._sequence = seq

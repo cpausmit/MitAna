@@ -47,6 +47,9 @@ if __name__ == '__main__':
         dataset = catalog.FindDataset(args.book, args.dataset, args.fileset, 1)
         analysis.AddDataset(dataset)
         analysis.SetUseCacher(1)
+
+        analysis.book = args.book
+        analysis.dataset = args.dataset
         
     elif args.inputFiles:
         for f in args.inputFiles:

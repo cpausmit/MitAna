@@ -404,6 +404,9 @@ def writeMacros(datasets, env):
         if env.realData or (json != '' and json != '~'):
             analysis.isRealData = True
 
+        analysis.book = book
+        analysis.dataset = dataset
+
         analysis.SetKeepHierarchy(False)
 
         execfile(env.workspace + '/macro.py')
