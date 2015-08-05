@@ -28,6 +28,8 @@ echo $HOSTNAME
 
 eval $(cd $CMSSW_NAME; scram runtime -sh)
 
+$CMSSW_NAME/src/MitAna/bin/setupExternal.sh
+
 env
 
 ls -l
