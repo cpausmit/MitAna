@@ -605,7 +605,7 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
             print ' Submitting:', book, dataset, fileset
 
             if fileset == 'pilot':
-                condorConfig['arguments'] += ' ' + str(nentries)
+                condorConfig['arguments'] = '"{book} {dataset} pilot {nentries}"'.format(nentries = nentries)
     
             jdlCommand = '\n'.join([key + ' = ' + formatCfg(value) for key, value in condorConfig.items()]) + '\nqueue\n'
             runSubproc('condor_submit', stdin = jdlCommand)
