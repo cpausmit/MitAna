@@ -580,8 +580,8 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
                 return s.format(task = env.taskName, book = book, dataset = dataset, fileset = fileset)
 
             if fileset.startswith('pilot'):
-                fileset = 'pilot'
                 nentries = int(fileset[fileset.find('-') + 1:])
+                fileset = 'pilot'
 
             # skip fileset if a job is running
             if (book, dataset, fileset) in runningJobs:
