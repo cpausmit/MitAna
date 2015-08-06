@@ -49,17 +49,33 @@ def runSubproc(*args, **kwargs):
         stdin = kwargs['stdin']
     else:
         stdin = None
+
+    if 'stdout' in kwargs and type(kwargs['stdout']) is list:
+        stdout = kwargs['stdout']
+    else:
+        stdout = None
+
+    if 'stderr' in kwargs and type(kwargs['stderr']) is list:
+        stderr = kwargs['stderr']
+    else:
+        stderr = None
             
     out, err = proc.communicate(stdin)
 
-    if 'stdout' not in kwargs or kwargs['stdout'] is not None:
+    if stdout is None:
         if out.strip():
             print out
+    else:
+        for line in out.strip('\n').split('\n'):
+            stdout.append(line)
 
-    if 'stderr' not in kwargs or kwargs['stderr'] is not None:
+    if stderr is None:
         if err.strip():
             sys.stderr.write(err)
             sys.stderr.flush()
+    else:
+        for line in err.strip('\n').split('\n'):
+            stderr.append(line)
 
 
 def setupWorkspace(env):
@@ -465,17 +481,21 @@ def writeMacros(datasets, env):
             macro.write('\nanalysis.Run(False)\n')
 
 
-def getRunningJobs(iwdParent):
-    proc = subprocess.Popen(['condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    out, err = proc.communicate()
+def getRunningJobs(iwdParent, killHeld):
+    out = []
+    err = []
+    runSubproc('condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments,JobStatus,GlobalJobId', stdout = out, stderr = err)
 
-    if out.strip() == 'All queues are empty':
+    if len(out) == 1 and out[0].strip() == 'All queues are empty':
         return {}
+
+    for line in err:
+        print line
 
     running = {}
 
     block = {}
-    for line in out.split('\n'):
+    for line in out:
         if line.strip() == '':
             # one job block ended
             if len(block) == 0:
@@ -484,7 +504,7 @@ def getRunningJobs(iwdParent):
             if block['Owner'].strip('"') != os.environ['USER'] or not block['Iwd'].strip('"').startswith(iwdParent + '/'):
                 block = {}
                 continue
-    
+
             try:
                 book, dataset, fileset = block['Arguments'].strip('"').split()[:3]
             except:
@@ -493,8 +513,18 @@ def getRunningJobs(iwdParent):
                 except:
                     block = {}
                     continue
-            
-            running[(book, dataset, fileset)] = block['ClusterId'] + '.' + block['ProcId']
+
+            jobId = block['ClusterId'] + '.' + block['ProcId']
+            submitHost = block['GlobalJobId']
+            submitHost = submitHost[:submitHost.find('#')]
+
+            if killHeld and block['JobStatus'] == '5' and submitHost == socket.gethostname(): # 5 = Held
+                print 'Killing job', jobId + ':', book, dataset, fileset
+                runSubproc('condor_rm', jobId)
+                block = {}
+                continue
+           
+            running[(book, dataset, fileset)] = jobId
             block = {}
             continue
             
@@ -658,6 +688,7 @@ if __name__ == '__main__':
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
+    argParser.add_argument('--resubmit-held', '-H', action = 'store_true', dest = 'resubmitHeld', help = 'Resubmit held jobs automatically. By default held jobs count as running and are skipped.')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
     
     args = argParser.parse_args()
@@ -715,6 +746,7 @@ if __name__ == '__main__':
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
     env.submitFrom = args.submitFrom
+    env.resubmitHeld = args.resubmitHeld
 
     env.cmsswdir = os.path.dirname(env.cmsswbase)
     env.mitTag = os.path.basename(env.cmsswdir)
@@ -884,7 +916,7 @@ if __name__ == '__main__':
 
     print ' Checking for running jobs..'
     
-    runningJobs = getRunningJobs(env.outDir)
+    runningJobs = getRunningJobs(env.outDir, env.resubmitHeld)
 
     if len(runningJobs) != 0:
         if newTask:
