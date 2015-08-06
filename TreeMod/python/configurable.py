@@ -1,3 +1,4 @@
+import sys
 import ROOT
 
 class Configurable(object):
@@ -80,7 +81,7 @@ class Configurable(object):
             attr = getattr(self._cppobj, name)
         except AttributeError:
             print 'Class ' + self._clsName + ' has no attribute ' + name
-            raise
+            sys.exit(1)
 
         if type(attr) is ROOT.MethodProxy:
             attr = Configurable.Method(name, self)
@@ -95,11 +96,15 @@ class Configurable(object):
 
         if not name.startswith('_'):
             try:
+                # for expression of form
+                #  obj.attr = value
+                # is this an attribute of the C++ object?
                 attr = getattr(self._cppobj, name)
                 self.config.append((name, value, False))
                 return
 
             except AttributeError:
+                # if not, set attribute on the python object
                 pass
 
         object.__setattr__(self, name, value)
@@ -110,7 +115,7 @@ class Configurable(object):
                 method = getattr(self, 'Set' + key)
             except AttributeError:
                 print 'Error raised in ' + self._clsName + ' constructor argument ' + key + ' = ' + str(value)
-                raise
+                sys.exit(1)
 
             if type(value) is tuple:
                 method(*value)
@@ -193,13 +198,37 @@ class Configurable(object):
 
         return newObj
 
-    def dumpPython(self, varName = 'v1', objects = {}):
+    def reset(self, *args, **kwargs):
+        """
+        Recreate the core object and clear the recorded configurations.
+        """
+
+        self._cppobj = type(self._cppobj)(*args)
+        self.config = [('_Ctor', args, True)] # attribute name, args, is method
+
+        self._configureFromArgs(kwargs)
+
+    def dumpPython(self, varName = 'v1', withCtor = True, objects = {}):
         """
         Return a python code snippet that constructs this object and calls the recorded
         non-const methods in sequence.
         """
 
         code = ''
+
+        # first write down any undefined Configurables
+        for attrName, args, isMethod in self.config:
+            if not isMethod:
+                args = (args,)
+
+            for arg in args:
+                if not isinstance(arg, Configurable) or arg in objects:
+                    continue
+
+                auxName = 'aux' + str(len(objects))
+                code += arg.dumpPython(varName = auxName, objects = objects)
+                code += '\n'
+                objects[arg] = auxName
 
         for attrName, args, isMethod in self.config:
             if isMethod:
@@ -209,16 +238,22 @@ class Configurable(object):
                         argList.append(objects[arg])
                     elif type(arg) is str:
                         argList.append("'%s'" % arg)
+                    elif isinstance(arg, ROOT.ObjectProxy):
+                        print 'Error in %s.%s()' % (varName, attrName)
+                        print 'Text dump of C++ class in function argument is not supported.'
+                        sys.exit(1)
                     else:
                         argList.append(str(arg))
     
                 argStr = ', '.join(argList)
                 if attrName == '_Ctor':
-                    code += '%s = %s(%s)\n' % (varName, self._clsName, argStr)
+                    if withCtor:
+                        code += '%s = %s(%s)\n' % (varName, self._clsName, argStr)
                 else:
                     code += '%s.%s(%s)\n' % (varName, attrName, argStr)
 
             else:
+                # args in this case is a single variable
                 code += '%s.%s = %s\n' % (varName, attrName, str(args))
 
         return code

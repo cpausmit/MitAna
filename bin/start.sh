@@ -5,7 +5,7 @@
 BOOK=$1
 DATASET=$2
 FILESET=$3
-JSON=$4
+NENTRIES=$4 # usually empty; set in pilot jobs
 
 if ! [ -d /cvmfs/cms.cern.ch ] || ! [ -d /cvmfs/cvmfs.cmsaf.mit.edu ]
 then
@@ -13,29 +13,28 @@ then
   exit 1
 fi
 
+if [ -e x509up ]
+then
+  export X509_USER_PROXY=x509up
+fi
+
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 source env.sh
 
-env
-
-scram project CMSSW $CMSSW_RELEASE
-tar xzf *.lib.tar.gz -C $CMSSW_RELEASE
-tar xzf *.inc.tar.gz -C $CMSSW_RELEASE
-tar xzf *.MitAna-bin.tar.gz -C $CMSSW_RELEASE
-
-export MIT_CATALOG=catalog
+scram project -n $CMSSW_NAME CMSSW $CMSSW_RELEASE
+tar xzf $CMSSW_NAME.tar.gz -C $CMSSW_RELEASE
 
 echo $HOSTNAME
 
-eval $(cd $CMSSW_RELEASE; scram runtime -sh)
+eval $(cd $CMSSW_NAME; scram runtime -sh)
+
+$CMSSW_NAME/src/MitAna/bin/setupExternal.sh
+
+env
 
 ls -l
+ls -l $CMSSW_NAME/lib/$SCRAM_ARCH
 
-if [ "$JSONLIST" ]
-then
-  JSONARG="--goodlumi $JSONLIST"
-fi
+python run.py $FILESET $NENTRIES
 
-echo "./analysis.py sequence.py --flat --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG"
-echo ""
-./analysis.py sequence.py --flat --book=$BOOK --dataset=$DATASET --fileset=$FILESET --output=${FILESET}.root --nentries=-1 $JSONARG
+ls -l
