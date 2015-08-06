@@ -469,8 +469,11 @@ def getRunningJobs(iwdParent):
     proc = subprocess.Popen(['condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     out, err = proc.communicate()
 
+    if out.strip() == 'All queues are empty':
+        return {}
+
     running = {}
-    
+
     block = {}
     for line in out.split('\n'):
         if line.strip() == '':
