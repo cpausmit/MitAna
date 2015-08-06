@@ -613,7 +613,11 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
                 condorConfig['arguments'] = '"{book} {dataset} pilot %d"' % nentries
     
             jdlCommand = '\n'.join([key + ' = ' + formatCfg(value) for key, value in condorConfig.items()]) + '\nqueue\n'
-            runSubproc('condor_submit', stdin = jdlCommand)
+
+            if env.submitFrom != '':
+                runSubproc('ssh', env.submitFrom, 'condor_submit', stdin = jdlCommand)
+            else:
+                runSubproc('condor_submit', stdin = jdlCommand)
 
     if updateDirectories:
         with open(env.workspace + '/directories', 'w') as dirList:
@@ -649,6 +653,7 @@ if __name__ == '__main__':
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
+    argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
     
@@ -706,6 +711,7 @@ if __name__ == '__main__':
     env.numFiles = args.numFiles
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
+    env.submitFrom = args.submitFrom
 
     env.cmsswdir = os.path.dirname(env.cmsswbase)
     env.mitTag = os.path.basename(env.cmsswdir)
