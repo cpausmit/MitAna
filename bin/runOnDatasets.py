@@ -605,12 +605,22 @@ def writeCondorConf(inTemplatePath, env):
     if 'executable' not in condorConfig:
         condorConfig['executable'] = env.workspace + '/start.sh'
 
-    if 'transfer_input_files' not in condorConfig:
-        inputList = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
-        if os.path.exists(env.workspace + '/x509up'):
-            inputList.append('x509up')
+    try:
+        inputList = map(str.strip, condorConfig['transfer_input_files'].split(','))
+        listWasGiven = True
+    except KeyError:
+        inputList = []
+        listWasGiven = False
 
-        condorConfig['transfer_input_files'] = ','.join(map(lambda x: env.workspace + '/' + x, inputList))
+    for inputFile in ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh', 'x509up']:
+        fullPath = env.workspace + '/' + inputFile
+        if os.path.exists(fullPath) and fullPath not in inputList:
+            if listWasGiven:
+                print ' Adding', fullPath, 'to transfer_input_files.'
+
+            inputList.append(fullPath)
+
+    condorConfig['transfer_input_files'] = ','.join(inputList)
 
     with open(env.workspace + '/condor.jdl', 'w') as jdlFile:
         for key, value in condorConfig.items():
