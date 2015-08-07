@@ -11,7 +11,7 @@ if __name__ == '__main__':
     
     argParser = ArgumentParser(description = 'Run BAMBU analysis')
     argParser.add_argument('config', metavar = 'CONFIG', help = 'Analysis macro defining the module sequence.')
-    argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/041', help = 'Input book, e.g. t2mit/filefi/041.')
+    argParser.add_argument('--book', '-b', metavar = 'BOOK', dest = 'book', default = 't2mit/filefi/042', help = 'Input book, e.g. t2mit/filefi/042.')
     argParser.add_argument('--dataset', '-d', metavar = 'DATASET', dest = 'dataset', help = 'Input dataset.')
     argParser.add_argument('--fileset', '-s', metavar = 'FILESET', dest = 'fileset', default = '0000', help = 'Input fileset.')
     argParser.add_argument('--file', '-f', metavar = 'INPUT', dest = 'inputFiles', nargs = '*', help = 'Input file name when running on a single file.')
