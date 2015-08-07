@@ -429,7 +429,7 @@ def writeMacros(datasets, env):
         # reset and build the analysis
         analysis.reset()
 
-        if env.realData or (json != '' and json != '~'):
+        if json != '' and json != '~':
             analysis.isRealData = True
 
         analysis.book = book
@@ -748,6 +748,9 @@ if __name__ == '__main__':
     if args.macro and not os.path.exists(args.macro):
         print ' Analysis configuration file ' + args.macro + ' does not exist'
         sys.exit(1)
+
+    if args.realData and args.goodlumiFile == '~':
+        args.goodlumiFile = '-'
     
     if args.configFileName:
         if not os.path.exists(args.configFileName):
@@ -792,7 +795,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     env.inMacroPath = args.macro
-    env.realData = args.realData
     env.numFiles = args.numFiles
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
