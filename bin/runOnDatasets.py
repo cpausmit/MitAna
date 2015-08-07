@@ -45,37 +45,44 @@ def runSubproc(*args, **kwargs):
 
     proc = subprocess.Popen(list(args), stdout = subprocess.PIPE, stderr = subprocess.PIPE, stdin = subprocess.PIPE)
 
-    if 'stdin' in kwargs and type(kwargs['stdin']) is str:
+    try:
         stdin = kwargs['stdin']
-    else:
+    except KeyError:
         stdin = None
 
-    if 'stdout' in kwargs and type(kwargs['stdout']) is list:
+    try:
         stdout = kwargs['stdout']
-    else:
-        stdout = None
+    except KeyError:
+        stdout = sys.stdout
 
-    if 'stderr' in kwargs and type(kwargs['stderr']) is list:
+    try:
         stderr = kwargs['stderr']
-    else:
-        stderr = None
+    except KeyError:
+        stderr = sys.stderr
             
     out, err = proc.communicate(stdin)
 
-    if stdout is None:
-        if out.strip():
-            print out
-    else:
-        for line in out.strip('\n').split('\n'):
-            stdout.append(line)
+    if stdout is not None:
+        if type(stdout) is list:
+            if out.endswith('\n'):
+                out = out[:-1]
+            for line in out.split('\n'):
+                stdout.append(line)
 
-    if stderr is None:
-        if err.strip():
-            sys.stderr.write(err)
-            sys.stderr.flush()
-    else:
-        for line in err.strip('\n').split('\n'):
-            stderr.append(line)
+        elif out.strip():
+            stdout.write(out)
+            stdout.flush()
+
+    if stderr is not None:
+        if type(stderr) is list:
+            if err.endswith('\n'):
+                err = err[:-1]
+            for line in err.split('\n'):
+                stderr.append(line)
+
+        elif err.strip():
+            stderr.write(err)
+            stderr.flush()
 
 
 def setupWorkspace(env):
@@ -124,6 +131,10 @@ def setupWorkspace(env):
 
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
+
+    # copy the execution script
+    if not env.update:
+        shutil.copyfile(env.cmsswbase + '/src/MitAna/bin/start.sh', env.workspace + '/start.sh')
 
     # (create and) copy the library tarball
     if os.path.exists(env.cmsswdir + '/' + env.libPack):
@@ -406,8 +417,9 @@ def writeMacros(datasets, env):
             continue
 
         # get the dataset file list
-        ds = catalog.FindDataset(book, dataset, '', 1)
+        ds = catalog.FindDataset(book, dataset, '', 3)
         firstFile = str(ds.FileUrl(0))
+
         if firstFile == '':
             print ' Dataset ' + book + '/' + dataset + ' appears to be empty.'
             continue
@@ -431,7 +443,7 @@ def writeMacros(datasets, env):
             analysis._sequence = goodLumiFilter(json) * analysis._sequence
 
         analysis.buildSequence()
-            
+
         # would be much nicer if mithep.Dataset had an interface that exposes fileset names
         filesPerFileset = 0
         with open(env.workspace + '/' + book + '/' + dataset + '/Files') as fileList:
@@ -471,7 +483,7 @@ def writeMacros(datasets, env):
 
             macro.write('mithep = ROOT.mithep\n')
             macro.write('analysis = mithep.Analysis()\n\n')
-            macro.write('analysis.SetUseCacher(1)\n\n')
+            macro.write('analysis.SetUseCacher(2)\n\n')
             macro.write('for f in files[fileset]:\n')
             macro.write('    analysis.AddFile(f)\n\n')
             macro.write('analysis.SetOutputName(fileset + \'.root\')\n\n')
@@ -515,16 +527,40 @@ def getRunningJobs(iwdParent, killHeld):
                     continue
 
             jobId = block['ClusterId'] + '.' + block['ProcId']
-            submitHost = block['GlobalJobId']
-            submitHost = submitHost[:submitHost.find('#')]
 
-            if killHeld and block['JobStatus'] == '5' and submitHost == socket.gethostname(): # 5 = Held
-                print 'Killing job', jobId + ':', book, dataset, fileset
-                runSubproc('condor_rm', jobId)
+            status = int(block['JobStatus'])
+            if status == 0:
+                statusStr = 'Unexpanded (U)'
+            elif status == 1:
+                statusStr = 'Idle (I)'
+            elif status == 2:
+                statusStr = 'Running (R)'
+            elif status == 3:
+                statusStr = 'Removed (X)'
+            elif status == 4:
+                statusStr = 'Completed (C)'
+            elif status == 5:
+                statusStr = 'Held (H)'
+            elif status == 6:
+                statusStr = 'Submission_err (E)'
+            else:
+                statusStr = 'Unknown'
+
+            if killHeld and status == 5:
+                submitHost = block['GlobalJobId'].strip('"')
+                submitHost = submitHost[:submitHost.find('#')]
+
+                if submitHost == socket.gethostname():
+                    print 'Killing job', jobId + ':', book, dataset, fileset
+                    runSubproc('condor_rm', jobId)
+                else:
+                    print 'Killing job on', submitHost, jobId + ':', book, dataset, fileset
+                    runSubproc('ssh', submitHost, 'condor_rm', jobId)
+
                 block = {}
                 continue
            
-            running[(book, dataset, fileset)] = jobId
+            running[(book, dataset, fileset)] = (jobId, statusStr)
             block = {}
             continue
             
@@ -567,7 +603,7 @@ def writeCondorConf(inTemplatePath, env):
     readCondorConf(inTemplatePath, condorConfig)
 
     if 'executable' not in condorConfig:
-        condorConfig['executable'] = os.environ['HOME'] + '/cms/cmssw/' + env.mitTag + '/' + env.cmsswname + '/src/MitAna/bin/start.sh'
+        condorConfig['executable'] = env.workspace + '/start.sh'
 
     if 'transfer_input_files' not in condorConfig:
         inputList = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
@@ -623,7 +659,8 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
 
             # skip fileset if a job is running
             if (book, dataset, fileset) in runningJobs:
-                print ' Running: ', book, dataset, fileset, '(' + runningJobs[(book, dataset, fileset)] + ')'
+                jobId, status = runningJobs[(book, dataset, fileset)]
+                print ' ' + status + ': ', book, dataset, fileset, '(' + jobId + ')'
                 continue
 
             # skip fileset if at least one output has non-zero size
@@ -836,12 +873,12 @@ if __name__ == '__main__':
     x509File = '/tmp/x509up_u' + str(os.getuid())
     if os.path.exists(x509File):
         shutil.copyfile(x509File, env.workspace + '/x509up')
-    else:
-        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
-        message += ' Continue?'
-        if not yes(message):
-            print ' Exiting.'
-            sys.exit(0)
+#    else:
+#        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
+#        message += ' Continue?'
+#        if not yes(message):
+#            print ' Exiting.'
+#            sys.exit(0)
    
     # datasets: list of tuples (book, dataset, json)
     updateDatasetList = False
@@ -936,7 +973,7 @@ if __name__ == '__main__':
             print ' Killing jobs:'
             for book, dataset, fileset in sorted(runningJobs.keys()):
                 print ' ', book, dataset, fileset
-                runSubproc('condor_rm', runningJobs[(book, dataset, fileset)], stdout = None, stderr = None)
+                runSubproc('condor_rm', runningJobs[(book, dataset, fileset)][0], stdout = None, stderr = None)
 
             runningJobs = {}
     
