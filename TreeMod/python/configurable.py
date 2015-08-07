@@ -65,6 +65,9 @@ class Configurable(object):
          mod.SetMyAttr(value)
         """
 
+        # need to rely on object.__setattr__ since we mess with out setattr below
+        object.__setattr__(self, 'const', False) # when True, do not allow non-const attribute calls
+
         self._cppobj = cppcls(*args)
         self._clsName = clsName
         self.config = [('_Ctor', args, True)] # attribute name, args, is method
@@ -93,6 +96,10 @@ class Configurable(object):
         Record the configuration provided in the direct form
          obj.attr = value
         """
+
+        if self.const:
+            print ' Attempt to set attribute', name, 'on a const object of class', self._clsName
+            sys.exit(1)
 
         if not name.startswith('_'):
             try:
@@ -151,6 +158,12 @@ class Configurable(object):
             m = self._cppobj.Class().GetMethod(methodName, ','.join(valueStrings), True) # True -> only look for const method
             recordConfig = (not m) # this method is not const
 
+        if self.const and recordConfig:
+            print ' Non-const member function', methodName, 'of class', self._clsName, 'was called for a const object.'
+            print ' (There is a chance that the function is actually a const function. If this is the case wrap the'
+            print ' calling line with [this_object].setConst(False) and [this_object].setConst(True)).'
+            sys.exit(1)
+
         if recordConfig:
             self.config.append((methodName, args, True))
 
@@ -166,10 +179,13 @@ class Configurable(object):
         method = getattr(self._cppobj, methodName)
         return method(*args)
 
+    def setConst(self, c = True):
+        object.__setattr__(self, 'const', c)
+
     def clone(self, *args, **kwargs):
         """
         Instantiate an object of the same type and call the recorded non-const methods
-        in sequence.
+        in sequence. Does not copy the constness.
         """
 
         calls = iter(self.config)
