@@ -417,7 +417,7 @@ def writeMacros(datasets, env):
             continue
 
         # get the dataset file list
-        ds = catalog.FindDataset(book, dataset, '', 3)
+        ds = catalog.FindDataset(book, dataset, '', 1)
         firstFile = str(ds.FileUrl(0))
 
         if firstFile == '':
@@ -483,7 +483,7 @@ def writeMacros(datasets, env):
 
             macro.write('mithep = ROOT.mithep\n')
             macro.write('analysis = mithep.Analysis()\n\n')
-            macro.write('analysis.SetUseCacher(2)\n\n')
+            macro.write('analysis.SetUseCacher(1)\n\n')
             macro.write('for f in files[fileset]:\n')
             macro.write('    analysis.AddFile(f)\n\n')
             macro.write('analysis.SetOutputName(fileset + \'.root\')\n\n')
@@ -677,6 +677,10 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
             if outputExists:
                 continue
 
+            if env.noSubmit:
+                print ' Skipping (no-submit = true):', book, dataset, fileset
+                continue
+
             print ' Submitting:', book, dataset, fileset
 
             if fileset == 'pilot':
@@ -783,7 +787,7 @@ if __name__ == '__main__':
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
     env.submitFrom = args.submitFrom
-    env.resubmitHeld = args.resubmitHeld
+    env.noSubmit = args.noSubmit
 
     env.cmsswdir = os.path.dirname(env.cmsswbase)
     env.mitTag = os.path.basename(env.cmsswdir)
@@ -953,7 +957,7 @@ if __name__ == '__main__':
 
     print ' Checking for running jobs..'
     
-    runningJobs = getRunningJobs(env.outDir, env.resubmitHeld)
+    runningJobs = getRunningJobs(env.outDir, args.resubmitHeld)
 
     if len(runningJobs) != 0:
         if newTask:
@@ -977,7 +981,7 @@ if __name__ == '__main__':
 
             runningJobs = {}
     
-    if args.kill or args.noSubmit:
+    if args.kill:
         sys.exit(0)
 
     # if pilot is desired, update allFilesets with the pilot information
