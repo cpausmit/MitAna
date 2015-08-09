@@ -614,6 +614,8 @@ def writeCondorConf(inTemplatePath, env):
 
     for inputFile in ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh', 'x509up']:
         fullPath = env.workspace + '/' + inputFile
+        if inputFile == 'x509up' and not os.path.exists(fullPath):
+            continue
         if fullPath not in inputList:
             if listWasGiven:
                 print ' Adding', fullPath, 'to transfer_input_files.'
