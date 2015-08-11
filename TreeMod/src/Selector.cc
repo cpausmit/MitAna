@@ -183,8 +183,7 @@ void Selector::SlaveBegin(TTree *tree)
         inputList.Add(new TObjString(obj->GetTitle()));
 
       fCacher = new Cacher(&inputList, fUseCacher == 2); // 2: full-local caching
-      if (fUseCacher == 2)
-        fCacher->SetNFilesAhead(1); // do not download too many files locally
+      fCacher->SetNFilesAhead(1); // do not download too many files locally
       if (!fCacher->InitialCaching()) {
         Error("SlaveBegin", "Initial cache failed.");
         throw std::exception();
