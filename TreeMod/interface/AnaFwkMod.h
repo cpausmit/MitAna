@@ -10,7 +10,6 @@
 #define MITANA_TREEEMOD_ANAFWKMOD_H
 
 #include "MitAna/TreeMod/interface/BaseMod.h" 
-#include "MitAna/DataUtil/interface/Cacher.h" 
 #include "MitAna/DataTree/interface/EventHeaderCol.h"
 #include "MitAna/DataTree/interface/MCEventInfo.h"
 #include "MitAna/DataTree/interface/PileupInfoFwd.h"
@@ -28,8 +27,6 @@ namespace mithep
       AnaFwkMod(const char *name="AnaFwkMod", 
                 const char *title="Analysis framework module");
 
-      void             SetInputLists(const TList *l);
-      void             SetUseCacher(Int_t i)            { fUseCacher = i;  }
       Long64_t         GetPrintScale()            const { return fPrintScale;  }
       Long64_t         GetSkipNEvents()           const { return fSkipNEvents; }
       void             SetPrintScale(UInt_t n)          { fPrintScale  = n;    }
@@ -45,9 +42,6 @@ namespace mithep
 
       TString          fAllHeadTreeName;   //all events tree name
       TString          fAllHeadBrName;     //all event headers branch name
-      const TList     *fInputLists;        //input lists (cannot be changed)
-      Int_t            fUseCacher;         //switch on caching of files
-      Cacher          *fCacher;            //caching tool
       Long64_t         fSkipNEvents;       //number of events to skip from beginning (def=0)
       UInt_t           fPrintScale;        //scale of when to print event number/timings (def=100)
       TStopwatch      *fSWtotal;           //!stop watch for overall timing

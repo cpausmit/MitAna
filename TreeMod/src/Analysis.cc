@@ -470,8 +470,6 @@ Bool_t Analysis::Init()
 
   // create our ana framework module
   AnaFwkMod *anamod = new AnaFwkMod;
-  anamod->SetInputLists(fList);
-  anamod->SetUseCacher(fUseCacher);
   anamod->SetSkipNEvents(fSkipNEvents);
   anamod->SetPrintScale(fPrintScale);
   fDeleteList->Add(anamod);
@@ -516,6 +514,7 @@ Bool_t Analysis::Init()
     fSelector->SetDoProxy(fDoProxy);
     fSelector->SetDoObjTabClean(fDoObjTabClean);
     fSelector->SetDoRunInfo(kTRUE);
+    fSelector->SetUseCacher(fUseCacher);
     fSelector->SetAllEvtHdrBrn(GetAllEvtHdrBrn());
     fSelector->SetAllEvtTreeName(GetAllEvtTreeName());
     fSelector->SetEvtHdrName(GetEvtHdrName());

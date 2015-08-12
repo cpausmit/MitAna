@@ -5,6 +5,7 @@
 #include <TProcessID.h>
 #include <TFile.h>
 #include <TTree.h>
+#include <TChain.h>
 #include <TROOT.h>
 
 #include <stdexcept>
@@ -16,6 +17,8 @@ ClassImp(mithep::Selector)
 //--------------------------------------------------------------------------------------------------
 Selector::Selector() : 
   fDoRunInfo     (kTRUE),
+  fUseCacher     (0),
+  fCacher        (0),
   fEvtHdrName    (Names::gkEvtHeaderBrn),
   fRunTreeName   (Names::gkRunTreeName),
   fRunInfoName   (Names::gkRunInfoBrn),
@@ -104,8 +107,8 @@ Bool_t Selector::EndRun()
 //--------------------------------------------------------------------------------------------------
 Bool_t Selector::Notify()
 {
-  // The Notify() function is called when a new file is opened.  Here, we check for a new run info
-  // tree.
+  // The Notify() function is called when a new file is opened.  Here, we take care of file caching and
+  // check for a new run info tree.
 
   if (!GetCurrentFile()) 
     return kTRUE;
@@ -123,6 +126,14 @@ Bool_t Selector::Notify()
 
   if (fDoRunInfo) 
     UpdateRunInfoTree();
+
+  // make sure to keep files cached
+  if (fCacher) {
+    if (!fCacher->NextCaching()) {
+      Error("Notify", "File caching failed.");
+      return kFALSE;
+    }
+  }
     
   return TAMSelector::Notify();
 }
@@ -145,6 +156,14 @@ Bool_t Selector::Process(Long64_t entry)
     }
   }
 
+  if (fCacher && fTree && fTree->GetTree()->GetReadEntry() == fTree->GetTree()->GetEntries() - 1) {
+    // process has reached the end of the current file
+    if (!fCacher->WaitForNextFile()) {
+      Error("Process", "Next file could not be cached.");
+      return kFALSE;
+    }
+  }
+
   return ret;
 }
 
@@ -154,10 +173,40 @@ void Selector::SlaveBegin(TTree *tree)
   // The SlaveBegin() function is called after the Begin() function and can be used to setup
   // analysis on the slaves. Here, we request the event header branch.
 
+  // perfrom initial caching before we get rolling
+  if (fUseCacher > 0) {
+    TChain* chain = dynamic_cast<TChain*>(tree);
+    if (chain) {
+      TList inputList;
+      inputList.SetOwner();
+      for (TObject* obj : *chain->GetListOfFiles())
+        inputList.Add(new TObjString(obj->GetTitle()));
+
+      fCacher = new Cacher(&inputList, fUseCacher == 2); // 2: full-local caching
+      fCacher->SetNFilesAhead(1); // do not download too many files locally
+      if (!fCacher->InitialCaching()) {
+        Error("SlaveBegin", "Initial cache failed.");
+        throw std::exception();
+      }
+    }
+  }
+
   if (fDoRunInfo)
     ReqBranch(fEvtHdrName, fEventHeader);
 
   TAMSelector::SlaveBegin(tree);
+}
+
+//--------------------------------------------------------------------------------------------------
+void Selector::SlaveTerminate()
+{
+  // Clean leftovers in cache
+  if (fCacher) {
+    fCacher->CleanCache();
+    delete fCacher;
+  }
+
+  TAMSelector::SlaveTerminate();
 }
 
 //--------------------------------------------------------------------------------------------------
