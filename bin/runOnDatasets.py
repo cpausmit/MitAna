@@ -38,6 +38,29 @@ def yes(message, options = []):
             print prompt
 
 
+def parseValueStr(value):
+    strmatch = re.match('["\'](.*)["\']$', value)
+    if strmatch:
+        value = strmatch.group(1)
+    else:
+        try:
+            value = int(value)
+        except ValueError:
+            try:
+                value = float(value)
+            except ValueError:
+                pass
+
+    return value
+
+
+def makeValueStr(value):
+    if type(value) is str:
+        value = "'" + value + "'"
+
+    return str(value)
+
+
 def runSubproc(*args, **kwargs):
     """
     Run external process using subprocess.Popen
@@ -240,24 +263,54 @@ def readDatasetList(fileName):
     datasets = []
 
     with open(fileName) as configFile:
+        firstLine = True
+        customKeys = []
         for line in configFile:
-            matches = re.match('([^#][^ ]*) +([^ ]+) +([^ ]+)( +[^ ]+)*', line.strip())
+            if not re.search('[a-zA-Z0-9]', line):
+                # skip non-alphanumeric lines
+                continue
+    
+            if firstLine:
+                # if column names are defined in the first line, pick them up
+                firstLine = False
+                columns = map(str.strip, line.lstrip('#').split())
+                if columns[0] == 'book' and columns[1] == 'dataset':
+                    if columns[2] != 'skim' or columns[-1] != 'json':
+                        print ' Column names are given in', fileName, 'but they do not conform to the template.'
+                        print ' The columns must be named "book dataset skim ... json".'
+                        sys.exit(1)
+    
+                    customKeys = columns[3:-1]
+                    continue
+    
+            matches = re.match('([^#][^ ]*) +([^ ]+) +([^ ]+)(| .*)$', line.strip())
             if not matches:
                 continue
-
-            book = matches.group(1)
-            dataset = matches.group(2)
-            skim = matches.group(3)
+    
+            book = matches.group(1).strip()
+            dataset = matches.group(2).strip()
+            skim = matches.group(3).strip()
+            json = ''
+            custom = {}
             # fourth paren captures the last column, which is currently assigned to JSON
             if matches.group(4):
-                json = matches.group(4).strip()
+                words = matches.group(4).split()
+                if len(customKeys) != 0:
+                    for iK, key in enumerate(customKeys):
+                        try:
+                            custom[key] = parseValueStr(words[iK])
+                        except IndexError:
+                            print ' Variable', key, 'not defined for dataset', dataset
+                            sys.exit(1)
+    
+                json = words[-1]
             else:
                 json = ''
-
+    
             if skim == 'noskim':
                 skim = '-'
 
-            datasets.append((book, dataset, skim, json))
+            datasets.append((book, dataset, skim, json, custom))
 
     return datasets
 
@@ -272,22 +325,24 @@ def writeDatasetList(fileName, datasets):
     append = []
     remove = []
 
-    for book, dataset, skim, json in datasets:
-        for exBook, exDataset, exSkim, exJson in fileContent:
+    for book, dataset, skim, json, custom in datasets:
+        for exBook, exDataset, exSkim, exJson, exCustom in fileContent:
             if book == exBook and dataset == exDataset:
-                if skim != exSkim or json != exJson:
+                if skim != exSkim or json != exJson or custom != exCustom:
                     message = ' Specified skim/JSON configuration for ' + book + '/' + dataset + ' does not match the existing.\n'
                     message += ' Update configuration?\n'
                     message += ' ' + exSkim + ' -> ' + skim + '\n'
                     message += ' ' + exJson + ' -> ' + json
+                    if len(exCustom) != 0 or len(custom) != 0:
+                        message += '\n ' + str(exCustom) + ' -> ' + str(custom)
                     if yes(message):
-                        remove.append((exBook, exDataset, exSkim, exJson))
-                        append.append((book, dataset, skim, json))
+                        remove.append((exBook, exDataset, exSkim, exJson, exCustom))
+                        append.append((book, dataset, skim, json, custom))
                 
                 break
 
         else:
-            append.append((book, dataset, skim, json))
+            append.append((book, dataset, skim, json, custom))
 
     if len(append) != 0 or len(remove) != 0:
         for d in remove:
@@ -296,8 +351,19 @@ def writeDatasetList(fileName, datasets):
             fileContent.append(d)
 
         with open(fileName, 'w') as configFile:
-            for book, dataset, skim, json in fileContent:
-                configFile.write(book + ' ' + dataset + ' ' + skim + ' ' + json + '\n')
+            firstLine = True
+            for book, dataset, skim, json, custom in fileContent:
+                if firstLine:
+                    configFile.write('book dataset skim ')
+                    for key in sorted(custom.keys()):
+                        configFile.write(key + ' ')
+                    configFile.write('json\n')
+                    firstLine = False
+
+                configFile.write(book + ' ' + dataset + ' ' + skim + ' ')
+                for key in sorted(custom.keys()):
+                    configFile.write(makeValueStr(custom[key]) + ' ')
+                configFile.write(json + '\n')
 
         return True
     else:
@@ -310,7 +376,7 @@ def setupDatasetDirs(datasets, env):
     Create a directory for each dataset under log and output directories.
     """
 
-    for book, dataset, skim, json in datasets:
+    for book, dataset, skim, json, custom in datasets:
         jobOutDirName = env.outDir + '/' + book + '/' + dataset
         jobLogDirName = env.logDir + '/' + book + '/' + dataset
         jobConfDirName = env.workspace + '/' + book + '/' + dataset
@@ -335,8 +401,9 @@ def getFilesets(env, datasets, limitTo = []):
     """
 
     allFilesets = {}
+    invalid = []
 
-    for book, dataset, skim, json in datasets:
+    for book, dataset, skim, json, custom in datasets:
         catalogSrc = env.catalogDir + '/' + book + '/' + dataset
         if skim != '-':
             catalogSrc += '/' + skim
@@ -352,6 +419,7 @@ def getFilesets(env, datasets, limitTo = []):
                             set0size += 1
             except IOError:
                 print ' Could not open catalog ' + catalogSrc + '. Skipping dataset.'
+                invalid.append((book, dataset, skim, json, custom))
                 continue
     
             if env.numFiles == 0 or env.numFiles >= set0size:
@@ -394,6 +462,10 @@ def getFilesets(env, datasets, limitTo = []):
         if len(filesets) != 0:
             allFilesets[(book, dataset)] = filesets
 
+    # clean up datasets that were invalid
+    for entry in invalid:
+        datasets.remove(entry)
+
     return allFilesets
 
 
@@ -410,7 +482,9 @@ def writeMacros(datasets, env):
     # read from the orignal catalog created in workspace
     catalog = mithep.Catalog(env.workspace)
 
-    for book, dataset, skim, json in datasets:
+    invalid = []
+
+    for book, dataset, skim, json, custom in datasets:
         fileName = env.workspace + '/' + book + '/' + dataset + '/run.py'
 
         if os.path.exists(fileName) and noOverwrite:
@@ -422,6 +496,7 @@ def writeMacros(datasets, env):
 
         if firstFile == '':
             print ' Dataset ' + book + '/' + dataset + ' appears to be empty.'
+            invalid.append((book, dataset, skim, json, custom))
             continue
 
         print ' Writing analysis macro for ' + book + '/' + dataset
@@ -436,6 +511,9 @@ def writeMacros(datasets, env):
         analysis.dataset = dataset
 
         analysis.SetKeepHierarchy(False)
+
+        for key, value in custom.items():
+            analysis.custom[key] = value
 
         execfile(env.workspace + '/macro.py')
 
@@ -491,6 +569,10 @@ def writeMacros(datasets, env):
             macro.write('    analysis.SetProcessNEvents(nentries)\n\n')
             macro.write(analysis.dumpPython(varName = 'analysis', withCtor = False, objects = {}))
             macro.write('\nanalysis.Run(False)\n')
+
+    # remove invalid entries from datasets
+    for entry in invalid:
+        datasets.remove(entry)
 
 
 def getRunningJobs(iwdParent, killHeld):
@@ -640,7 +722,7 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
         for line in dirList:
             directories.append(line.strip())
 
-    for book, dataset, skim, json in datasets:
+    for book, dataset, skim, json, custom in datasets:
         outPaths = {}
         if 'transfer_output_files' in condorConfig:
             outputs = map(str.strip, condorConfig['transfer_output_files'].split(','))
@@ -733,6 +815,7 @@ if __name__ == '__main__':
     argParser.add_argument('--num-files', '-i', metavar = 'N', dest = 'numFiles', type = int, default = 0, help = 'Process N files per job (Job creation time only). Set to 0 for default value.')
     argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', default = '~')
     argParser.add_argument('--data', '-D', action = 'store_true', dest = 'realData', help = 'Process real data (sets the real-data flag on various modules).')
+    argParser.add_argument('--custom', '-m', metavar = 'EXPR', dest = 'custom', nargs = '+', help = 'Custom variables passed to the analysis object. EXPR is any number of space-separated expressions of form key=value.')
     argParser.add_argument('--analysis', '-a', metavar = 'ANALYSIS', dest = 'macro', help = 'Analysis python script that sets up the execution sequence of the modules.')
     argParser.add_argument('--name', '-n', metavar = 'NAME', dest = 'taskName', default = '', help = 'Workspace name. If not given, set to the configuration file name if applicable, otherwise to current epoch time.')
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
@@ -912,12 +995,26 @@ if __name__ == '__main__':
         currentList = readDatasetList(env.workspace + '/datasets.list')
         if args.dataset:
             datasets = []
+
+            # parse custom variables
+            inCustom = {}
+            if args.custom is not None:
+                for expr in args.custom:
+                    key, eq, value = expr.partition('=')
+                    if not value:
+                        continue
+
+                    value = parseValueStr(value)
+                    inCustom[key] = value
+
             for entry in currentList:
                 if entry[1] == args.dataset:
                     book = args.book if args.book else entry[0]
                     skim = args.skim if args.skim else entry[2]
                     json = args.goodlumiFile if args.goodlumiFile else entry[3]
-                    newEntry = (book, args.dataset, skim, json)
+                    custom = inCustom if len(inCustom) != 0 else entry[4]
+
+                    newEntry = (book, args.dataset, skim, json, custom)
                     datasets.append(newEntry)
                     if newEntry != entry:
                         updateDatasetList = True
@@ -936,10 +1033,12 @@ if __name__ == '__main__':
                 message += '  dataset = ' + args.dataset + '\n'
                 message += '  skim    = ' + args.skim + '\n'
                 message += '  json    = ' + args.goodlumiFile
+                if len(inCustom) != 0:
+                    message += '\n  custom    = ' + str(inCustom)
 
                 if yes(message):
                     updateDatasetList = True
-                    datasets.append((args.book, args.dataset, args.skim, args.goodlumiFile))
+                    datasets.append((args.book, args.dataset, args.skim, args.goodlumiFile, inCustom))
                 else:
                     sys.exit(0)
 

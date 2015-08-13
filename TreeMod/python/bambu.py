@@ -19,6 +19,7 @@ class _Analysis(Configurable):
         self.isRealData = False
         self.book = ''
         self.dataset = ''
+        self.custom = {}
 
     def setSequence(self, seq):
         self._sequence = seq
@@ -54,6 +55,7 @@ class _Analysis(Configurable):
         self._sequence = None
         self._outputMods = []
         self.isRealData = False
+        self.custom = {}
 
     def dumpPython(self, varName = 'analysis', withCtor = True, objects = {}):
         if not self._sequence.isBuilt:
