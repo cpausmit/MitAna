@@ -732,6 +732,9 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
         
                 for remapDef in remapDefs:
                     source, eq, target = map(str.strip, remapDef.partition('='))
+                    if '/' not in target:
+                        target = env.outDir + '/{book}/{dataset}/' + target
+
                     outPaths[source] = target
 
                     if os.path.dirname(target) not in directories:
@@ -740,7 +743,7 @@ def submitJobs(env, datasets, allFilesets, runningJobs):
         
             for output in outputs:
                 if output not in outPaths:
-                    outPaths[output] = env.outDir + '/{book}/{dataset}/' + os.path.basename(output)
+                    outPaths[output] = env.outDir + '/{book}/{dataset}/' + output
 
         # loop over filesets and do actual submission
         for fileset in allFilesets[(book, dataset)]:
