@@ -51,7 +51,8 @@ then
     # the cache existence. Download will not happen if the cache exists.
 
     # do not ask me why I do this! PYTHON MADNESS
-    user=$USER; unset -v `env | sed -e 's/=.*//'`; export USER=$user; export PATH=/bin:/usr/bin
+    env | sed 's/^.*/export &/' > _requestFile_sh_env
+    user=$(id -un); unset -v `env | sed -e 's/=.*//'`; export USER=$user; export PATH=/bin:/usr/bin
     source /home/$user/.bashrc
     # worst patch in a long time #
   
@@ -65,7 +66,10 @@ then
 
     if [ "$localopt" != "copy" ]
     then
+      rm _requestFile_sh_env
       exit $rc
+    else
+      echo " Download request made. Now obtaining a local copy for this job.."
     fi
   fi
 fi
@@ -74,6 +78,15 @@ if ! [[ $file =~ ^\./ ]]
 then
   echo " $h - SmartCache not available or not requested, but the destination is not local. EXIT!"
   exit 1
+fi
+
+if [ -e _requestFile_sh_env ]
+then
+  # recover the environment variables that were unset
+  unset -v `env | sed -e 's/=.*//'`
+  
+  source _requestFile_sh_env
+  rm _requestFile_sh_env
 fi
 
 destdir=.$lfdir
@@ -98,6 +111,9 @@ fi
 server="xrootd.cmsaf.mit.edu"
 echo " $h - SmartCache not available or not requested.. trying xrootd cp (xrdcp)."
 echo " -> xrdcp from $server to ./store/user/paus/$book/$version/$dataset/$filename"
-( xrdcp -s root://${server}/$lfn $file.xrdcp && mv $file.xrdcp $file ) &
+( for try in {1..20}; do xrdcp -s root://${server}/$lfn $file.xrdcp; stat=$?; \
+    if [ $stat -eq 0 ]; then mv $file.xrdcp $file && break; else rm -f $file.xrdcp; fi; \
+    done ) &
+# retry 20: ~< 1 minute per try, Cacher wait timeout is 20 minutes -> trying more than 20 times is useless
 
 exit 0
