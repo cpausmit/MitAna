@@ -44,7 +44,7 @@ echo "_Files" >> _Files
 
 python run.py $FILESET $NENTRIES
 
-if [ $(stat -c %s ${FILESET}.root) -eq 0 ]
+if [ ! -e ${FILESET}.root ] || [ $(stat -c %s ${FILESET}.root) -eq 0 ]
 then
   # {fileset}.root is empty -> the job crashed. Remove the outputs so corrupt files don't get shipped back.
   for file in $(ls)

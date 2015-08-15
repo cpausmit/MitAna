@@ -119,7 +119,8 @@ then
     exit $?
   elif [ "$localopt" = "copy" ]
   then
-    hdfs dfs -get /cms$lfn $file &
+    # using cp with FUSE is faster than hdfs dfs -get
+    ( cp $cache $file.cp && mv $file.cp $file ) &
     exit 0
   fi
 fi
