@@ -1,8 +1,12 @@
 #!/bin/bash
 #---------------------------------------------------------------------------------------------------
 # Request one file to be downloaded using SmartCache queues or through local download with xrdcp. 
-#
+# Follow the comment lines for different cases:
+# Case 1. $file = /mnt/hadoop/cms/store/...
+# Case 2. $file = ./store/... + local option (-L or -C)
+# Case 3. $file = ./store/...
 #                                                                           C.Paus (V0 Apr xx, 2014)
+#                                                                         Y.Iiyama (V1 Aug 15, 2015)
 #---------------------------------------------------------------------------------------------------
 h=`basename $0`
 # start waiting time now
@@ -15,6 +19,10 @@ then
   echo " $h - Found file: $file. EXIT!"
   exit 0
 fi
+
+# Status:
+# Case 1: Cache does not exist
+# Case 2 & 3: Local copy does not exist
 
 localopt=""
 if [ "$2" = "-L" ]
@@ -41,15 +49,17 @@ lfn=$lfdir/$filename
 
 cache=/mnt/hadoop/cms$lfn
 
-if [ -e "/usr/local/DynamicData/SmartCache/setup.sh" ]
+if [ "$localopt" = "link" ] && [ ! -e $cache ]
 then
-  if ( [ "$localopt" ] && [ ! -e $cache ] ) || [[ $file =~ ^/mnt/hadoop/cms ]]
-  then
-    # first condition = Copy from hadoop cache requested but the cache does not exist
-    # -> for this job will use xrdcp but at the same time request a cache download
-    # second condition = Hadoop cache requested. Submit a download request regardless of
-    # the cache existence. Download will not happen if the cache exists.
+  echo " $h - Link to cache requested, but the cache does not exist. Proceeding with download."
+  localopt=copy
+fi
 
+if ( [ $file = $cache ] || [ "$localopt" ] ) && [ ! -e $cache ]
+then
+  # case 1 or 2 and cache does not exist
+  if [ -e "/usr/local/DynamicData/SmartCache/setup.sh" ]
+  then
     # do not ask me why I do this! PYTHON MADNESS
     env | sed 's/^.*/export &/' > _requestFile_sh_env
     user=$(id -un); unset -v `env | sed -e 's/=.*//'`; export USER=$user; export PATH=/bin:/usr/bin
@@ -63,20 +73,27 @@ then
     echo " -> addDownloadRequest.py --file=$filename --dataset=$dataset --book=$book/$version"
     addDownloadRequest.py --file=$filename --dataset=$dataset --book=$book/$version
     rc="$?"
-
-    if [ "$localopt" != "copy" ]
+  
+    if [ "$localopt" ]
     then
+      echo " Download request made. Now obtaining a local copy for this job.."
+    else
       rm _requestFile_sh_env
       exit $rc
-    else
-      echo " Download request made. Now obtaining a local copy for this job.."
     fi
+  else
+    echo " $h - Cache $cache requested but SmartCache is not available. EXIT!"
+    exit 1
   fi
 fi
 
+# Status:
+# Case 1: Closed. Caller should wait for the cache to arrive.
+# Case 2 & 3: Local copy does not exist.
+
 if ! [[ $file =~ ^\./ ]]
 then
-  echo " $h - SmartCache not available or not requested, but the destination is not local. EXIT!"
+  echo " $h - SmartCache not requested, but the destination is not local. EXIT!"
   exit 1
 fi
 
@@ -93,25 +110,27 @@ destdir=.$lfdir
 
 mkdir -p $destdir
 
-if [ "$localopt" = "link" ]
+if [ "$localopt" ] && [ -e $cache ]
 then
-  if [ -e $cache ]
+  echo " $h - Using cache $cache"
+  if [ "$localopt" = "link" ]
   then
     ln -s $cache $file
     exit $?
-  else
-    echo " $h - Link to cache requested, but the cache does not exist. Proceeding with download."
+  elif [ "$localopt" = "copy" ]
+  then
+    hdfs dfs -get /cms$lfn $file &
+    exit 0
   fi
-elif [ "$localopt" = "copy" ] && [ -e $cache ]
-then
-  hdfs dfs -get /cms$lfn $file &
-  exit 0
 fi
 
+# Case 2: Neither local copy nor cache exists.
+# Case 3: Local copy does not exist.
+
 server="xrootd.cmsaf.mit.edu"
-echo " $h - SmartCache not available or not requested.. trying xrootd cp (xrdcp)."
-echo " -> xrdcp from $server to ./store/user/paus/$book/$version/$dataset/$filename"
-( for try in {1..20}; do xrdcp -s root://${server}/$lfn $file.xrdcp; stat=$?; \
+echo " $h - xrdcp from $server to ./store/user/paus/$book/$version/$dataset/$filename"
+( for try in {1..20}; do echo "xrdcp attempt $try"; \
+    xrdcp -s root://${server}/$lfn $file.xrdcp; stat=$?; \
     if [ $stat -eq 0 ]; then mv $file.xrdcp $file && break; else rm -f $file.xrdcp; fi; \
     done ) &
 # retry 20: ~< 1 minute per try, Cacher wait timeout is 20 minutes -> trying more than 20 times is useless

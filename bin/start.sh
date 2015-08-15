@@ -18,6 +18,10 @@ then
   export X509_USER_PROXY=x509up
 fi
 
+# make sure you get a stack trace in case of failure
+# (For some reason gEnv is not mutable under PyROOT)
+echo "Root.Stacktrace: 1" > .rootrc
+
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 source env.sh
 
@@ -35,6 +39,18 @@ env
 ls -l
 ls -l $CMSSW_NAME/lib/$SCRAM_ARCH
 
+ls > _Files
+echo "_Files" >> _Files
+
 python run.py $FILESET $NENTRIES
+
+if [ $(stat -c %s ${FILESET}.root) -eq 0 ]
+then
+  # {fileset}.root is empty -> the job crashed. Remove the outputs so corrupt files don't get shipped back.
+  for file in $(ls)
+  do
+    grep $file _Files > /dev/null || rm $file
+  done
+fi
 
 ls -l
