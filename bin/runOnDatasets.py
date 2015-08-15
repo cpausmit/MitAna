@@ -9,7 +9,7 @@ import glob
 import shutil
 import socket
 
-FULL_LOCAL = True
+FULL_LOCAL = False
 
 class DatasetInfo(object):
     """
