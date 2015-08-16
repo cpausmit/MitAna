@@ -5,7 +5,7 @@
 BOOK=$1
 DATASET=$2
 FILESET=$3
-NENTRIES=$4 # usually empty; set in pilot jobs
+NENTRIES=$4
 
 if ! [ -d /cvmfs/cms.cern.ch ] || ! [ -d /cvmfs/cvmfs.cmsaf.mit.edu ]
 then
