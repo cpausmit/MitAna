@@ -9,6 +9,13 @@ import glob
 import shutil
 import socket
 
+# experimental full local caching
+FULL_LOCAL = False
+
+#######################
+## UTILITY FUNCTIONS ##
+#######################
+
 def yes(message, options = []):
     """
     Print the message and return true if the response is y.
@@ -36,6 +43,29 @@ def yes(message, options = []):
             return optvals[response]
         except KeyError:
             print prompt
+
+
+def parseValueStr(value):
+    strmatch = re.match('["\'](.*)["\']$', value)
+    if strmatch:
+        value = strmatch.group(1)
+    else:
+        try:
+            value = int(value)
+        except ValueError:
+            try:
+                value = float(value)
+            except ValueError:
+                pass
+
+    return value
+
+
+def makeValueStr(value):
+    if type(value) is str:
+        value = "'" + value + "'"
+
+    return str(value)
 
 
 def runSubproc(*args, **kwargs):
@@ -84,6 +114,246 @@ def runSubproc(*args, **kwargs):
             stderr.write(err)
             stderr.flush()
 
+#############
+## CLASSES ##
+#############
+
+class DatasetInfo(object):
+    """
+    A class that represents one line of the dataset list.
+    """
+
+    def __init__(self, book = '', dataset = ''):
+        self.book = book
+        self.dataset = dataset
+        self.json = ''
+        self.skim = ''
+        self.custom = {}
+
+        self.outDir = ''
+        self.logDir = ''
+        self.confDir = ''
+        self.jobs = {}
+
+    def isMC(self):
+        """
+        Return True if json is either a null string or ~.
+        """
+        return self.json == '' or self.json == '~'
+
+    def jsonName(self):
+        if self.json == '':
+            return '~'
+        else:
+            return self.json
+
+    def hasJsonFile(self):
+        return self.jsonName() != '~' and self.jsonName() != '-'
+
+    def skimName(self):
+        """
+        Return the name of the skim. If not defined, return -.
+        """
+        if self.skim == '' or self.skim == 'noskim':
+            return '-'
+        else:
+            return self.skim
+
+    def customKeys(self):
+        return sorted(self.custom.keys())
+
+    def key(self):
+        return (self.book, self.dataset)
+
+    def path(self):
+        return self.book + '/' + self.dataset
+
+    def setDirNames(self, env):
+        # job output (histograms) destination
+        self.outDir = env.outDir + '/' + self.path()
+        # .log, .out, and .err files
+        self.logDir = env.logDir + '/' + self.path()
+        # catalog and analysis macro
+        self.confDir = env.workspace + '/' + self.path()
+
+    def makeDirectories(self):
+        if not os.path.exists(self.outDir):
+            os.makedirs(self.outDir)
+        if not os.path.exists(self.logDir):
+            os.makedirs(self.logDir)
+        if not os.path.exists(self.confDir):
+            os.makedirs(self.confDir)
+        
+    def __eq__(self, rhs):
+        if self.book != rhs.book or self.dataset != rhs.dataset:
+            return False
+        if self.isMC() != rhs.isMC():
+            return False
+        if self.skimName() != rhs.skimName():
+            return False
+        for key, value in self.custom.items():
+            if key not in rhs.custom:
+                return False
+            if value != rhs.custom[key]:
+                return False
+
+        return True
+
+    def __ne__(self, rhs):
+        return not self.__eq__(rhs)
+
+
+class JobInfo(object):
+    """
+    A class that represents one job = one fileset.
+    """
+
+    #status
+    SubmitReady = -1
+    OutputExists = -2
+    Skip = -3
+    Unexpanded = 0
+    Idle = 1
+    Running = 2
+    Removed = 3
+    Completed = 4
+    Held = 5
+    SubmissionErr = 6
+
+    def __init__(self, dataset, fileset, nentries = -1):
+        self.dataset = dataset
+        self.fileset = fileset
+        self.nentries = nentries
+
+        self.submitHost = ''
+        self.jobId = ''
+        self.status = JobInfo.SubmitReady
+
+    def statusStr(self):
+        if self.status == 0:
+            statusStr = 'Unexpanded (U)'
+        elif self.status == 1:
+            statusStr = 'Idle (I)'
+        elif self.status == 2:
+            statusStr = 'Running (R)'
+        elif self.status == 3:
+            statusStr = 'Removed (X)'
+        elif self.status == 4:
+            statusStr = 'Completed (C)'
+        elif self.status == 5:
+            statusStr = 'Held (H)'
+        elif self.status == 6:
+            statusStr = 'Submission_err (E)'
+        else:
+            statusStr = 'Unknown'
+
+        return statusStr
+
+
+class CondorConfig(object):
+    """
+    Condor job description with preset parameter values.
+    """
+
+    def __init__(self, taskName):
+        self.jdl = {
+            'arguments': '"{book} {dataset} {fileset} {nentries}"',
+            'initialdir': env.outDir + '/{book}/{dataset}',
+            'output': env.logDir + '/{book}/{dataset}/{fileset}.out',
+            'error': env.logDir + '/{book}/{dataset}/{fileset}.err',
+            'log': env.logDir + '/{book}/{dataset}/{fileset}.log',     
+            'universe': 'vanilla',
+            'getenv': 'False',
+            'input': '/dev/null',
+            'should_transfer_files': 'YES',
+            'when_to_transfer_output': 'ON_EXIT'
+        }
+        self.taskName = taskName
+
+    def readFromFile(self, path, env):
+        with open(path) as confFile:
+            for line in confFile:
+                if not line.strip() or line.strip().startswith('#'):
+                    continue
+    
+                key, eq, value = line.partition('=')
+                if key in self.jdl:
+                    print ' Ignoring key ' + key + ' found in condor template.'
+                    continue
+    
+                self.jdl[key.strip().lower()] = value.strip()
+
+        if 'executable' not in self.jdl:
+            self.jdl['executable'] = env.workspace + '/start.sh'
+
+        if '{fileset}.root' in self.outputRemaps():
+            print ' Remap of {fileset}.root is not supported.'
+            sys.exit(1)
+    
+        try:
+            inputList = map(str.strip, self.jdl['transfer_input_files'].split(','))
+            listWasGiven = True
+        except KeyError:
+            inputList = []
+            listWasGiven = False
+    
+        for inputFile in ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh', 'x509up']:
+            fullPath = env.workspace + '/' + inputFile
+            if inputFile == 'x509up' and not os.path.exists(fullPath):
+                continue
+            if fullPath not in inputList:
+                if listWasGiven:
+                    print ' Adding', fullPath, 'to transfer_input_files.'
+    
+                inputList.append(fullPath)
+    
+        self.jdl['transfer_input_files'] = ','.join(inputList)
+    
+    def writeToFile(self, path):
+        with open(path, 'w') as jdlFile:
+            for key, value in self.jdl.items():
+                jdlFile.write(key + ' = ' + value + '\n')
+
+    def outputRemaps(self):
+        if 'transfer_output_remaps' not in self.jdl:
+            return {}
+
+        remapDict = {}
+        remapDefs = map(str.strip, self.jdl['transfer_output_remaps'].strip('"').split(';'))
+        for remapDef in remapDefs:
+            source, eq, target = map(str.strip, remapDef.partition('='))
+            remapDict[source] = target
+
+        return remapDict
+
+    def outputList(self, jobInfo):
+        outPaths = map(str.strip, self.jdl['transfer_output_files'].split(','))
+        remaps = self.outputRemaps()
+
+        for iP in range(len(outPaths)):
+            outPath = outPaths[iP]
+            if outPath in remaps:
+                outPaths[iP] = remaps[outPath]
+                outPath = outPaths[iP]
+
+            if not outPath.startswith('/'):
+                outPaths[iP] = self.jdl['initialdir'] + '/' + outPath
+                outPath = outPaths[iP]
+
+            outPaths[iP] = self.format(outPath, jobInfo)
+
+        return outPaths
+
+    def format(self, s, jobInfo):
+        return s.format(task = self.taskName, book = jobInfo.dataset.book, dataset = jobInfo.dataset.dataset, fileset = jobInfo.fileset, nentries = jobInfo.nentries)
+
+    def jdlCommand(self, jobInfo):
+        return '\n'.join([key + ' = ' + self.format(value, jobInfo) for key, value in self.jdl.items()]) + '\nqueue\n'
+
+
+######################################################################
+## MAIN EXECUTABLE FUNCTIONS (PROBABLY BETTER IN A CLASS IN FUTURE) ##
+######################################################################
 
 def setupWorkspace(env):
     """
@@ -122,12 +392,6 @@ def setupWorkspace(env):
             envFile.write('export CMSSW_NAME="' + env.cmsswname + '"\n')
             envFile.write('export MIT_DATA="' + env.mitdata + '"\n')
 
-        # write out the list of directories related to this job
-        # will be updated in submitJobs() if transfer_output_remaps is used
-        with open(env.workspace + '/directories', 'w') as dirList:
-            dirList.write(env.workspace + '\n')
-            dirList.write(env.outDir + '\n')
-            dirList.write(env.logDir + '\n')
 
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
@@ -240,24 +504,49 @@ def readDatasetList(fileName):
     datasets = []
 
     with open(fileName) as configFile:
+        firstLine = True
+        customKeys = []
         for line in configFile:
-            matches = re.match('([^#][^ ]*) +([^ ]+) +([^ ]+)( +[^ ]+)*', line.strip())
+            if not re.search('[a-zA-Z0-9]', line):
+                # skip non-alphanumeric lines
+                continue
+    
+            if firstLine:
+                # if column names are defined in the first line, pick them up
+                firstLine = False
+                columns = map(str.strip, line.lstrip('#').split())
+                if columns[0] == 'book' and columns[1] == 'dataset':
+                    if columns[2] != 'skim' or columns[-1] != 'json':
+                        print ' Column names are given in', fileName, 'but they do not conform to the template.'
+                        print ' The columns must be named "book dataset skim ... json".'
+                        sys.exit(1)
+    
+                    customKeys = columns[3:-1]
+                    continue
+    
+            matches = re.match('([^#][^ ]*) +([^ ]+) +([^ ]+)(| .*)$', line.strip())
             if not matches:
                 continue
+    
+            datasetInfo = DatasetInfo(book = matches.group(1).strip(), dataset = matches.group(2).strip())
+            datasetInfo.skim = matches.group(3).strip()
 
-            book = matches.group(1)
-            dataset = matches.group(2)
-            skim = matches.group(3)
             # fourth paren captures the last column, which is currently assigned to JSON
             if matches.group(4):
-                json = matches.group(4).strip()
+                words = matches.group(4).split()
+                if len(customKeys) != 0:
+                    for iK, key in enumerate(customKeys):
+                        try:
+                            datasetInfo.custom[key] = parseValueStr(words[iK])
+                        except IndexError:
+                            print ' Variable', key, 'not defined for dataset', dataset
+                            sys.exit(1)
+    
+                datasetInfo.json = words[-1]
             else:
-                json = ''
-
-            if skim == 'noskim':
-                skim = '-'
-
-            datasets.append((book, dataset, skim, json))
+                datasetInfo.json = ''
+    
+            datasets.append(datasetInfo)
 
     return datasets
 
@@ -272,22 +561,24 @@ def writeDatasetList(fileName, datasets):
     append = []
     remove = []
 
-    for book, dataset, skim, json in datasets:
-        for exBook, exDataset, exSkim, exJson in fileContent:
-            if book == exBook and dataset == exDataset:
-                if skim != exSkim or json != exJson:
-                    message = ' Specified skim/JSON configuration for ' + book + '/' + dataset + ' does not match the existing.\n'
+    for datasetInfo in datasets:
+        for exDatasetInfo in fileContent:
+            if datasetInfo.key() == exDatasetInfo.key():
+                if datasetInfo != exDatasetInfo:
+                    message = ' Specified skim/JSON configuration for ' + datasetInfo.path() + ' does not match the existing.\n'
                     message += ' Update configuration?\n'
-                    message += ' ' + exSkim + ' -> ' + skim + '\n'
-                    message += ' ' + exJson + ' -> ' + json
+                    message += ' ' + exDatasetInfo.skim + ' -> ' + datasetInfo.skim + '\n'
+                    message += ' ' + exDatasetInfo.json + ' -> ' + datasetInfo.json
+                    if len(exDatasetInfo.custom) != 0 or len(datasetInfo.custom) != 0:
+                        message += '\n ' + str(exDatasetInfo.custom) + ' -> ' + str(datasetInfo.custom)
                     if yes(message):
-                        remove.append((exBook, exDataset, exSkim, exJson))
-                        append.append((book, dataset, skim, json))
+                        remove.append(exDatasetInfo)
+                        append.append(datasetInfo)
                 
                 break
 
-        else:
-            append.append((book, dataset, skim, json))
+        else: # if no matching exDatasetInfo was found
+            append.append(datasetInfo)
 
     if len(append) != 0 or len(remove) != 0:
         for d in remove:
@@ -296,8 +587,19 @@ def writeDatasetList(fileName, datasets):
             fileContent.append(d)
 
         with open(fileName, 'w') as configFile:
-            for book, dataset, skim, json in fileContent:
-                configFile.write(book + ' ' + dataset + ' ' + skim + ' ' + json + '\n')
+            firstLine = True
+            for datasetInfo in fileContent:
+                if firstLine:
+                    configFile.write('book dataset skim ')
+                    for key in datasetInfo.customKeys():
+                        configFile.write(key + ' ')
+                    configFile.write('json\n')
+                    firstLine = False
+
+                configFile.write(datasetInfo.book + ' ' + datasetInfo.dataset + ' ' + datasetInfo.skimName() + ' ')
+                for key in datasetInfo.customKeys():
+                    configFile.write(makeValueStr(datasetInfo.custom[key]) + ' ')
+                configFile.write(datasetInfo.jsonName() + '\n')
 
         return True
     else:
@@ -305,45 +607,21 @@ def writeDatasetList(fileName, datasets):
         return False
 
 
-def setupDatasetDirs(datasets, env):
-    """
-    Create a directory for each dataset under log and output directories.
-    """
-
-    for book, dataset, skim, json in datasets:
-        jobOutDirName = env.outDir + '/' + book + '/' + dataset
-        jobLogDirName = env.logDir + '/' + book + '/' + dataset
-        jobConfDirName = env.workspace + '/' + book + '/' + dataset
-
-        # job output (histograms) destination; if no remap is used
-        if not os.path.exists(jobOutDirName):
-            os.makedirs(jobOutDirName)
-
-        # .log, .out, and .err files
-        if not os.path.exists(jobLogDirName):
-            os.makedirs(jobLogDirName)
-
-        # catalog and analysis macro
-        if not os.path.exists(jobConfDirName):
-            os.makedirs(jobConfDirName)
-
-
-def getFilesets(env, datasets, limitTo = []):
+def writeCatalogs(catalogDir, datasets, filesPerFileset = 0):
     """
     Open the catalog and read out the list of filesets. Write out the catalog to
-    the workspace (fileset size may be different depending on env.numFiles).
+    the workspace (fileset size may be different depending on filesPerFileset).
     """
 
-    allFilesets = {}
+    invalid = []
 
-    for book, dataset, skim, json in datasets:
-        catalogSrc = env.catalogDir + '/' + book + '/' + dataset
-        if skim != '-':
-            catalogSrc += '/' + skim
-        catalogDst = env.workspace + '/' + book + '/' + dataset
+    for datasetInfo in datasets:
+        if not os.path.exists(datasetInfo.confDir + '/Files'):
+            # catalog is not copied / created yet. Copy or write
+            catalogSrc = catalogDir + '/' + datasetInfo.path()
+            if datasetInfo.skimName() != '-':
+                catalogSrc += '/' + datasetInfo.skimName()
 
-        if not os.path.exists(catalogDst + '/Files'):
-            # original catalog is not created yet. Copy or write
             set0size = 0
             try:
                 with open(catalogSrc + '/Files') as fileList:
@@ -352,101 +630,101 @@ def getFilesets(env, datasets, limitTo = []):
                             set0size += 1
             except IOError:
                 print ' Could not open catalog ' + catalogSrc + '. Skipping dataset.'
+                invalid.append(datasetInfo)
                 continue
     
-            if env.numFiles == 0 or env.numFiles >= set0size:
-                # using default fileset size
+            if filesPerFileset == 0 or filesPerFileset >= set0size:
+                # using default fileset size - copy
                 for fileName in os.listdir(catalogSrc):
                     if os.path.isfile(catalogSrc + '/' + fileName):
-                        shutil.copyfile(catalogSrc + '/' + fileName, catalogDst + '/' + fileName)
+                        shutil.copyfile(catalogSrc + '/' + fileName, datasetInfo.confDir + '/' + fileName)
             else:
-                # fileset size smaller than default
+                # fileset size smaller than default - write own catalog
                 with open(catalogSrc + '/Files') as src:
-                    with open(catalogDst + '/Files', 'w') as dst:
+                    with open(datasetInfo.confDir + '/Files', 'w') as dst:
                         iLine = 0
                         for line in src:
-                            dst.write('%04d ' % (iLine / env.numFiles))
+                            dst.write('%04d ' % (iLine / filesPerFileset))
                             dst.write(' '.join(line.split()[1:]) + '\n')
                             iLine += 1
 
-                nFilesets = iLine / env.numFiles
-                if iLine % env.numFiles != 0:
+                nFilesets = iLine / filesPerFileset
+                if iLine % filesPerFileset != 0:
                     nFilesets += 1
                 
                 with open(catalogSrc + '/Filesets') as src:
                     location = src.readline().split()[1]
 
-                with open(catalogDst + '/Filesets', 'w') as dst:
+                with open(datasetInfo.confDir + '/Filesets', 'w') as dst:
                     # write dummy data
                     for iSet in range(nFilesets):
                         dst.write('%04d %s 0 0 0 0 0 0\n' % (iSet, location))
 
-
-        filesets = []
-        with open(catalogDst + '/Filesets') as filesetList:
-            for line in filesetList:
-                filesetId = line.strip().split()[0]
-                if len(limitTo) != 0 and filesetId not in limitTo:
-                    continue
-    
-                filesets.append(filesetId)
-    
-        if len(filesets) != 0:
-            allFilesets[(book, dataset)] = filesets
-
-    return allFilesets
+    # clean up datasets that were invalid
+    for entry in invalid:
+        datasets.remove(entry)
 
 
-def writeMacros(datasets, env):
+def writeMacros(workspace, datasets, noOverwrite = True):
     """
     Parse the input macro and write a standalone python script for each dataset.
     """
-
-    noOverwrite = env.update and not env.inMacroPath
 
     from MitAna.TreeMod.bambu import mithep, analysis
     from MitAna.PhysicsMod.runlumisel import goodLumiFilter
 
     # read from the orignal catalog created in workspace
-    catalog = mithep.Catalog(env.workspace)
+    catalog = mithep.Catalog(workspace)
 
-    for book, dataset, skim, json in datasets:
-        fileName = env.workspace + '/' + book + '/' + dataset + '/run.py'
+    invalid = []
+
+    for datasetInfo in datasets:
+        fileName = workspace + '/' + datasetInfo.path() + '/run.py'
 
         if os.path.exists(fileName) and noOverwrite:
             continue
 
         # get the dataset file list
-        ds = catalog.FindDataset(book, dataset, '', 1)
-        firstFile = str(ds.FileUrl(0))
+        if FULL_LOCAL:
+            ds = catalog.FindDataset(datasetInfo.book, datasetInfo.dataset, '', 3)
+        else:
+            ds = catalog.FindDataset(datasetInfo.book, datasetInfo.dataset, '', 1)
 
-        if firstFile == '':
-            print ' Dataset ' + book + '/' + dataset + ' appears to be empty.'
+        pilotFile = str(ds.FileUrl(0))
+
+        if pilotFile == '':
+            print ' Dataset ' + datasetInfo.path() + ' appears to be empty.'
+            invalid.append(datasetInfo)
             continue
 
-        print ' Writing analysis macro for ' + book + '/' + dataset
+        # pilot job never needs local caching
+        pilotFile = pilotFile.replace('./store', '/mnt/hadoop/cms/store')
+
+        print ' Writing analysis macro for ' + datasetInfo.path()
 
         # reset and build the analysis
         analysis.reset()
 
-        if json != '' and json != '~':
-            analysis.isRealData = True
+        analysis.isRealData = not datasetInfo.isMC()
 
-        analysis.book = book
-        analysis.dataset = dataset
+        analysis.book = datasetInfo.book
+        analysis.dataset = datasetInfo.dataset
 
         analysis.SetKeepHierarchy(False)
 
-        execfile(env.workspace + '/macro.py')
+        for key, value in datasetInfo.custom.items():
+            analysis.custom[key] = value
 
-        if json and json != '~' and json != '-':
-            analysis._sequence = goodLumiFilter(json) * analysis._sequence
+        execfile(workspace + '/macro.py')
+
+        if datasetInfo.hasJsonFile():
+            analysis._sequence = goodLumiFilter(datasetInfo.jsonName()) * analysis._sequence
 
         analysis.buildSequence()
 
         # would be much nicer if mithep.Dataset had an interface that exposes fileset names
         filesPerFileset = 0
-        with open(env.workspace + '/' + book + '/' + dataset + '/Files') as fileList:
+        with open(workspace + '/' + datasetInfo.path() + '/Files') as fileList:
             for line in fileList:
                 if line.split()[0] == '0000':
                     filesPerFileset += 1
@@ -454,18 +732,16 @@ def writeMacros(datasets, env):
         with open(fileName, 'w') as macro:
             macro.write('import sys\n')
             macro.write('import ROOT\n\n')
+            macro.write('ROOT.gROOT.SetBatch(True)\n')
             macro.write('fileset = sys.argv[1]\n')
-            macro.write('if len(sys.argv) > 2:\n')
-            macro.write('    nentries = int(sys.argv[2])\n')
-            macro.write('else:\n')
-            macro.write('    nentries = -1\n\n')
+            macro.write('nentries = int(sys.argv[2])\n')
 
             for lib in mithep.loadedLibs:
                 macro.write('ROOT.gSystem.Load(\'' + lib + '\')\n')
 
             macro.write('\nfiles = {\n')
             # first file for pilot job submission
-            macro.write('    \'pilot\': [\'' + firstFile + '\'],\n')
+            macro.write('    \'pilot\': [\'' + pilotFile + '\'],\n')
 
             iFile = 0
             for iFileset in range(ds.NFiles() / filesPerFileset + 1):
@@ -483,7 +759,13 @@ def writeMacros(datasets, env):
 
             macro.write('mithep = ROOT.mithep\n')
             macro.write('analysis = mithep.Analysis()\n\n')
-            macro.write('analysis.SetUseCacher(1)\n\n')
+            if FULL_LOCAL:
+                macro.write('if fileset == \'pilot\':\n')
+                macro.write('    analysis.SetUseCacher(1)\n')
+                macro.write('else:\n')
+                macro.write('    analysis.SetUseCacher(2)\n\n')
+            else:
+                macro.write('analysis.SetUseCacher(1)\n\n')
             macro.write('for f in files[fileset]:\n')
             macro.write('    analysis.AddFile(f)\n\n')
             macro.write('analysis.SetOutputName(fileset + \'.root\')\n\n')
@@ -492,8 +774,58 @@ def writeMacros(datasets, env):
             macro.write(analysis.dumpPython(varName = 'analysis', withCtor = False, objects = {}))
             macro.write('\nanalysis.Run(False)\n')
 
+    # remove invalid entries from datasets
+    for entry in invalid:
+        datasets.remove(entry)
 
-def getRunningJobs(iwdParent, killHeld):
+
+def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
+    """
+    Create a list of jobs (= filesets) from the catalog and set their status
+    """
+
+    def setStatus(jobInfo):
+        outPath = jobInfo.dataset.outDir + '/' + jobInfo.fileset + '.root'
+        if os.path.exists(outPath) and os.stat(outPath).st_size != 0:
+            jobInfo.status = JobInfo.OutputExists
+        elif len(limitTo) == 0 or jobInfo.fileset in limitTo:
+            jobInfo.status = JobInfo.SubmitReady
+        else:
+            jobInfo.status = JobInfo.Skip
+
+
+    removePilotOutput = False
+
+    # read catalog and add jobs to datasetInfo
+    for datasetInfo in datasets:
+        with open(datasetInfo.confDir + '/Filesets') as filesetList:
+            for line in filesetList:
+                filesetId = line.strip().split()[0]
+                jobInfo = JobInfo(datasetInfo, filesetId)
+                setStatus(jobInfo)
+                
+                datasetInfo.jobs[filesetId] = jobInfo
+
+        pilot = JobInfo(datasetInfo, 'pilot', nentries = 0)
+        setStatus(pilot)
+        datasetInfo.jobs['pilot'] = pilot
+
+        if pilot.status == JobInfo.OutputExists:
+            if not removePilotOutput:
+                message = 'Remove pilot output?'
+                if yes(message):
+                    removePilotOutput = True
+
+        if removePilotOutput:
+            pilotOutput = condorConf.outputList(pilot)
+            for path in pilotOutput:
+                try:
+                    os.remove(path)
+                except OSError:
+                    print ' Failed to remove', path
+                    pass
+
+    # query condor to get real job status
     out = []
     err = []
     runSubproc('condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments,JobStatus,GlobalJobId', stdout = out, stderr = err)
@@ -504,211 +836,95 @@ def getRunningJobs(iwdParent, killHeld):
     for line in err:
         print line
 
-    running = {}
-
+    nInQueue = 0
     block = {}
     for line in out:
-        if line.strip() == '':
+        if line.strip() != '':
+            cfg = line.partition('=')
+            block[cfg[0].strip()] = cfg[2].strip().strip('"')
+
+        else:
             # one job block ended
-            if len(block) == 0:
-                continue
-
-            if block['Owner'].strip('"') != os.environ['USER'] or not block['Iwd'].strip('"').startswith(iwdParent + '/'):
-                block = {}
-                continue
-
             try:
-                book, dataset, fileset = block['Arguments'].strip('"').split()[:3]
-            except:
-                try:
-                    book, dataset, fileset = block['Args'].strip('"').split()[:3]
-                except:
-                    block = {}
-                    continue
-
-            jobId = block['ClusterId'] + '.' + block['ProcId']
-
-            status = int(block['JobStatus'])
-            if status == 0:
-                statusStr = 'Unexpanded (U)'
-            elif status == 1:
-                statusStr = 'Idle (I)'
-            elif status == 2:
-                statusStr = 'Running (R)'
-            elif status == 3:
-                statusStr = 'Removed (X)'
-            elif status == 4:
-                statusStr = 'Completed (C)'
-            elif status == 5:
-                statusStr = 'Held (H)'
-            elif status == 6:
-                statusStr = 'Submission_err (E)'
-            else:
-                statusStr = 'Unknown'
-
-            if killHeld and status == 5:
-                submitHost = block['GlobalJobId'].strip('"')
-                submitHost = submitHost[:submitHost.find('#')]
-
-                if submitHost == socket.gethostname():
-                    print 'Killing job', jobId + ':', book, dataset, fileset
-                    runSubproc('condor_rm', jobId)
-                else:
-                    print 'Killing job on', submitHost, jobId + ':', book, dataset, fileset
-                    runSubproc('ssh', submitHost, 'condor_rm', jobId)
-
-                block = {}
-                continue
-           
-            running[(book, dataset, fileset)] = (jobId, statusStr)
-            block = {}
-            continue
-            
-        cfg = line.partition('=')
-        block[cfg[0].strip()] = cfg[2].strip()
-
-    return running
-
-
-def readCondorConf(path, condorConfig = {}):
-    with open(path) as confFile:
-        for line in confFile:
-            if not line.strip() or line.strip().startswith('#'):
-                continue
-
-            key, eq, value = line.partition('=')
-            if key in condorConfig:
-                print ' Ignoring key ' + key + ' found in condor template.'
-                continue
-
-            condorConfig[key.strip().lower()] = value.strip()
-
-    return condorConfig
-
-
-def writeCondorConf(inTemplatePath, env):
-    condorConfig = {
-        'arguments': '"{book} {dataset} {fileset}"',
-        'initialdir': env.outDir + '/{book}/{dataset}',
-        'output': env.logDir + '/{book}/{dataset}/{fileset}.out',
-        'error': env.logDir + '/{book}/{dataset}/{fileset}.err',
-        'log': env.logDir + '/{book}/{dataset}/{fileset}.log',     
-        'universe': 'vanilla',
-        'getenv': 'False',
-        'input': '/dev/null',
-        'should_transfer_files': 'YES',
-        'when_to_transfer_output': 'ON_EXIT'
-    }
-
-    readCondorConf(inTemplatePath, condorConfig)
-
-    if 'executable' not in condorConfig:
-        condorConfig['executable'] = env.workspace + '/start.sh'
-
-    try:
-        inputList = map(str.strip, condorConfig['transfer_input_files'].split(','))
-        listWasGiven = True
-    except KeyError:
-        inputList = []
-        listWasGiven = False
-
-    for inputFile in ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh', 'x509up']:
-        fullPath = env.workspace + '/' + inputFile
-        if inputFile == 'x509up' and not os.path.exists(fullPath):
-            continue
-        if fullPath not in inputList:
-            if listWasGiven:
-                print ' Adding', fullPath, 'to transfer_input_files.'
-
-            inputList.append(fullPath)
-
-    condorConfig['transfer_input_files'] = ','.join(inputList)
-
-    with open(env.workspace + '/condor.jdl', 'w') as jdlFile:
-        for key, value in condorConfig.items():
-            jdlFile.write(key + ' = ' + value + '\n')
-
-
-def submitJobs(env, datasets, allFilesets, runningJobs):
-    condorConfig = readCondorConf(env.workspace + '/condor.jdl')
-
-    # list of output / log directories for this task
-    # (update if remap is used)
-    directories = []
-    updateDirectories = False
-    with open(env.workspace + '/directories') as dirList:
-        for line in dirList:
-            directories.append(line.strip())
-
-    for book, dataset, skim, json in datasets:
-        outPaths = {}
-        if 'transfer_output_files' in condorConfig:
-            outputs = map(str.strip, condorConfig['transfer_output_files'].split(','))
+                if block['Owner'] != os.environ['USER']:
+                    raise Exception
     
-            if 'transfer_output_remaps' in condorConfig:
-                remapDefs = map(str.strip, condorConfig['transfer_output_remaps'].strip('"').split(';'))
-        
-                for remapDef in remapDefs:
-                    source, eq, target = map(str.strip, remapDef.partition('='))
-                    outPaths[source] = target
+                try:
+                    book, dataset, fileset = block['Arguments'].split()[:3]
+                except:
+                    book, dataset, fileset = block['Args'].split()[:3]
+    
+                datasetInfo = next(info for info in datasets if info.key() == (book, dataset))
+                    
+                if block['Iwd'] != datasetInfo.outDir:
+                    raise Exception
+    
+                jobInfo = datasetInfo.jobs[fileset]
+    
+                submitHost = block['GlobalJobId']
+                jobInfo.submitHost = submitHost[:submitHost.find('#')]
+                jobInfo.jobId = block['ClusterId'] + '.' + block['ProcId']
+    
+                jobInfo.status = int(block['JobStatus'])
 
-                    if os.path.dirname(target) not in directories:
-                        directories.append(os.path.dirname(target))
-                        updateDirectories = True
-        
-            for output in outputs:
-                if output not in outPaths:
-                    outPaths[output] = env.outDir + '/{book}/{dataset}/' + os.path.basename(output)
+                nInQueue += 1
+    
+                if jobInfo.status in killStatus:
+                    killJob(jobInfo)
 
+            except:
+                pass
+
+            block = {}
+
+    return nInQueue
+
+
+def killJob(jobInfo):
+    datasetInfo = jobInfo.dataset
+    if jobInfo.submitHost == socket.gethostname():
+        print 'Killing job', jobInfo.jobId + ':', datasetInfo.book, datasetInfo.dataset, jobInfo.fileset
+        runSubproc('condor_rm', jobInfo.jobId)
+    else:
+        print 'Killing job on', jobInfo.submitHost, jobInfo.jobId + ':', datasetInfo.book, datasetInfo.dataset, jobInfo.fileset
+        runSubproc('ssh', jobInfo.submitHost, 'condor_rm', jobInfo.jobId)
+
+    datasetInfo.jobs.pop(jobInfo.fileset)
+
+
+def submitJobs(env, datasets, condorConf):
+    for datasetInfo in datasets:
         # loop over filesets and do actual submission
-        for fileset in allFilesets[(book, dataset)]:
-            def formatCfg(s):
-                return s.format(task = env.taskName, book = book, dataset = dataset, fileset = fileset)
+        for fileset in sorted(datasetInfo.jobs.keys()):
+            jobInfo = datasetInfo.jobs[fileset]
 
-            if fileset.startswith('pilot'):
-                nentries = int(fileset[fileset.find('-') + 1:])
-                fileset = 'pilot'
-
-            # skip fileset if a job is running
-            if (book, dataset, fileset) in runningJobs:
-                jobId, status = runningJobs[(book, dataset, fileset)]
-                print ' ' + status + ': ', book, dataset, fileset, '(' + jobId + ')'
+            if fileset == 'pilot' and jobInfo.nentries == 0:
                 continue
 
-            # skip fileset if at least one output has non-zero size
-            outputExists = False
-            for outPath in map(formatCfg, outPaths.values()):
-                if not os.path.isdir(os.path.dirname(outPath)):
-                    os.makedirs(os.path.dirname(outPath))
+            # skip fileset if a job is in condor queue
+            if jobInfo.jobId != '':
+                print ' ' + jobInfo.statusStr() + ':', datasetInfo.dataset, fileset, '(' + jobInfo.submitHost + ':' + jobInfo.jobId + ')'
+                continue
 
-                if os.path.exists(outPath) and os.stat(outPath).st_size != 0:
-                    print ' Output exists:', book, dataset, fileset
-                    outputExists = True
-                    break
+            # skip fileset if output exists
+            if jobInfo.status == JobInfo.OutputExists:
+                print ' Output exists:', datasetInfo.dataset, fileset
+                continue
 
-            if outputExists:
+            if jobInfo.status == JobInfo.Skip:
+                print ' Skipping (fileset not requested):', datasetInfo.dataset, fileset
                 continue
 
             if env.noSubmit:
-                print ' Skipping (no-submit = true):', book, dataset, fileset
+                print ' Skipping (no-submit = true):', datasetInfo.dataset, fileset
                 continue
 
-            print ' Submitting:', book, dataset, fileset
-
-            if fileset == 'pilot':
-                condorConfig['arguments'] = '"{book} {dataset} pilot %d"' % nentries
-    
-            jdlCommand = '\n'.join([key + ' = ' + formatCfg(value) for key, value in condorConfig.items()]) + '\nqueue\n'
+            print ' Submitting:', datasetInfo.dataset, fileset
 
             if env.submitFrom != '':
-                runSubproc('ssh', env.submitFrom, 'condor_submit', stdin = jdlCommand)
+                runSubproc('ssh', env.submitFrom, 'condor_submit', stdin = condorConf.jdlCommand(jobInfo))
             else:
-                runSubproc('condor_submit', stdin = jdlCommand)
-
-    if updateDirectories:
-        with open(env.workspace + '/directories', 'w') as dirList:
-            for directory in directories:
-                dirList.write(directory + '\n')
+                runSubproc('condor_submit', stdin = condorConf.jdlCommand(jobInfo))
 
 
 if __name__ == '__main__':
@@ -720,7 +936,7 @@ if __name__ == '__main__':
     
     description ='''Submit a BAMBU analysis to cluster.
     When a workspace name is specified and the workspace already exists in thee standard location, the workspace is recreated (--recreate) or checked for failed jobs. The dataset(s) to be processed can be passed from the command line (--book, --dataset, and --filesets (optional)) or listed in a configuration file, which is a plain text file with each row corresponding to a dataset. In this file, the book and dataset names must be in the first two columns, and the lumi list JSON file name (only the file name; the directory for the file is given by MIT_JSON_DIR environment variable). The list of datasets is stored in the workspace. When this script is invoked for an existing workspace with no dataset specification, all datasets in the stored configuration will be checked, and the failed jobs will be resubmitted.
-    When a new worksapce is created, tarballs of the binaries, scripts, and header files necessary for the job execution is copied into the workspace. These tarballs are then shipped to condor execution directory for each job. Thus, updates on the source code and scripts in the CMSSW release area will not affect the execution of the jobs. The --update flag can be used to renew the tarballs, although this is in general not recommended, as it can lead to inconsistencies between the outputs in the same worksapce.
+    When a new workspace is created, tarballs of the binaries, scripts, and header files necessary for the job execution is copied into the workspace. These tarballs are then shipped to condor execution directory for each job. Thus, updates on the source code and scripts in the CMSSW release area will not affect the execution of the jobs. The --update flag can be used to renew the tarballs, although this is in general not recommended, as it can lead to inconsistencies between the outputs in the same workspace.
     '''
     
     argParser = ArgumentParser(description = description, formatter_class = RawTextHelpFormatter)
@@ -733,6 +949,7 @@ if __name__ == '__main__':
     argParser.add_argument('--num-files', '-i', metavar = 'N', dest = 'numFiles', type = int, default = 0, help = 'Process N files per job (Job creation time only). Set to 0 for default value.')
     argParser.add_argument('--goodlumi', '-j', metavar = 'FILE', dest = 'goodlumiFile', default = '~')
     argParser.add_argument('--data', '-D', action = 'store_true', dest = 'realData', help = 'Process real data (sets the real-data flag on various modules).')
+    argParser.add_argument('--custom', '-m', metavar = 'EXPR', dest = 'custom', nargs = '+', help = 'Custom variables passed to the analysis object. EXPR is any number of space-separated expressions of form key=value.')
     argParser.add_argument('--analysis', '-a', metavar = 'ANALYSIS', dest = 'macro', help = 'Analysis python script that sets up the execution sequence of the modules.')
     argParser.add_argument('--name', '-n', metavar = 'NAME', dest = 'taskName', default = '', help = 'Workspace name. If not given, set to the configuration file name if applicable, otherwise to current epoch time.')
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
@@ -797,7 +1014,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     env.inMacroPath = args.macro
-    env.numFiles = args.numFiles
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
     env.submitFrom = args.submitFrom
@@ -823,39 +1039,30 @@ if __name__ == '__main__':
                 print ' Exiting.'
                 sys.exit(0)
 
-            elif resp == 1:
-                try:
-                    directories = []
-                    with open(env.workspace + '/directories') as dirList:
-                        for line in dirList:
-                            directories.append(dirList.strip())
-                except:
-                    directories = [env.workspace, env.outDir, env.logDir]
-
-                print ' Removing directories:'
-                for directory in directories:
-                    print '  ' + directory
-                    try:
-                        shutil.rmtree(directory)
-                    except:
-                        pass
-
-            elif resp == 2:
-                print ' Existing output will be moved to tag (default \'last\'):'
-                tag = sys.stdin.readline().strip()
-                if tag == '':
-                    tag = 'last'
-
-                print ' Moving directories'
-                for directory in directories:
-                    print '  ' + directory
-                print ' to'
-                for directory in directories:
-                    print '  ' + directory + '-' + tag
-
-                for directory in directories:
-                    os.rename(directory, directory + '-' + tag)
-
+            else:
+                if resp == 1:
+                    print ' Removing directories:'
+                    for directory in [env.workspace, env.logDir, env.outDir]:
+                        print '  ' + directory
+                        try:
+                            shutil.rmtree(directory)
+                        except:
+                            pass
+    
+                elif resp == 2:
+                    print ' Existing output will be moved to tag (default \'last\'):'
+                    tag = sys.stdin.readline().strip()
+                    if tag == '':
+                        tag = 'last'
+    
+                    print ' Moving directories'
+                    for directory in [env.workspace, env.logDir, env.outDir]:
+                        print '  ' + directory + ' -> ' + directory + '-' + tag
+                        try:
+                            os.rename(directory, directory + '-' + tag)
+                        except OSError:
+                            print ' Move failed. Exiting.'
+                            sys.exit(1)
 
         elif args.update:
             message = ' Updating ' + env.taskName + ' to the latest:\n'
@@ -912,14 +1119,33 @@ if __name__ == '__main__':
         currentList = readDatasetList(env.workspace + '/datasets.list')
         if args.dataset:
             datasets = []
-            for entry in currentList:
-                if entry[1] == args.dataset:
-                    book = args.book if args.book else entry[0]
-                    skim = args.skim if args.skim else entry[2]
-                    json = args.goodlumiFile if args.goodlumiFile else entry[3]
-                    newEntry = (book, args.dataset, skim, json)
-                    datasets.append(newEntry)
-                    if newEntry != entry:
+
+            inDataset = DatasetInfo(book = args.book, dataset = args.dataset)
+
+            inDataset.skim = args.skim
+            inDataset.json = args.goodlumiFile
+            if args.custom is not None:
+                for expr in args.custom:
+                    key, eq, value = expr.partition('=')
+                    if not value:
+                        continue
+
+                    value = parseValueStr(value)
+                    inDataset.custom[key] = value
+
+            for datasetInfo in currentList:
+                if datasetInfo.dataset == args.dataset:
+                    if not inDataset.book:
+                        inDataset.book = datasetInfo.book
+                    if not inDataset.skim:
+                        inDataset.skim = datasetInfo.skim
+                    if not inDataset.json:
+                        inDataset.json = datasetInfo.json
+                    if len(inDataset.custom) == 0:
+                        inDataset.custom.update(datasetInfo.custom)
+
+                    datasets.append(inDataset)
+                    if inDataset != datasetInfo:
                         updateDatasetList = True
 
             if len(datasets) == 0:
@@ -927,19 +1153,21 @@ if __name__ == '__main__':
                     print ' A dataset was given, but we are not updating the workspace. Use --update flag to append new datasets.'
                     sys.exit(1)
 
-                if args.book == '':
+                if inDataset.book == '':
                     print ' Specify a book to add the dataset from.'
                     sys.exit(1)
 
                 message = ' Add dataset config?\n'
-                message += '  book    = ' + args.book + '\n'
-                message += '  dataset = ' + args.dataset + '\n'
-                message += '  skim    = ' + args.skim + '\n'
-                message += '  json    = ' + args.goodlumiFile
+                message += '  book    = ' + inDataset.book + '\n'
+                message += '  dataset = ' + inDataset.dataset + '\n'
+                message += '  skim    = ' + inDataset.skim + '\n'
+                message += '  json    = ' + inDataset.json
+                if len(inDataset.custom) != 0:
+                    message += '\n  custom    = ' + str(inDataset.custom)
 
                 if yes(message):
                     updateDatasetList = True
-                    datasets.append((args.book, args.dataset, args.skim, args.goodlumiFile))
+                    datasets.append(inDataset)
                 else:
                     sys.exit(0)
 
@@ -950,57 +1178,61 @@ if __name__ == '__main__':
         # write updates to the list of datasets
         updateDatasetList = writeDatasetList(env.workspace + '/datasets.list', datasets)
 
-    if updateDatasetList:
-        setupDatasetDirs(datasets, env)
+    # set directory names and make directories if needed
+    for datasetInfo in datasets:
+        datasetInfo.setDirNames(env)
+        if updateDatasetList:
+            datasetInfo.makeDirectories()
 
-    allFilesets = getFilesets(env, datasets, args.filesets)
+    if updateDatasetList:
+        writeCatalogs(env.catalogDir, datasets, filesPerFileset = args.numFiles)
 
     if updateDatasetList or (env.update and env.inMacroPath):
-        writeMacros(datasets, env)
-   
-    if len(allFilesets) == 0:
-        print ' No valid fileset found.'
-        sys.exit(1)
+        writeMacros(env.workspace, datasets, noOverwrite = env.update and not env.inMacroPath)
 
+    condorConf = CondorConfig(env.taskName)
+   
     if newTask or (args.update and args.condorTemplatePath):
         path = args.condorTemplatePath
         if not path:
             path = env.cmsswbase + '/src/MitAna/config/condor_template.jdl'
 
-        writeCondorConf(path, env)
+        condorConf.readFromFile(path, env)
+        condorConf.writeToFile(env.workspace + '/condor.jdl')
+    else:
+        condorConf.readFromFile(env.workspace + '/condor.jdl', env)
 
     print ' Checking for running jobs..'
-    
-    runningJobs = getRunningJobs(env.outDir, args.resubmitHeld)
 
-    if len(runningJobs) != 0:
-        if newTask:
-            message = ' New task was requested but some jobs are running.\n'
-            message += ' Kill jobs?'
-            kill = yes(message)
-            if not kill:
-                print ' Cannot continue while jobs are running. Exit.'
-                sys.exit(1)
+    if args.kill:
+        killStatus = range(7)
+    elif args.resubmitHeld:
+        killStatus = [5]
+    else:
+        killStatus = []
 
-        elif args.kill:
-            kill = True
+    nInQueue = makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
+
+    if nInQueue != 0 and newTask:
+        message = ' New task was requested but some jobs are in condor queue.\n'
+        message += ' Kill jobs?'
+        if yes(message):
+            for datasetInfo in datasets:
+                for jobInfo in datasets.jobs.values():
+                    if jobInfo.jobId != '':
+                        killJob(jobInfo)
+
         else:
-            kill = False
-
-        if kill:
-            print ' Killing jobs:'
-            for book, dataset, fileset in sorted(runningJobs.keys()):
-                print ' ', book, dataset, fileset
-                runSubproc('condor_rm', runningJobs[(book, dataset, fileset)][0], stdout = None, stderr = None)
-
-            runningJobs = {}
+            print ' Cannot continue while jobs are running. Exit.'
+            sys.exit(1)
     
     if args.kill:
         sys.exit(0)
 
-    # if pilot is desired, update allFilesets with the pilot information
+    # if pilot is requested, update allFilesets with the pilot information
     if args.pilot != 0:
-        allFilesets = dict([(key, ['pilot-' + str(args.pilot)]) for key in allFilesets.keys()])
+        for datasetInfo in datasets:
+            datasetInfo.jobs = {'pilot': JobInfo(datasetInfo, 'pilot', nentries = args.pilot)}
 
     # loop over datasets to submit
-    submitJobs(env, datasets, allFilesets, runningJobs)
+    submitJobs(env, datasets, condorConf)

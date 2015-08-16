@@ -160,7 +160,7 @@ Bool_t Selector::Process(Long64_t entry)
     // process has reached the end of the current file
     if (!fCacher->WaitForNextFile()) {
       Error("Process", "Next file could not be cached.");
-      return kFALSE;
+      AbortAnalysis();
     }
   }
 
@@ -186,7 +186,7 @@ void Selector::SlaveBegin(TTree *tree)
       fCacher->SetNFilesAhead(1); // do not download too many files locally
       if (!fCacher->InitialCaching()) {
         Error("SlaveBegin", "Initial cache failed.");
-        throw std::exception();
+        AbortAnalysis();
       }
     }
   }
