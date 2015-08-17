@@ -176,13 +176,19 @@ class DatasetInfo(object):
         # catalog and analysis macro
         self.confDir = env.workspace + '/' + self.path()
 
-    def makeDirectories(self):
+    def makeDirectories(self, condorConf = None):
         if not os.path.exists(self.outDir):
             os.makedirs(self.outDir)
         if not os.path.exists(self.logDir):
             os.makedirs(self.logDir)
         if not os.path.exists(self.confDir):
             os.makedirs(self.confDir)
+
+        if condorConf:
+            outDirs = condorConf.outputDirList(self)
+            for outDir in outDirs:
+                if not os.path.exists(outDir):
+                    os.makedirs(outDir)
         
     def __eq__(self, rhs):
         if self.book != rhs.book or self.dataset != rhs.dataset:
@@ -344,8 +350,34 @@ class CondorConfig(object):
 
         return outPaths
 
-    def format(self, s, jobInfo):
-        return s.format(task = self.taskName, book = jobInfo.dataset.book, dataset = jobInfo.dataset.dataset, fileset = jobInfo.fileset, nentries = jobInfo.nentries)
+    def outputDirList(self, datasetInfo):
+        outDirs = []
+
+        outPaths = map(str.strip, self.jdl['transfer_output_files'].split(','))
+        remaps = self.outputRemaps()
+
+        for outPath in outPaths:
+            if outPath in remaps:
+                outPath = remaps[outPath]
+
+            if outPath.startswith('/'):
+                outDir = os.path.dirname(outPath)
+            else:
+                outDir = self.jdl['initialdir']
+
+            outDir = self.format(outDir, datasetInfo)
+            if outDir not in outDirs:
+                outDirs.append(outDir)
+
+        return outDirs
+
+    def format(self, s, info):
+        if type(info) is JobInfo:
+            return s.format(task = self.taskName, book = info.dataset.book, dataset = info.dataset.dataset, fileset = info.fileset, nentries = info.nentries)
+        elif type(info) is DatasetInfo:
+            return s.format(task = self.taskName, book = info.book, dataset = info.dataset)
+        else:
+            return s
 
     def jdlCommand(self, jobInfo):
         return '\n'.join([key + ' = ' + self.format(value, jobInfo) for key, value in self.jdl.items()]) + '\nqueue\n'
@@ -1178,18 +1210,7 @@ if __name__ == '__main__':
         # write updates to the list of datasets
         updateDatasetList = writeDatasetList(env.workspace + '/datasets.list', datasets)
 
-    # set directory names and make directories if needed
-    for datasetInfo in datasets:
-        datasetInfo.setDirNames(env)
-        if updateDatasetList:
-            datasetInfo.makeDirectories()
-
-    if updateDatasetList:
-        writeCatalogs(env.catalogDir, datasets, filesPerFileset = args.numFiles)
-
-    if updateDatasetList or (env.update and env.inMacroPath):
-        writeMacros(env.workspace, datasets, noOverwrite = env.update and not env.inMacroPath)
-
+    # create the condor jdl object
     condorConf = CondorConfig(env.taskName)
    
     if newTask or (args.update and args.condorTemplatePath):
@@ -1201,6 +1222,18 @@ if __name__ == '__main__':
         condorConf.writeToFile(env.workspace + '/condor.jdl')
     else:
         condorConf.readFromFile(env.workspace + '/condor.jdl', env)
+
+    # set directory names and make directories if needed
+    for datasetInfo in datasets:
+        datasetInfo.setDirNames(env)
+        if updateDatasetList:
+            datasetInfo.makeDirectories(condorConf) # condorConf to take care of remaps
+
+    if updateDatasetList:
+        writeCatalogs(env.catalogDir, datasets, filesPerFileset = args.numFiles)
+
+    if updateDatasetList or (env.update and env.inMacroPath):
+        writeMacros(env.workspace, datasets, noOverwrite = env.update and not env.inMacroPath)
 
     print ' Checking for running jobs..'
 
