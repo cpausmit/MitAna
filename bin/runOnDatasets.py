@@ -168,7 +168,7 @@ class DatasetInfo(object):
     def path(self):
         return self.book + '/' + self.dataset
 
-    def setDirNames(self, env):
+    def setDirNames(self, env, condorConf = None):
         # job output (histograms) destination
         self.outDir = env.outDir + '/' + self.path()
         # .log, .out, and .err files
@@ -176,7 +176,6 @@ class DatasetInfo(object):
         # catalog and analysis macro
         self.confDir = env.workspace + '/' + self.path()
 
-    def makeDirectories(self, condorConf = None):
         if not os.path.exists(self.outDir):
             os.makedirs(self.outDir)
         if not os.path.exists(self.logDir):
@@ -1225,9 +1224,9 @@ if __name__ == '__main__':
 
     # set directory names and make directories if needed
     for datasetInfo in datasets:
-        datasetInfo.setDirNames(env)
-        if updateDatasetList:
-            datasetInfo.makeDirectories(condorConf) # condorConf to take care of remaps
+        # condorConf to take care of remaps
+        # will make directories if they don't exist yet
+        datasetInfo.setDirNames(env, condorConf)
 
     if updateDatasetList:
         writeCatalogs(env.catalogDir, datasets, filesPerFileset = args.numFiles)
