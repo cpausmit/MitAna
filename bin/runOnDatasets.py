@@ -862,12 +862,11 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
     runSubproc('condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments,JobStatus,GlobalJobId', stdout = out, stderr = err)
 
     if len(out) == 1 and out[0].strip() == 'All queues are empty':
-        return {}
+        out = []
 
     for line in err:
         print line
 
-    nInQueue = 0
     block = {}
     for line in out:
         if line.strip() != '':
@@ -898,8 +897,6 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
     
                 jobInfo.status = int(block['JobStatus'])
 
-                nInQueue += 1
-    
                 if jobInfo.status in killStatus:
                     killJob(jobInfo)
 
@@ -907,8 +904,6 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
                 pass
 
             block = {}
-
-    return nInQueue
 
 
 def killJob(jobInfo):
@@ -920,7 +915,9 @@ def killJob(jobInfo):
         print 'Killing job on', jobInfo.submitHost, jobInfo.jobId + ':', datasetInfo.book, datasetInfo.dataset, jobInfo.fileset
         runSubproc('ssh', jobInfo.submitHost, 'condor_rm', jobInfo.jobId)
 
-    datasetInfo.jobs.pop(jobInfo.fileset)
+    jobInfo.status = JobInfo.SubmitReady
+    jobInfo.submitHost = ''
+    jobInfo.jobId = ''
 
 
 def submitJobs(env, datasets, condorConf):
@@ -1243,16 +1240,20 @@ if __name__ == '__main__':
     else:
         killStatus = []
 
-    nInQueue = makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
+    makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
 
-    if nInQueue != 0 and newTask:
-        message = ' New task was requested but some jobs are in condor queue.\n'
-        message += ' Kill jobs?'
-        if yes(message):
-            for datasetInfo in datasets:
-                for jobInfo in datasets.jobs.values():
-                    if jobInfo.jobId != '':
-                        killJob(jobInfo)
+    if newTask:
+        jobsInQueue = []
+        for datasetInfo in datasets:
+            jobsInQueue += [jobInfo for jobInfo in datasetInfo.jobs.values() if jobInfo.jobId != '']
+            
+        if len(jobsInQueue) != 0:
+            message = ' New task was requested but some jobs are in condor queue.\n'
+            message += ' Kill jobs?'
+            if yes(message):
+                for jobInfo in jobsInQueue:
+                    killJob(jobInfo)
+                    jobInfo.dataset.jobs.pop(jobInfo.fileset)
 
         else:
             print ' Cannot continue while jobs are running. Exit.'
