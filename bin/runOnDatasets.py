@@ -1255,9 +1255,9 @@ if __name__ == '__main__':
                     killJob(jobInfo)
                     jobInfo.dataset.jobs.pop(jobInfo.fileset)
 
-        else:
-            print ' Cannot continue while jobs are running. Exit.'
-            sys.exit(1)
+            else:
+                print ' Cannot continue while jobs are running. Exit.'
+                sys.exit(1)
     
     if args.kill:
         sys.exit(0)
