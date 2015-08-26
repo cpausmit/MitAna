@@ -42,7 +42,17 @@ ls -l $CMSSW_NAME/lib/$SCRAM_ARCH
 ls > _Files
 echo "_Files" >> _Files
 
+if [ -e preExec.sh ]
+then
+  source preExec.sh
+fi
+
 python run.py $FILESET $NENTRIES
+
+if [ -e postExec.sh ]
+then
+  source postExec.sh
+fi
 
 if [ ! -e ${FILESET}.root ] || [ $(stat -c %s ${FILESET}.root) -eq 0 ]
 then
@@ -54,8 +64,3 @@ then
 fi
 
 ls -l
-
-if [ -e stageout.sh ]
-then
-  ./stageout.sh $BOOK $DATASET $FILESET
-fi

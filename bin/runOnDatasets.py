@@ -303,7 +303,7 @@ class CondorConfig(object):
             listWasGiven = False
     
         inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
-        for optionalInput in [env.x509up, 'stageout.sh']:
+        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
             if os.path.exists(env.workspace + '/' + optionalInput):
                 inputFiles.append(optionalInput)
 
@@ -430,9 +430,11 @@ def setupWorkspace(env):
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
 
-    if env.stageoutScriptPath: # including update case
-        shutil.copyfile(env.stageoutScriptPath, env.workspace + '/stageout.sh')
-        os.chmod(env.workspace + '/stageout.sh', 0755)
+    if env.preExecPath: # including update case
+        shutil.copyfile(env.preExecPath, env.workspace + '/preExec.sh')
+
+    if env.postExecPath: # including update case
+        shutil.copyfile(env.postExecPath, env.workspace + '/postExec.sh')
 
     # copy the latest user proxy
     if os.path.exists('/tmp/' + env.x509up):
@@ -994,7 +996,8 @@ if __name__ == '__main__':
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
-    argParser.add_argument('--stageout-script', '-o', metavar = 'FILE', dest = 'stageoutScriptPath', default = '', help = 'Stageout script (bash) to be executed at the end of the job. The script will be invoked with book, dataset, and fileset as arguments.')
+    argParser.add_argument('--pre-exec', '-o', metavar = 'FILE', dest = 'preExecPath', default = '', help = 'Bash script to be sourced before the job.')
+    argParser.add_argument('--post-exec', '-o', metavar = 'FILE', dest = 'postExecPath', default = '', help = 'Bash script to be sourced after the job.')
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
@@ -1056,7 +1059,8 @@ if __name__ == '__main__':
     env.inMacroPath = args.macro
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
-    env.stageoutScriptPath = args.stageoutScriptPath
+    env.preExecPath = args.preExecPath
+    env.postExecPath = args.postExecPath
     env.submitFrom = args.submitFrom
     env.noSubmit = args.noSubmit
 
@@ -1116,8 +1120,10 @@ if __name__ == '__main__':
                 message += ' . List of datasets\n'
             if args.condorTemplatePath:
                 message += ' . Condor job description\n'
-            if args.stageoutScriptPath:
-                message += ' . Stageout script\n'
+            if args.preExecPath:
+                message += ' . Pre-exec script\n'
+            if args.postExecPath:
+                message += ' . Post-exec script\n'
 
             message += ' The output of the task may become inconsistent with the existing ones after this operation.\n'
             message += ' Do you wish to continue?'
