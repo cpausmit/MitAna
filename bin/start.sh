@@ -13,9 +13,9 @@ then
   exit 1
 fi
 
-if [ -e x509up ]
+if [ -e x509up_u$(id -u) ]
 then
-  export X509_USER_PROXY=x509up
+  export X509_USER_PROXY=x509up_u$(id -u)
 fi
 
 # make sure you get a stack trace in case of failure
@@ -54,3 +54,8 @@ then
 fi
 
 ls -l
+
+if [ -e stageout.sh ]
+then
+  ./stageout.sh $BOOK $DATASET $FILESET
+fi

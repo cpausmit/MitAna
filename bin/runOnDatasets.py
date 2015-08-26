@@ -10,7 +10,7 @@ import shutil
 import socket
 
 # experimental full local caching
-FULL_LOCAL = False
+FULL_LOCAL = True
 
 #######################
 ## UTILITY FUNCTIONS ##
@@ -302,10 +302,13 @@ class CondorConfig(object):
             inputList = []
             listWasGiven = False
     
-        for inputFile in ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh', 'x509up']:
+        inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
+        for optionalInput in [env.x509up, 'stageout.sh']:
+            if os.path.exists(env.workspace + '/' + optionalInput):
+                inputFiles.append(optionalInput)
+
+        for inputFile in inputFiles:
             fullPath = env.workspace + '/' + inputFile
-            if inputFile == 'x509up' and not os.path.exists(fullPath):
-                continue
             if fullPath not in inputList:
                 if listWasGiven:
                     print ' Adding', fullPath, 'to transfer_input_files.'
@@ -426,6 +429,14 @@ def setupWorkspace(env):
 
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
+
+    if env.stageoutScriptPath: # including update case
+        shutil.copyfile(env.stageoutScriptPath, env.workspace + '/stageout.sh')
+        os.chmod(env.workspace + '/stageout.sh', 0755)
+
+    # copy the latest user proxy
+    if os.path.exists('/tmp/' + env.x509up):
+        shutil.copy('/tmp/' + env.x509up, env.workspace + '/' + env.x509up)
 
     # copy the execution script
     if not env.update:
@@ -983,6 +994,7 @@ if __name__ == '__main__':
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
+    argParser.add_argument('--stageout-script', '-o', metavar = 'FILE', dest = 'stageoutScriptPath', default = '', help = 'Stageout script (bash) to be executed at the end of the job. The script will be invoked with book, dataset, and fileset as arguments.')
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
@@ -1044,6 +1056,7 @@ if __name__ == '__main__':
     env.inMacroPath = args.macro
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
+    env.stageoutScriptPath = args.stageoutScriptPath
     env.submitFrom = args.submitFrom
     env.noSubmit = args.noSubmit
 
@@ -1097,12 +1110,14 @@ if __name__ == '__main__':
             message += ' . Binaries\n'
             message += ' . Headers\n'
             message += ' . MitAna/bin\n'
-            if env.inMacroPath:
-                message += ' . ' + env.inMacroPath + '\n'
+            if args.macro:
+                message += ' . ' + args.macro + '\n'
             if args.configFileName or args.dataset:
                 message += ' . List of datasets\n'
             if args.condorTemplatePath:
                 message += ' . Condor job description\n'
+            if args.stageoutScriptPath:
+                message += ' . Stageout script\n'
 
             message += ' The output of the task may become inconsistent with the existing ones after this operation.\n'
             message += ' Do you wish to continue?'
@@ -1118,21 +1133,19 @@ if __name__ == '__main__':
     if newTask:
         print ' Creating task', env.taskName
 
-    if newTask or args.update:
-        ready = setupWorkspace(env)
-        if not ready:
-            sys.exit(1)
-
-    x509File = '/tmp/x509up_u' + str(os.getuid())
-    if os.path.exists(x509File):
-        shutil.copyfile(x509File, env.workspace + '/x509up')
-#    else:
+    env.x509up = 'x509up_u' + str(os.getuid())
+#    if not os.path.exists('/tmp/' + env.x509up):
 #        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
 #        message += ' Continue?'
 #        if not yes(message):
 #            print ' Exiting.'
 #            sys.exit(0)
-   
+
+    if newTask or args.update:
+        ready = setupWorkspace(env)
+        if not ready:
+            sys.exit(1)
+  
     # datasets: list of tuples (book, dataset, json)
     updateDatasetList = False
 
