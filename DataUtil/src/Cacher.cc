@@ -16,7 +16,7 @@ Cacher::Cacher(const TList *list, Bool_t fullLocal) :
   fCumulativeWait(0),
   fCurrentWait(0),
   fWaitLength(10),
-  fTimeout(1200)
+  fTimeout(1800)
 {
   // Constructor
   fInputList.SetOwner();
