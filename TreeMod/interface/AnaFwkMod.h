@@ -27,8 +27,10 @@ namespace mithep
       AnaFwkMod(const char *name="AnaFwkMod", 
                 const char *title="Analysis framework module");
 
+      UInt_t           GetCheckMC()               const { return fCheckMC;     }
       Long64_t         GetPrintScale()            const { return fPrintScale;  }
       Long64_t         GetSkipNEvents()           const { return fSkipNEvents; }
+      void             SetCheckMC(UInt_t n)             { fCheckMC = n;        }
       void             SetPrintScale(UInt_t n)          { fPrintScale  = n;    }
       void             SetSkipNEvents(Long64_t n)       { fSkipNEvents = n;    }
 
@@ -40,6 +42,7 @@ namespace mithep
       void             SlaveBegin();
       void             SlaveTerminate();
 
+      UInt_t           fCheckMC;           //=0 no data/MC check, =1 abort if not MC, =2 warn if not MC
       TString          fAllHeadTreeName;   //all events tree name
       TString          fAllHeadBrName;     //all event headers branch name
       Long64_t         fSkipNEvents;       //number of events to skip from beginning (def=0)

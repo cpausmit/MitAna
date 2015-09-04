@@ -70,6 +70,8 @@ if __name__ == '__main__':
     # set up data / MC
     if args.realData or args.goodlumiFile:
         analysis.isRealData = True
+    else:
+        analysis.SetCheckMC(1)
 
     # add custom variables
     if args.custom is not None:

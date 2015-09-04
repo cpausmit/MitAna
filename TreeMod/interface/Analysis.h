@@ -101,6 +101,7 @@ namespace mithep
       void                      SetSkipFirstNEvents(Long64_t n)     { fSkipNEvents    = n;        }
       void                      SetSuperModule(TAModule *mod);
       void                      SetTreeName(const char *name)       { fTreeName  = name;          }
+      void                      SetCheckMC(UInt_t check)            { fCheckMC   = check;         }
       void                      SetUseHLT(Bool_t hlt)               { fUseHLT    = hlt ? 1 : 0;   }
       void                      SetAllowNoHLTTree(Bool_t allow)     { fUseHLT    = allow ? 2 : 1; }
       void                      SetUseMC(Bool_t mc)                 { fUseMC     = mc;            }
@@ -126,6 +127,7 @@ namespace mithep
         kTerminate  //after terminate
       };
 
+      UInt_t                    fCheckMC;         //=0 no data/MC check, =1 abort if not MC, =2 warn if not MC
       Bool_t                    fUseProof;        //=true if PROOF is to be used (def=0)
       Int_t                     fUseCacher;       //=1 use file caching, =2 use full-local caching (def=0)
       UInt_t                    fUseHLT;          //=1 if HLTFwkMod is to be used, 2 to process input with no HLT info (def=1)

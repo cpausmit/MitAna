@@ -302,10 +302,13 @@ class CondorConfig(object):
             inputList = []
             listWasGiven = False
     
-        for inputFile in ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh', 'x509up']:
+        inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
+        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
+            if os.path.exists(env.workspace + '/' + optionalInput):
+                inputFiles.append(optionalInput)
+
+        for inputFile in inputFiles:
             fullPath = env.workspace + '/' + inputFile
-            if inputFile == 'x509up' and not os.path.exists(fullPath):
-                continue
             if fullPath not in inputList:
                 if listWasGiven:
                     print ' Adding', fullPath, 'to transfer_input_files.'
@@ -426,6 +429,16 @@ def setupWorkspace(env):
 
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
+
+    if env.preExecPath: # including update case
+        shutil.copyfile(env.preExecPath, env.workspace + '/preExec.sh')
+
+    if env.postExecPath: # including update case
+        shutil.copyfile(env.postExecPath, env.workspace + '/postExec.sh')
+
+    # copy the latest user proxy
+    if os.path.exists('/tmp/' + env.x509up):
+        shutil.copy('/tmp/' + env.x509up, env.workspace + '/' + env.x509up)
 
     # copy the execution script
     if not env.update:
@@ -862,12 +875,11 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
     runSubproc('condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments,JobStatus,GlobalJobId', stdout = out, stderr = err)
 
     if len(out) == 1 and out[0].strip() == 'All queues are empty':
-        return {}
+        out = []
 
     for line in err:
         print line
 
-    nInQueue = 0
     block = {}
     for line in out:
         if line.strip() != '':
@@ -898,8 +910,6 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
     
                 jobInfo.status = int(block['JobStatus'])
 
-                nInQueue += 1
-    
                 if jobInfo.status in killStatus:
                     killJob(jobInfo)
 
@@ -907,8 +917,6 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
                 pass
 
             block = {}
-
-    return nInQueue
 
 
 def killJob(jobInfo):
@@ -920,7 +928,9 @@ def killJob(jobInfo):
         print 'Killing job on', jobInfo.submitHost, jobInfo.jobId + ':', datasetInfo.book, datasetInfo.dataset, jobInfo.fileset
         runSubproc('ssh', jobInfo.submitHost, 'condor_rm', jobInfo.jobId)
 
-    datasetInfo.jobs.pop(jobInfo.fileset)
+    jobInfo.status = JobInfo.SubmitReady
+    jobInfo.submitHost = ''
+    jobInfo.jobId = ''
 
 
 def submitJobs(env, datasets, condorConf):
@@ -986,6 +996,8 @@ if __name__ == '__main__':
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
+    argParser.add_argument('--pre-exec', '-e', metavar = 'FILE', dest = 'preExecPath', default = '', help = 'Bash script to be sourced before the job.')
+    argParser.add_argument('--post-exec', '-o', metavar = 'FILE', dest = 'postExecPath', default = '', help = 'Bash script to be sourced after the job.')
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
@@ -1047,6 +1059,8 @@ if __name__ == '__main__':
     env.inMacroPath = args.macro
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
+    env.preExecPath = args.preExecPath
+    env.postExecPath = args.postExecPath
     env.submitFrom = args.submitFrom
     env.noSubmit = args.noSubmit
 
@@ -1100,12 +1114,16 @@ if __name__ == '__main__':
             message += ' . Binaries\n'
             message += ' . Headers\n'
             message += ' . MitAna/bin\n'
-            if env.inMacroPath:
-                message += ' . ' + env.inMacroPath + '\n'
+            if args.macro:
+                message += ' . ' + args.macro + '\n'
             if args.configFileName or args.dataset:
                 message += ' . List of datasets\n'
             if args.condorTemplatePath:
                 message += ' . Condor job description\n'
+            if args.preExecPath:
+                message += ' . Pre-exec script\n'
+            if args.postExecPath:
+                message += ' . Post-exec script\n'
 
             message += ' The output of the task may become inconsistent with the existing ones after this operation.\n'
             message += ' Do you wish to continue?'
@@ -1121,21 +1139,19 @@ if __name__ == '__main__':
     if newTask:
         print ' Creating task', env.taskName
 
-    if newTask or args.update:
-        ready = setupWorkspace(env)
-        if not ready:
-            sys.exit(1)
-
-    x509File = '/tmp/x509up_u' + str(os.getuid())
-    if os.path.exists(x509File):
-        shutil.copyfile(x509File, env.workspace + '/x509up')
-#    else:
+    env.x509up = 'x509up_u' + str(os.getuid())
+#    if not os.path.exists('/tmp/' + env.x509up):
 #        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
 #        message += ' Continue?'
 #        if not yes(message):
 #            print ' Exiting.'
 #            sys.exit(0)
-   
+
+    if newTask or args.update:
+        ready = setupWorkspace(env)
+        if not ready:
+            sys.exit(1)
+  
     # datasets: list of tuples (book, dataset, json)
     updateDatasetList = False
 
@@ -1243,20 +1259,24 @@ if __name__ == '__main__':
     else:
         killStatus = []
 
-    nInQueue = makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
+    makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
 
-    if nInQueue != 0 and newTask:
-        message = ' New task was requested but some jobs are in condor queue.\n'
-        message += ' Kill jobs?'
-        if yes(message):
-            for datasetInfo in datasets:
-                for jobInfo in datasets.jobs.values():
-                    if jobInfo.jobId != '':
-                        killJob(jobInfo)
+    if newTask:
+        jobsInQueue = []
+        for datasetInfo in datasets:
+            jobsInQueue += [jobInfo for jobInfo in datasetInfo.jobs.values() if jobInfo.jobId != '']
+            
+        if len(jobsInQueue) != 0:
+            message = ' New task was requested but some jobs are in condor queue.\n'
+            message += ' Kill jobs?'
+            if yes(message):
+                for jobInfo in jobsInQueue:
+                    killJob(jobInfo)
+                    jobInfo.dataset.jobs.pop(jobInfo.fileset)
 
-        else:
-            print ' Cannot continue while jobs are running. Exit.'
-            sys.exit(1)
+            else:
+                print ' Cannot continue while jobs are running. Exit.'
+                sys.exit(1)
     
     if args.kill:
         sys.exit(0)

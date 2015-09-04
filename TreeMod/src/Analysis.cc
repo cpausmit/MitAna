@@ -31,6 +31,7 @@ using namespace mithep;
 
 //--------------------------------------------------------------------------------------------------
 Analysis::Analysis(Bool_t useproof) :
+  fCheckMC(0),
   fUseProof(useproof),
   fUseCacher(0),
   fUseHLT(1),
@@ -472,6 +473,7 @@ Bool_t Analysis::Init()
   AnaFwkMod *anamod = new AnaFwkMod;
   anamod->SetSkipNEvents(fSkipNEvents);
   anamod->SetPrintScale(fPrintScale);
+  anamod->SetCheckMC(fCheckMC);
   fDeleteList->Add(anamod);
 
   // create our HLT framework module

@@ -58,6 +58,11 @@ void AnaFwkMod::BeginRun()
     if (!file) 
       return;
 
+    if (fCheckMC == 1 && !GetEventHeader()->IsMC())
+      SendError(kAbortAnalysis, "BeginRun", "Job configured for MC but input file does not contain MC info");
+    else if (fCheckMC == 2 && !GetEventHeader()->IsMC())
+      SendError(kWarning, "BeginRun", "Job configured for MC but input file does not contain MC info");
+
     // get all event header tree
     fAllHeadTree = dynamic_cast<TTree*>(file->Get(fAllHeadTreeName));
     if (!fAllHeadTree) {
@@ -70,7 +75,8 @@ void AnaFwkMod::BeginRun()
     // get all event header branch
     if (fAllHeadTree->GetBranch(fAllHeadBrName)) {
       fAllHeadTree->SetBranchAddress(fAllHeadBrName, &fAllEventHeader);
-    } else {
+    }
+    else {
       SendError(kWarning, "BeginRun",
                 "Cannot find branch '%s' in tree '%s'", 
                 fAllHeadBrName.Data(), fAllHeadTreeName.Data());

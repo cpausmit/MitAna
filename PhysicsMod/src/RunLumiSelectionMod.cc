@@ -111,8 +111,8 @@ void RunLumiSelectionMod::SlaveTerminate()
   fRunLumiGraph->SetName("ProcessedRunsLumis");
   AddOutput(fRunLumiGraph);
   
-  delete runArray;
-  delete lumiArray;
+  delete [] runArray;
+  delete [] lumiArray;
   
   SaveNEventsProcessed();
 }

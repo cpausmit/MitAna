@@ -13,9 +13,9 @@ then
   exit 1
 fi
 
-if [ -e x509up ]
+if [ -e x509up_u$(id -u) ]
 then
-  export X509_USER_PROXY=x509up
+  export X509_USER_PROXY=x509up_u$(id -u)
 fi
 
 # make sure you get a stack trace in case of failure
@@ -42,7 +42,17 @@ ls -l $CMSSW_NAME/lib/$SCRAM_ARCH
 ls > _Files
 echo "_Files" >> _Files
 
+if [ -e preExec.sh ]
+then
+  source preExec.sh
+fi
+
 python run.py $FILESET $NENTRIES
+
+if [ -e postExec.sh ]
+then
+  source postExec.sh
+fi
 
 if [ ! -e ${FILESET}.root ] || [ $(stat -c %s ${FILESET}.root) -eq 0 ]
 then
