@@ -1,6 +1,7 @@
 #include "MitAna/TreeMod/interface/MCFwkMod.h"
 
 #include "MitAna/DataTree/interface/MCRunInfo.h"
+#include "MitAna/DataTree/interface/EventHeader.h"
 #include "MitAna/DataTree/interface/Names.h"
 
 ClassImp(mithep::MCFwkMod)

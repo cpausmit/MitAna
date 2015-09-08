@@ -1,6 +1,7 @@
 #include <TFile.h>
 #include <TTree.h>
 #include "MitAna/DataTree/interface/Names.h"
+#include "MitAna/DataTree/interface/RunInfo.h"
 #include "MitAna/DataUtil/interface/Debug.h"
 #include "MitAna/TreeMod/interface/CatalogingMod.h"
 

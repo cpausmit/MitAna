@@ -5,6 +5,7 @@
 #include "MitAna/DataTree/interface/TriggerObject.h"
 #include "MitAna/DataTree/interface/TriggerObjectCol.h"
 #include "MitAna/DataTree/interface/TriggerObjectsTable.h"
+#include "MitAna/DataTree/interface/EventHeader.h"
 
 using namespace mithep;
 

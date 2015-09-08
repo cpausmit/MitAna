@@ -4,6 +4,8 @@
 #include "MitAna/DataTree/interface/BranchTable.h"
 #include "MitAna/DataTree/interface/EventHeaderCol.h"
 #include "MitAna/DataTree/interface/MCEventInfo.h"
+#include "MitAna/DataTree/interface/LAHeader.h"
+#include "MitAna/DataTree/interface/RunInfo.h"
 #include "MitAna/TreeMod/interface/TreeBranchLoader.h"
 #include "MitAna/TreeMod/interface/OutputMod.h"
 #include "MitAna/TreeMod/interface/HLTFwkMod.h"
