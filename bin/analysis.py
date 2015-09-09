@@ -3,6 +3,7 @@
 import os
 import shutil
 import re
+import ROOT
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -109,5 +110,5 @@ if __name__ == '__main__':
     print '\n+++++ ANALYSIS FLOW +++++\n'
     analysis.PrintModuleTree()
     print '\n+++++++++++++++++++++++++\n'
-    
+
     analysis.Run(False)

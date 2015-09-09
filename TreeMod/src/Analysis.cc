@@ -56,7 +56,7 @@ Analysis::Analysis(Bool_t useproof) :
   fDoNEvents(TChain::kBigNumber),
   fSkipNEvents(0),
   fPrintScale(1),
-  fCacheSize(-1),
+  fUseReadCache(kTRUE),
   fTreeName(Names::gkEvtTreeName),
   fEvtHdrName(Names::gkEvtHeaderBrn),
   fRunTreeName(Names::gkRunTreeName),
@@ -67,7 +67,8 @@ Analysis::Analysis(Bool_t useproof) :
   fHLTTreeName(Names::gkHltTreeName),
   fAllEvtTreeName(Names::gkAllEvtTreeName),
   fHLTObjsName(Names::gkHltObjBrn),
-  fMCEventInfoName(Names::gkMCEvtInfoBrn)
+  fMCEventInfoName(Names::gkMCEvtInfoBrn),
+  fPerfStatsFileName("")
 {
   // Default constructor.
 
@@ -428,8 +429,6 @@ Bool_t Analysis::Init()
       while (TObjString *obj = dynamic_cast<TObjString*>(next())) {
         fChain->Add(obj->GetName());
         fSet->Add(obj->GetName());
-        if (fCacheSize<0 && obj->GetString().Contains("/castor/"))
-          fCacheSize = 64*1024*1024;
       }
     } else {
       TChain *chain = new TChain(fTreeName);
@@ -439,8 +438,6 @@ Bool_t Analysis::Init()
       while (TObjString *obj = dynamic_cast<TObjString*>(next())) {
         chain->Add(obj->GetName());
         set->Add(obj->GetName());
-        if (fCacheSize<0 && obj->GetString().Contains("/castor/"))
-          fCacheSize = 64*1024*1024;
       }
 
       TString alias("TAMTREE_"); // aliases currently not used
@@ -459,10 +456,6 @@ Bool_t Analysis::Init()
 
   if (fParallel)
     TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
-
-  // CP - Mar 22, 2014: why is this commented out?
-  //if (fCacheSize>=0)
-  //  fChain->SetCacheSize(fCacheSize);
 
   // create our customized loader plugin for TAM
   TreeLoader *bl = new TreeLoader;
@@ -508,15 +501,17 @@ Bool_t Analysis::Init()
     fLoaders->SetName("TAM_LOADERS");
     fProof->AddInput(fLoaders);
 
-  } else {
+  }
+  else {
 
     // when not running Proof, we must make a selector
     fSelector = new Selector;
-    fSelector->SetCacheSize(fCacheSize);
+    fSelector->SetUseReadCache(fUseReadCache);
     fSelector->SetDoProxy(fDoProxy);
     fSelector->SetDoObjTabClean(fDoObjTabClean);
     fSelector->SetDoRunInfo(kTRUE);
     fSelector->SetUseCacher(fUseCacher);
+    fSelector->SetPerfStatsFileName(fPerfStatsFileName);
     fSelector->SetAllEvtHdrBrn(GetAllEvtHdrBrn());
     fSelector->SetAllEvtTreeName(GetAllEvtTreeName());
     fSelector->SetEvtHdrName(GetEvtHdrName());

@@ -10,7 +10,7 @@ import shutil
 import socket
 
 # experimental full local caching
-FULL_LOCAL = False
+FULL_LOCAL = True
 
 #######################
 ## UTILITY FUNCTIONS ##

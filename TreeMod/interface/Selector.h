@@ -9,21 +9,18 @@
 #ifndef MITANA_TREEMOD_SELECTOR_H
 #define MITANA_TREEMOD_SELECTOR_H
 
-#include "MitAna/TAM/interface/TAModule.h" 
 #include "MitAna/TAM/interface/TAMSelector.h" 
-#include "MitAna/TAM/interface/TAMVirtualBranchLoader.h" 
-#include "MitAna/DataUtil/interface/Cacher.h" 
 #include "MitAna/DataCont/interface/BaseCollection.h"
 #include "MitAna/DataCont/interface/ObjArray.h"
-#include "MitAna/DataTree/interface/EventHeader.h" 
-#include "MitAna/DataTree/interface/LAHeader.h" 
-#include "MitAna/DataTree/interface/RunInfo.h" 
-#include "MitAna/DataTree/interface/MCRunInfo.h" 
 
-#include <typeindex>
+#include <vector>
 
 namespace mithep {
   class OutputMod;
+  class Cacher;
+  class EventHeader;
+  class RunInfo;
+  class MCRunInfo;
 
   class Selector : public TAMSelector {
   public:
@@ -137,30 +134,17 @@ namespace mithep {
     EventHeader*         fEventHeader;    //!event header for current event
     RunInfo*             fRunInfo;        //!run information for current run
     MCRunInfo*           fMCRunInfo;      //!MC run information for current run
-    TTree*               fLATree;         //!look-ahead tree in current file
-    LAHeader*            fLAHeader;       //!event header for next event
     UInt_t               fCurRunNum;      //!current run number
     TList                fOutputMods;     //!pointer(s) to output modules
     TObjArray            fTrash;          //!pointers to trashed objects
     THashTable           fObjInfoStore;   //!single-point pointer store for GetObject function
+    std::vector<Long64_t> fRunTransitions; //(local) entry number for the last events of runs
 
   private:
     friend class OutputMod;
 
     ClassDef(Selector, 1) // Customized selector class
   };
-}
-
-//--------------------------------------------------------------------------------------------------
-inline Bool_t mithep::Selector::ConsistentRunNum() const
-{
-  return (ValidRunNum() && fCurRunNum==fEventHeader->RunNum());
-}
-
-//--------------------------------------------------------------------------------------------------
-inline Bool_t mithep::Selector::ValidRunInfo() const
-{
-  return (fRunInfo && fCurRunNum==fRunInfo->RunNum());
 }
 
 namespace mithep {

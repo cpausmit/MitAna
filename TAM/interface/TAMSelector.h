@@ -4,8 +4,6 @@
 // keep this for compatibility 
 #define TAM_TAMSelector
 
-#include <TTreeCache.h>
-
 #ifndef ROOT_Riostream
 #include <Riostream.h>
 #endif
@@ -73,8 +71,7 @@ protected:
    };
 
    TTree            *fTree;            //!the tree or chain
-   TTreeCache       *fTreeCache;       //!tree cache
-   Int_t             fCacheSize;       //tree cache size
+   Bool_t            fUseReadCache;    //use read cache
 
    THashTable        fBranchTable;     //!table of requested branches
    THashTable        fEventObjs;       //!table of objects available to any mod
@@ -94,6 +91,9 @@ protected:
    UInt_t            fObjCounterRun;   //!keep object counter for resetting it 
                                        // in process when end of run is reached
    UInt_t            fVerbosity;       //if one wants to print debug info
+
+   TString           fPerfStatsFileName; // file name for tree read performance study
+
    BranchProxy       fProxy;           //proxy for reference resolving branch 
                                        // loading via TAM
    Bool_t            fDoProxy;         //if TAMSelector should be proxy for 
@@ -157,10 +157,11 @@ public:
    void              ReqBranch(const Char_t* bname, T*& address);
    virtual TObject  *RemoveObjThisEvt(const Char_t* name);
    virtual TObject  *RetractObj(const Char_t* name);
-   void              SetCacheSize(Int_t i)      { fCacheSize = i;     }
-   void              SetDoProxy(Bool_t b)       { fDoProxy = b;       }
-   void              SetDoObjTabClean(Bool_t b) { fDoObjTabClean = b; }
-   void              SetVerbosity(UInt_t vb)    { fVerbosity = vb;    }
+   void              SetUseReadCache(Bool_t use){ fUseReadCache = use; }
+   void              SetDoProxy(Bool_t b)       { fDoProxy = b;        }
+   void              SetDoObjTabClean(Bool_t b) { fDoObjTabClean = b;  }
+   void              SetVerbosity(UInt_t vb)    { fVerbosity = vb;     }
+   void              SetPerfStatsFileName(Char_t const* name) { fPerfStatsFileName = name; }
    void              SlaveBegin(TTree* tree);
    void              SlaveTerminate();
    void              Terminate();

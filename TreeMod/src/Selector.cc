@@ -1,7 +1,13 @@
 #include "MitAna/TreeMod/interface/Selector.h"
-#include "MitAna/DataTree/interface/Names.h"
 #include "MitAna/TreeMod/interface/OutputMod.h"
+#include "MitAna/DataTree/interface/Names.h"
+#include "MitAna/DataTree/interface/EventHeader.h" 
+#include "MitAna/DataTree/interface/RunInfo.h" 
+#include "MitAna/DataTree/interface/MCRunInfo.h" 
+#include "MitAna/DataTree/interface/LAHeader.h" 
+#include "MitAna/DataUtil/interface/Cacher.h"
 #include "MitAna/Utils/interface/StreamerCorrection.h"
+#include "MitAna/TAM/interface/TAMVirtualBranchLoader.h"
 #include <TProcessID.h>
 #include <TFile.h>
 #include <TTree.h>
@@ -31,8 +37,6 @@ Selector::Selector() :
   fEventHeader   (0),
   fRunInfo       (0),
   fMCRunInfo     (0),
-  fLATree        (0),
-  fLAHeader      (0),
   fCurRunNum     (UInt_t(-1)),
   fTrash         (0)
 {
@@ -49,6 +53,18 @@ Selector::~Selector()
   // Destructor.
 
   gROOT->GetListOfSpecials()->Remove(this);
+}
+
+//--------------------------------------------------------------------------------------------------
+Bool_t Selector::ConsistentRunNum() const
+{
+  return (ValidRunNum() && fCurRunNum==fEventHeader->RunNum());
+}
+
+//--------------------------------------------------------------------------------------------------
+Bool_t Selector::ValidRunInfo() const
+{
+  return (fRunInfo && fCurRunNum==fRunInfo->RunNum());
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -90,18 +106,15 @@ Bool_t Selector::EndRun()
     return kFALSE;
 
   // determine if run will end
-  if (fCurEvt+1==fTree->GetTree()->GetEntries())
+  if (fCurEvt + 1 == fTree->GetTree()->GetEntries())
     return kTRUE; // we are at last entry in current file
 
-  fLAHeader=0;
-  Int_t ret = fLATree->GetEvent(fCurEvt);
-  if (ret<0 || fLAHeader==0) {
-    Error("EndRun", "Could not get entry lookahead entry for next event,"
-                    " assuming end of run %d reached!", fCurRunNum);
+  if (fRunTransitions.back() == fCurEvt) {
+    fRunTransitions.pop_back();
     return kTRUE;
   }
 
-  return (fLAHeader->RunNum()!=fCurRunNum);
+  return kFALSE;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -245,8 +258,6 @@ void Selector::UpdateRunInfoTree()
   fRunInfo   = 0;
   fMCRunInfo = 0;
   fCurRunNum = UInt_t(-1);
-  fLATree    = 0;
-  fLAHeader  = 0;
 
   // get current file and retrieve trees
   TFile *f = GetCurrentFile();
@@ -271,17 +282,39 @@ void Selector::UpdateRunInfoTree()
   if (fRunTree->GetBranch(fMCRunInfoName))
     fRunTree->SetBranchAddress(fMCRunInfoName, &fMCRunInfo);
 
+  fRunTransitions.clear();
   // look-ahead tree
-  fLATree = dynamic_cast<TTree*>(f->Get(fLATreeName));
-  if (!fLATree) {
-    Fatal("UpdateRunInfoTree", "Cannot find look-ahead tree with name %s", fLATreeName.Data());
-  }
+  // to be deprecated in 043. Keep these lines for backward compatibility!
+  auto* laTree = dynamic_cast<TTree*>(f->Get(fLATreeName));
+  if (laTree) {
+    if (!laTree->GetBranch(fLAHdrName))
+      Fatal("UpdateRunInfoTree", "Cannot find look-ahead branch with name %s", fLAHdrName.Data());
 
-  // set branches 
-  if (fLATree->GetBranch(fLAHdrName)) {
-    fLATree->SetBranchAddress(fLAHdrName, &fLAHeader);
-  } else {
-    Fatal("UpdateRunInfoTree", "Cannot find look-ahead branch with name %s", fLAHdrName.Data());
+    auto* lah = new LAHeader;
+    laTree->SetBranchAddress(fLAHdrName, &lah);
+    if (laTree->GetEntry(0) <= 0)
+      Fatal("UpdateRunInfoTree", "Look-ahead tree empty or corrupted");
+
+    UInt_t currentRun = lah->RunNum();
+    Long64_t iLAEntry = 1;
+    while (laTree->GetEntry(iLAEntry) > 0) {
+      if (lah->RunNum() != currentRun) {
+        // LATree count is off +1 wrt Events tree
+        // Entry for the first event of a run in LATree is the entry for the last event of the previous run in Events
+        // Insert entry numbers in reverse order so that back() corresponds to the next run transition event
+        fRunTransitions.insert(fRunTransitions.begin(), iLAEntry);
+        currentRun = lah->RunNum();
+      }
+      ++iLAEntry;
+    }
+    fRunTransitions.insert(fRunTransitions.begin(), iLAEntry);
+
+    delete laTree;
+    delete lah;
+  }
+  else {
+    // TODO implement alternative here
+    Fatal("UpdateRunInfoTree", "Cannot find look-ahead tree with name %s", fLATreeName.Data());
   }
 }
 
