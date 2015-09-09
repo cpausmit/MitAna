@@ -1,37 +1,40 @@
 #ifndef MITPHYSICS_UTILS_QGTAGGER_H
 #define MITPHYSICS_UTILS_QGTAGGER_H
 
-#include "MitAna/DataTree/interface/PFJetCol.h"
-#include "MitAna/DataTree/interface/VertexCol.h"
+#include "MitAna/DataTree/interface/VertexFwd.h"
 #include "MitAna/PhysicsUtils/interface/QGLikelihoodCalculator.h"
 #include <map>
 
 namespace mithep {
+  class PFJet;
 
   class QGTagger {
-
   public:
     QGTagger(bool useCHS);
     virtual ~QGTagger();
-    
+
     // setters
-    void SetRhoIso(Float_t rhoIso) { variables["rhoIso"] = rhoIso; }
+    void SetRhoIso(double rhoIso) { calculatorInput_[QGLikelihoodCalculator::kRhoIso] = rhoIso; }
 
     // compute the inputs for gluon-quark discrimination
     void CalculateVariables(const PFJet *jet, const VertexCol *vertices);
-    
+
+    // compute the discriminant
+    double QGValue();
+
     // getters
-    Float_t QGValue(); 
-    Float_t GetPtD(); 
-    Float_t GetAxis1(); 
-    Float_t GetAxis2(); 
-    Float_t GetMult(); 
+    double GetPtD();
+    double GetAxis1();
+    double GetAxis2();
+    double GetMult();
 
   private:
-    QGLikelihoodCalculator     *qgLikelihood;
-    std::map<TString, Float_t>  variables;
+    QGLikelihoodCalculator* qgLikelihood_{0};
+    double calculatorInput_[QGLikelihoodCalculator::nInputVariables] = {};
 
     ClassDef(QGTagger, 1)
   };
+
 }
+
 #endif

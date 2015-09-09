@@ -10,37 +10,44 @@
 #ifndef QGLikelihoodCalculator_h
 #define QGLikelihoodCalculator_h
 
-#include <string>
-
 #include "TFile.h"
-#include "TH1F.h"
-#include <map>
-
-
+#include "TH1.h"
+#include "TString.h"
 
 class QGLikelihoodCalculator {
-
  public:
-//  QGLikelihoodCalculator( const std::string& fileName="QG_QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Summer11-PU_S3_START42_V11-v2.root", unsigned nPtBins=21, unsigned int nRhoBins=25 );
+  enum InputVariable {
+    kPt,
+    kEta,
+    kRhoIso,
+    kMult,
+    kPtD,
+    kAxis1,
+    kAxis2,
+    nInputVariables
+  };
+
   QGLikelihoodCalculator(TString const& dataDir, Bool_t chs = false);
    ~QGLikelihoodCalculator();
 
-  float computeQGLikelihoodPU( float pt, float rhoPF, int nCharged, int nNeutral, float ptD, float rmsCand=-1. );
-  float computeQGLikelihood2012( float pt, float eta, float rho, int nPFCandidates_QC, float ptD_QC, float axis2_QC ); //new
-  Float_t QGvalue(std::map<TString, Float_t>);
+  double computeQGLikelihoodPU(double pt, double rhoPF, int nCharged, int nNeutral, double ptD, double rmsCand=-1.);
+  double computeQGLikelihood2012(double pt, double eta, double rho, int nPFCandidates_QC, double ptD_QC, double axis2_QC);
+  double QGvalue(double input[nInputVariables]);
 
-  float likelihoodProduct( float nCharged, float nNeutral, float ptD, float rmsCand, TH1F* h1_nCharged, TH1F* h1_nNeutral, TH1F* h1_ptD, TH1F* h1_rmsCand);
-
-
+  double likelihoodProduct(double nCharged, double nNeutral, double ptD, double rmsCand, TH1* h1_nCharged, TH1* h1_nNeutral, TH1* h1_ptD, TH1* h1_rmsCand);
 
  private:
+  void loadInputPU();
+  void loadInput2012();
 
-  TFile* histoFile_;
-  std::map<std::string,TH1F*> plots_;
-  unsigned int nPtBins_;
-  unsigned int nRhoBins_;
+  static unsigned const nPtBins_{20};
+  static unsigned const nRhoBins_{40};
+  double ptBins_[22];
+  double rhoBins_[41];
 
+  TString histoFilePath_{""};
+  TH1* dataHistoPU_[4 * 2][nPtBins_][nRhoBins_] = {}; // 4 jet types * (g, q)
+  TH1* dataHisto2012_[3 * 2][2][nPtBins_][nRhoBins_] = {}; // 3 var types * (g, q)
 };
-
 
 #endif
