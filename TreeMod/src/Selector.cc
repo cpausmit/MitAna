@@ -268,16 +268,14 @@ void Selector::UpdateRunInfoTree()
 
   // run info tree
   fRunTree = dynamic_cast<TTree*>(f->Get(fRunTreeName));
-  if (!fRunTree) {
+  if (!fRunTree)
     Fatal("UpdateRunInfoTree", "Cannot find run info tree with name %s", fRunTreeName.Data());
-  }
 
   // set branches 
-  if (fRunTree->GetBranch(fRunInfoName)) {
+  if (fRunTree->GetBranch(fRunInfoName))
     fRunTree->SetBranchAddress(fRunInfoName, &fRunInfo);
-  } else {
+  else
     Fatal("UpdateRunInfoTree", "Cannot find run info branch with name %s", fRunInfoName.Data());
-  }
 
   if (fRunTree->GetBranch(fMCRunInfoName))
     fRunTree->SetBranchAddress(fMCRunInfoName, &fMCRunInfo);
@@ -290,27 +288,37 @@ void Selector::UpdateRunInfoTree()
     if (!laTree->GetBranch(fLAHdrName))
       Fatal("UpdateRunInfoTree", "Cannot find look-ahead branch with name %s", fLAHdrName.Data());
 
-    auto* lah = new LAHeader;
-    laTree->SetBranchAddress(fLAHdrName, &lah);
-    if (laTree->GetEntry(0) <= 0)
-      Fatal("UpdateRunInfoTree", "Look-ahead tree empty or corrupted");
+    Long64_t iLAEntry = 0;    
 
-    UInt_t currentRun = lah->RunNum();
-    Long64_t iLAEntry = 1;
-    while (laTree->GetEntry(iLAEntry) > 0) {
-      if (lah->RunNum() != currentRun) {
-        // LATree count is off +1 wrt Events tree
-        // Entry for the first event of a run in LATree is the entry for the last event of the previous run in Events
-        // Insert entry numbers in reverse order so that back() corresponds to the next run transition event
-        fRunTransitions.insert(fRunTransitions.begin(), iLAEntry);
-        currentRun = lah->RunNum();
-      }
+    if (laTree->GetEntries() > 0) {
+      auto* lah = new LAHeader;
+      laTree->SetBranchAddress(fLAHdrName, &lah);
+
+      if (laTree->GetEntry(iLAEntry) <= 0)
+        Fatal("UpdateRunInfoTree", "Look-ahead tree empty or corrupted");
+
+      UInt_t currentRun = lah->RunNum();
+
       ++iLAEntry;
+
+      while (laTree->GetEntry(iLAEntry) > 0) {
+        if (lah->RunNum() != currentRun) {
+          // LATree count is off +1 wrt Events tree
+          // Entry for the first event of a run in LATree is the entry for the last event of the previous run in Events
+          // Insert entry numbers in reverse order so that back() corresponds to the next run transition event
+          fRunTransitions.insert(fRunTransitions.begin(), iLAEntry);
+          currentRun = lah->RunNum();
+        }
+        ++iLAEntry;
+      }
+
+      laTree->ResetBranchAddresses();
+      delete lah;
     }
+
     fRunTransitions.insert(fRunTransitions.begin(), iLAEntry);
 
     delete laTree;
-    delete lah;
   }
   else {
     // TODO implement alternative here
