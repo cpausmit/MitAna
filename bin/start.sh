@@ -59,7 +59,7 @@ then
   # {fileset}.root is empty -> the job crashed. Remove the outputs so corrupt files don't get shipped back.
   for file in $(ls)
   do
-    grep $file _Files > /dev/null || rm $file
+    grep $file _Files > /dev/null || rm -rf $file
   done
 fi
 
