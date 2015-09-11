@@ -56,10 +56,13 @@ Bins::getBins_int(int nBins_total, double* Lower, double xmin, double xmax, bool
   int nBins = nBins_total - 1;
   double dx = plotLog ? TMath::Power(xmax / xmin, 1. / nBins) : xmax - xmin / nBins;
 
-  Lower[0] = xmin;
+  double lowerExact = xmin;
+  Lower[0] = TMath::Ceil(lowerExact);
   for (int i = 1; i != nBins; ++i) {
-    if (plotLog)
-      Lower[i] = TMath::Ceil(Lower[i - 1] * dx);
+    if (plotLog) {
+      lowerExact *= dx;
+      Lower[i] = TMath::Ceil(lowerExact);
+    }
     else
       Lower[i] = TMath::Ceil(Lower[i - 1] + dx);
   }
