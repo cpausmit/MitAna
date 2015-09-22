@@ -9,6 +9,7 @@
 #include "MitAna/TreeMod/interface/MCFwkMod.h"
 #include "MitAna/TreeMod/interface/HLTMod.h"
 #include "MitAna/TreeMod/interface/L1Mod.h"
+#include "MitAna/TreeMod/interface/BooleanMod.h"
 #include "MitAna/TreeMod/interface/OutputMod.h"
 #include "MitAna/TreeMod/interface/Selector.h"
 #include "MitAna/TreeMod/interface/TreeBranchLoader.h"
@@ -32,6 +33,8 @@
 #pragma link C++ class mithep::MCFwkMod+;
 #pragma link C++ class mithep::HLTMod+;
 #pragma link C++ class mithep::L1Mod+;
+#pragma link C++ class mithep::BooleanMod+;
+#pragma link C++ class mithep::BooleanMod::Expression+;
 #pragma link C++ class mithep::OutputMod+;
 #pragma link C++ class mithep::Selector+;
 #pragma link C++ class mithep::TreeBranchLoader+;

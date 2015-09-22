@@ -5,6 +5,7 @@
 #include "MitAna/PhysicsMod/interface/HLTExampleMod.h"
 #include "MitAna/PhysicsMod/interface/RunSelectionMod.h"
 #include "MitAna/PhysicsMod/interface/RunLumiSelectionMod.h"
+#include "MitAna/PhysicsMod/interface/RunLumiListMod.h"
 #include "MitAna/PhysicsMod/interface/SimpleExampleMod.h"
 #include "MitAna/PhysicsMod/interface/TrackToPartMod.h"
 #include "MitAna/PhysicsMod/interface/MCProcessSelectionMod.h"
@@ -27,6 +28,7 @@
 #pragma link C++ class mithep::TrackToPartMod+;
 #pragma link C++ class mithep::RunSelectionMod+;
 #pragma link C++ class mithep::RunLumiSelectionMod+;
+#pragma link C++ class mithep::RunLumiListMod+;
 #pragma link C++ class mithep::MCProcessSelectionMod+;
 #pragma link C++ class mithep::FastJetMod+;
 #pragma link C++ class mithep::MaskCollectionMod+;
