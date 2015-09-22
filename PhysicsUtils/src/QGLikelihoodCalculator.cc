@@ -1,272 +1,295 @@
 #include "MitAna/PhysicsUtils/interface/QGLikelihoodCalculator.h"
 #include "MitAna/PhysicsUtils/interface/Bins.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include <iostream>
-#include <fstream>
-#include <cstdlib>
+#include "TROOT.h"
+#include <cmath>
+#include <stdexcept>
 
-#include "TMath.h"
-
-#include <map>
-using namespace std;
-
-// constructor:
-
-QGLikelihoodCalculator::QGLikelihoodCalculator(TString const& dataDir, Bool_t chs)
+QGLikelihoodCalculator::QGLikelihoodCalculator(TString const& dataDir, Bool_t chs/* = false*/)
 {
-  TString histoFileName = "ReducedHisto_2012.root";
+  if (dataDir.Length() == 0)
+    throw std::runtime_error("No dataDir passed to QGLikelihoodCalculator");
+
+  TString histoFileName("ReducedHisto_2012.root");
   if (chs)
     histoFileName = "ReducedHisto_2012_CHS.root";
 
-  TString fullPath;
+  histoFilePath_ = dataDir + "/" + histoFileName;
 
-  if (dataDir.Length() == 0)
-    throw std::runtime_error("No dataDir passed to QGLikelihoodCalculator");
-  else if (dataDir[0] == '/')
-    fullPath = dataDir + "/" + histoFileName;
-  else
-    fullPath = edm::FileInPath(dataDir + histoFileName).fullPath();
+  Bins::getBins_int(nPtBins_ + 1, ptBins_, 20., 2000., true);
+  ptBins_[nPtBins_ + 1] = 4000.;
 
-  histoFile_ = TFile::Open(fullPath);
-
-  nPtBins_ = 21;
-  nRhoBins_ = 45 ;
+  Bins::getBins_int(nRhoBins_ + 1, rhoBins_, 0., 40., false);
 }
 
 // ADD map destructor
 QGLikelihoodCalculator::~QGLikelihoodCalculator()
 {
+  for (unsigned iH = 0; iH != 4 * 2; ++iH) {
+    for (unsigned iPt = 0; iPt != nPtBins_; ++iPt) {
+      for (unsigned iRho = 0; iRho != nRhoBins_; ++iRho)
+        delete dataHistoPU_[iH][iPt][iRho];
+    }
+  }
+
+  for (unsigned iV = 0; iV != 3 * 2; ++iV) {
+    for (unsigned iCF = 0; iCF != 2; ++iCF) {
+      for (unsigned iPt = 0; iPt != nPtBins_; ++iPt) {
+        for (unsigned iRho = 0; iRho != nRhoBins_; ++iRho)
+          delete dataHisto2012_[iV][iCF][iPt][iRho];
+      }
+    }
+  }
 }
 
-float QGLikelihoodCalculator::computeQGLikelihoodPU(float pt, float rhoPF, int nCharged, int nNeutral, float ptD, float rmsCand)
+void
+QGLikelihoodCalculator::loadInputPU()
 {
-  double ptBins[100];
-  Bins::getBins_int(Bins::nPtBins+1, ptBins, Bins::Pt0,Bins::Pt1,true);
-  ptBins[Bins::nPtBins+1]=Bins::PtLastExtend;
+  auto* inputFile = TFile::Open(histoFilePath_);
 
-  double rhoBins[100];
-  Bins::getBins_int(Bins::nRhoBins+1,rhoBins,Bins::Rho0,Bins::Rho1,false);
+  if (!inputFile || inputFile->IsZombie())
+    throw std::runtime_error(("Histogram input file for QGLikelihoodCalculator " + histoFilePath_ + " not available or corrupted").Data());
 
-  double ptMin=0.;
-  double ptMax=0;
-  double rhoMin=0.;
-  double rhoMax=0;
-  
-  if (Bins::getBin(Bins::nPtBins,ptBins,pt,&ptMin,&ptMax)<0)
+  TString hNames[4 * 2] = {
+    "rhoBins_pt%d_%d/nChargedJet0_gluon_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/nChargedJet0_quark_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/nNeutralJet0_gluon_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/nNeutralJet0_quark_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/ptDJet0_gluon_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/ptDJet0_quark_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/rmsCandJet0_gluon_pt%d_%d_rho%d",
+    "rhoBins_pt%d_%d/rmsCandJet0_quark_pt%d_%d_rho%d"
+  };
+
+  for (unsigned iH = 0; iH != 4 * 2; ++iH) {
+    for (unsigned iPt = 0; iPt != nPtBins_; ++iPt) {
+      int ptMin = ptBins_[iPt];
+      int ptMax = ptBins_[iPt + 1];
+      for (unsigned iRho = 0; iRho != nRhoBins_; ++iRho) {
+        auto* source = dynamic_cast<TH1*>(inputFile->Get(TString::Format(hNames[iH].Data(), ptMin, ptMax, ptMin, ptMax, iRho)));
+        if (!source)
+          throw std::runtime_error(("Histogram " + TString::Format(hNames[iH].Data(), ptMin, ptMax, ptMin, ptMax, iRho) + " not found in " + histoFilePath_).Data());
+
+        gROOT->cd();
+        auto* clone = static_cast<TH1*>(source->Clone());
+        clone->Scale(1. / clone->Integral("width"));
+
+        dataHistoPU_[iH][iPt][iRho] = clone;
+      }
+    }
+  }
+
+  delete inputFile;
+}
+
+void
+QGLikelihoodCalculator::loadInput2012()
+{
+  auto* inputFile = TFile::Open(histoFilePath_);
+
+  if (!inputFile || inputFile->IsZombie())
+    throw std::runtime_error(("Histogram input file for QGLikelihoodCalculator " + histoFilePath_ + " not available or corrupted").Data());
+
+
+  TString hNames[2][3 * 2] = {
+    {
+      "rhoBins_pt%d_%d/nPFCand_QC_ptCutJet0_gluon_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/nPFCand_QC_ptCutJet0_quark_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/ptD_QCJet0_gluon_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/ptD_QCJet0_quark_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/axis2_QCJet0_gluon_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/axis2_QCJet0_quark_pt%d_%d_rho%d"
+    },
+    {
+      "rhoBins_pt%d_%d/nPFCand_QC_ptCutJet0_F_gluon_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/nPFCand_QC_ptCutJet0_F_quark_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/ptD_QCJet0_F_gluon_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/ptD_QCJet0_F_quark_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/axis2_QCJet0_F_gluon_pt%d_%d_rho%d",
+      "rhoBins_pt%d_%d/axis2_QCJet0_F_quark_pt%d_%d_rho%d"
+    }
+  };
+
+  for (unsigned iV = 0; iV != 3 * 2; ++iV) {
+    for (unsigned iCF = 0; iCF != 2; ++iCF) {
+      for (unsigned iPt = 0; iPt != nPtBins_; ++iPt) {
+        int ptMin = ptBins_[iPt];
+        int ptMax = ptBins_[iPt + 1];
+        for (unsigned iRho = 0; iRho != nRhoBins_; ++iRho) {
+          auto* source = dynamic_cast<TH1*>(inputFile->Get(TString::Format(hNames[iCF][iV].Data(), ptMin, ptMax, ptMin, ptMax, iRho)));
+          if (!source)
+            throw std::runtime_error(("Histogram " + TString::Format(hNames[iCF][iV].Data(), ptMin, ptMax, ptMin, ptMax, iRho) + " not found in " + histoFilePath_).Data());
+
+          gROOT->cd();
+          TH1* clone = static_cast<TH1*>(source->Clone());
+
+          // try to make it more stable
+          if (clone->GetEntries() < 50.)
+            clone->Rebin(5);
+          else if (clone->GetEntries() < 500.)
+            clone->Rebin(2);
+
+          clone->Scale(1. / clone->Integral("width"));
+
+          dataHisto2012_[iV][iCF][iPt][iRho] = clone;
+        }
+      }
+    }
+  }
+
+  delete inputFile;
+}
+
+double
+QGLikelihoodCalculator::computeQGLikelihoodPU(double pt, double rhoPF, int nCharged, int nNeutral, double ptD, double rmsCand)
+{
+  double ptMin = 0.;
+  double ptMax = 0.;
+  int iPt = Bins::getBin(nPtBins_, ptBins_, pt, &ptMin, &ptMax);
+  if (iPt < 0)
     return -1;
-  if (Bins::getBin(Bins::nRhoBins,rhoBins,rhoPF,&rhoMin,&rhoMax)<0)
-    return -1;
 
-  int rhoBin = rhoMin;
-
-  if (ptMax==0.)
+  if (ptMax == 0.)
     return -1.;
 
-  char histoName[300];
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/nChargedJet0_gluon_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL)
-		plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_nCharged_gluon = plots_[histoName];
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/nChargedJet0_quark_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL)
-		plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_nCharged_quark = plots_[histoName];
+  double rhoMin = 0.;
+  double rhoMax = 0;
+  int iRho = Bins::getBin(nRhoBins_, rhoBins_, rhoPF, &rhoMin, &rhoMax);
+  if (iRho < 0)
+    return -1;
 
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/nNeutralJet0_gluon_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL)
-		plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_nNeutral_gluon = plots_[histoName];
+  if (!dataHistoPU_[0][0][0])
+    loadInputPU();
 
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/nNeutralJet0_quark_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL)
-		plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_nNeutral_quark = plots_[histoName];
+  TH1* h1_nCharged_gluon = dataHistoPU_[0][iPt][iRho];
+  TH1* h1_nCharged_quark = dataHistoPU_[1][iPt][iRho];
+  TH1* h1_nNeutral_gluon = dataHistoPU_[2][iPt][iRho];
+  TH1* h1_nNeutral_quark = dataHistoPU_[3][iPt][iRho];
+  TH1* h1_ptD_gluon = (ptD >= 0.) ? dataHistoPU_[4][iPt][iRho] : 0;
+  TH1* h1_ptD_quark = (ptD >= 0.) ? dataHistoPU_[5][iPt][iRho] : 0;
+  TH1* h1_rmsCand_gluon = (rmsCand >= 0.) ? dataHistoPU_[6][iPt][iRho] : 0;
+  TH1* h1_rmsCand_quark = (rmsCand >= 0.) ? dataHistoPU_[7][iPt][iRho] : 0;
 
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/ptDJet0_gluon_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL && ptD>=0.)
-		plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_ptD_gluon = (ptD>=0.) ? plots_[histoName] : 0;
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/ptDJet0_quark_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL && ptD>=0.)
-	plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_ptD_quark = (ptD>=0.) ? plots_[histoName] : 0;
+  double gluonP = likelihoodProduct(nCharged, nNeutral, ptD, rmsCand, h1_nCharged_gluon, h1_nNeutral_gluon, h1_ptD_gluon, h1_rmsCand_gluon);
+  double quarkP = likelihoodProduct(nCharged, nNeutral, ptD, rmsCand, h1_nCharged_quark, h1_nNeutral_quark, h1_ptD_quark, h1_rmsCand_quark);
 
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/rmsCandJet0_gluon_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL && rmsCand>=0.)
-	plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_rmsCand_gluon = (rmsCand>=0.) ? plots_[histoName] : 0;
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/rmsCandJet0_quark_pt%.0f_%.0f_rho%d", ptMin, ptMax, ptMin, ptMax, rhoBin);
-	if(plots_[histoName]==NULL && rmsCand>=0.)
-	plots_[histoName]=(TH1F*)histoFile_->Get(histoName)->Clone();
-  	TH1F* h1_rmsCand_quark = (rmsCand>=0.) ? plots_[histoName]: 0;
-
-
-  float gluonP = likelihoodProduct(nCharged, nNeutral, ptD, rmsCand, h1_nCharged_gluon, h1_nNeutral_gluon, h1_ptD_gluon, h1_rmsCand_gluon);
-  float quarkP = likelihoodProduct(nCharged, nNeutral, ptD, rmsCand, h1_nCharged_quark, h1_nNeutral_quark, h1_ptD_quark, h1_rmsCand_quark);
-
-  float QGLikelihood = quarkP/(gluonP + quarkP);
-
-  return QGLikelihood;
+  return quarkP / (gluonP + quarkP);
 }
 
 //---------------------------------------------------------------------------------------------------
-float QGLikelihoodCalculator::computeQGLikelihood2012(float pt, float eta, float rho,
-						      int nPFCandidates_QC_ptCut, float ptD_QC,
-						      float axis2_QC)
+double
+QGLikelihoodCalculator::computeQGLikelihood2012(double pt, double eta, double rho,
+                                                int nPFCandidates_QC_ptCut, double ptD_QC,
+                                                double axis2_QC)
 {
-
   // in forward use inclusive 127-4000 bin
-  if (fabs(eta)>2.5 && pt>127.) pt = 128.;
-  
-  std::vector<std::string> varName;
-  //varName.push_back("nPFCand_QCJet0");
-  if (fabs(eta)<2.5) {
-    varName.push_back("nPFCand_QC_ptCutJet0");
-    varName.push_back("ptD_QCJet0");
-    varName.push_back("axis2_QCJet0");
-  } else {
-    varName.push_back("nPFCand_QC_ptCutJet0_F");
-    varName.push_back("ptD_QCJet0_F");
-    varName.push_back("axis2_QCJet0_F");
-  }
-  
-  std::vector<float> vars;
-  vars.push_back(nPFCandidates_QC_ptCut);
-  vars.push_back(ptD_QC);
-  vars.push_back(-log(axis2_QC)); //-log
+  int iCF = std::abs(eta) <= 2.5 ? 0 : 1;
+  if (iCF == 1 && pt > 127.)
+    pt = 128.;
 
-#ifdef DEBUG
-  fprintf(stderr,"computeQG\n");
-#endif
-  double RhoBins[100];
-  double PtBins[100];
+  double vars[3] = {
+    double(nPFCandidates_QC_ptCut),
+    double(ptD_QC),
+    -std::log(axis2_QC)
+  };
 
-#ifdef DEBUG
-  fprintf(stderr,"computeBins\n");
-#endif
-
-  Bins::getBins_int(Bins::nPtBins+1,PtBins,Bins::Pt0,Bins::Pt1,true);
-  PtBins[Bins::nPtBins+1]=Bins::PtLastExtend;
-  Bins::getBins_int(Bins::nRhoBins+1,RhoBins,Bins::Rho0,Bins::Rho1,false);
-  
-  
   double ptMin=0.;
-  double ptMax=0;
-  double rhoMin=0.;
-  double rhoMax=0;
-  
-  if(Bins::getBin(Bins::nPtBins,PtBins,pt,&ptMin,&ptMax) <0) return -1;
-  if(Bins::getBin(Bins::nRhoBins,RhoBins,rho,&rhoMin,&rhoMax) <0) return -1;
-  //get Histo
-  
-  float Q=1;
-  float G=1;
-  char histoName[1023];
-  ptMin=ceil(ptMin);
-  ptMax=ceil(ptMax);
-  rhoMin=floor(rhoMin);
-  rhoMax=floor(rhoMax);
-#ifdef DEBUG
-  fprintf(stderr,"Start LOOP %.0f %.0f %.0f %.0f\n",ptMin,ptMax,rhoMin,rhoMax);
-#endif
-  
-for(unsigned int i=0;i<vars.size();i++){
-  //get Histo
-  float Qi(1),Gi(1),mQ,mG;
-#ifdef DEBUG
-  fprintf(stderr,"var %d = %s, value = %f\n",i,varName[i].c_str(), vars[i]);
-#endif
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/%s_quark_pt%.0f_%.0f_rho%.0f", ptMin, ptMax,varName[i].c_str(), ptMin, ptMax, rhoMin);
-#ifdef DEBUG
-  fprintf(stderr,"looking for histo: %s\n", histoName);
-#endif
-  if (plots_[histoName] == NULL) { //first time 
-    plots_[histoName]=(TH1F*)histoFile_->Get(histoName); 
-    if (plots_[histoName]->GetEntries()<50) plots_[histoName]->Rebin(5); // try to make it more stable
-    else if (plots_[histoName]->GetEntries()<500) plots_[histoName]->Rebin(2); // try to make it more stable
-  }
-  if (plots_[histoName] == NULL) fprintf(stderr,"Histo %s does not exists\n",histoName); //DEBUG
-  plots_[ histoName]->Scale(1./plots_[histoName]->Integral("width")); 
-  
-  Qi=plots_[histoName]->GetBinContent(plots_[histoName]->FindBin(vars[i]));
-  mQ=plots_[histoName]->GetMean();
-  
-  sprintf(histoName, "rhoBins_pt%.0f_%.0f/%s_gluon_pt%.0f_%.0f_rho%.0f", ptMin, ptMax,varName[i].c_str(), ptMin, ptMax, rhoMin);
-#ifdef DEBUG
-  fprintf(stderr,"looking for histo: %s\n", histoName);
-#endif
-  if (plots_[histoName] == NULL) { // first time
-    plots_[histoName]=(TH1F*)histoFile_->Get(histoName);
-    if (plots_[histoName]->GetEntries()<50) plots_[histoName]->Rebin(5); // try to make it more stable
-    else if (plots_[histoName]->GetEntries()<500) plots_[histoName]->Rebin(2); // try to make it more stable
-  }
-  if (plots_[histoName] == NULL) fprintf(stderr,"Histo %s does not exists\n",histoName); //DEBUG
-  plots_[ histoName]->Scale(1./plots_[histoName]->Integral("width")); 
-  Gi=plots_[histoName]->GetBinContent(plots_[histoName]->FindBin(vars[i]));
-  mG=plots_[histoName]->GetMean();
-  
-  float epsilon=0;
-  float delta=0.000001;
-  if (Qi<=epsilon && Gi<=epsilon){
-    if(mQ>mG)
-      {if(vars[i]>mQ) {Qi=1-delta;Gi=delta;}
-	else if(vars[i]<mG){Qi=delta;Gi=1-delta;}
+  double ptMax=0.;
+
+  int iPt = Bins::getBin(nPtBins_, ptBins_, pt, &ptMin, &ptMax);
+  if (iPt < 0)
+    return -1;
+
+  if (ptMax == 0.)
+    return -1.;
+
+  double rhoMin = 0.;
+  double rhoMax = 0;
+  int iRho = Bins::getBin(nRhoBins_, rhoBins_, rho, &rhoMin, &rhoMax);
+  if (iRho < 0)
+    return -1;
+
+  if (!dataHisto2012_[0][0][0][0])
+    loadInput2012();
+
+  TH1* dataG[3] = {
+    dataHisto2012_[0][iCF][iPt][iRho],
+    dataHisto2012_[2][iCF][iPt][iRho],
+    dataHisto2012_[4][iCF][iPt][iRho]
+  };
+
+  TH1* dataQ[3] = {
+    dataHisto2012_[1][iCF][iPt][iRho],
+    dataHisto2012_[3][iCF][iPt][iRho],
+    dataHisto2012_[5][iCF][iPt][iRho]
+  };
+
+  double G = 1.;
+  double Q = 1.;
+
+  for(unsigned iV = 0; iV != 3; ++iV){
+    double Gi = dataG[iV]->GetBinContent(dataG[iV]->FindBin(vars[iV]));
+    double mG = dataG[iV]->GetMean();
+
+    double Qi = dataQ[iV]->GetBinContent(dataQ[iV]->FindBin(vars[iV]));
+    double mQ = dataQ[iV]->GetMean();
+
+    double delta = 0.000001;
+    if (Qi <= 0. && Gi <= 0.) {
+      if (mQ > mG) {
+        if(vars[iV] > mQ) {
+          Qi = 1. - delta;
+          Gi = delta;
+        }
+        else if (vars[iV] < mG) {
+          Qi = delta;
+          Gi = 1. - delta;
+        }
       }
-    else if(mQ<mG)
-      {if(vars[i]<mQ) {Qi=1-delta;Gi=delta;}
-	else if(vars[i]>mG){Qi=delta;Gi=1-delta;}
+      else if (mQ < mG) {
+        if(vars[iV] < mQ) {
+          Qi = 1. - delta;
+          Gi = delta;
+        }
+        else if(vars[iV] > mG) {
+          Qi = delta;
+          Gi = 1. - delta;
+        }
       }
-  } 
-  
-  Q*=Qi;
-  G*=Gi;	
-  
-#ifdef DEBUG
-  fprintf(stderr,"Q: %f\n",Q);
-#endif
-#ifdef DEBUG
-  fprintf(stderr,"G: %f\n",G);
-#endif
- }
- 
- if (Q==0)
-   return 0;
- 
- return Q/(Q+G);
+    }
+
+    Q *= Qi;
+    G *= Gi;	
+  }
+
+  if (Q == 0)
+    return 0.;
+
+  return Q / (Q + G);
 }
 
 //---------------------------------------------------------------------------------------------------
-float QGLikelihoodCalculator::likelihoodProduct(float nCharged, float nNeutral, float ptD,
-						float rmsCand,
-						TH1F* h1_nCharged, TH1F* h1_nNeutral,
-						TH1F* h1_ptD, TH1F* h1_rmsCand)
+double
+QGLikelihoodCalculator::likelihoodProduct(double nCharged, double nNeutral, double ptD,
+                                          double rmsCand,
+                                          TH1* h1_nCharged, TH1* h1_nNeutral,
+                                          TH1* h1_ptD, TH1* h1_rmsCand)
 {
-
-  h1_nCharged->Scale(1./h1_nCharged->Integral("width"));
-  if (h1_nNeutral!=0)
-    h1_nNeutral->Scale(1./h1_nNeutral->Integral("width"));
-  if (h1_ptD!=0)
-    h1_ptD->Scale(1./h1_ptD->Integral("width"));
-  if (h1_rmsCand!=0)
-    h1_rmsCand->Scale(1./h1_rmsCand->Integral("width"));
-
-
-  float likeliProd =  h1_nCharged->GetBinContent(h1_nCharged->FindBin(nCharged));
-  if (h1_nNeutral!=0)
-    likeliProd*=h1_nNeutral->GetBinContent(h1_nNeutral->FindBin(nNeutral));
-  if (h1_ptD!=0)
-    likeliProd*=h1_ptD->GetBinContent(h1_ptD->FindBin(ptD));
-  if (h1_rmsCand!=0)
-    likeliProd*=h1_rmsCand->GetBinContent(h1_rmsCand->FindBin(rmsCand));
+  double likeliProd = h1_nCharged->GetBinContent(h1_nCharged->FindBin(nCharged));
+  if (h1_nNeutral)
+    likeliProd *= h1_nNeutral->GetBinContent(h1_nNeutral->FindBin(nNeutral));
+  if (h1_ptD)
+    likeliProd *= h1_ptD->GetBinContent(h1_ptD->FindBin(ptD));
+  if (h1_rmsCand)
+    likeliProd *= h1_rmsCand->GetBinContent(h1_rmsCand->FindBin(rmsCand));
 
   return likeliProd;
 }
 
 //---------------------------------------------------------------------------------------------------
-Float_t QGLikelihoodCalculator::QGvalue(std::map<TString, Float_t> variables)
+double
+QGLikelihoodCalculator::QGvalue(double input[nInputVariables])
 {
-  return computeQGLikelihood2012(variables["pt"], variables["eta"], variables["rhoIso"],
-				 variables["mult"], variables["ptD"], variables["axis2"]);
+  return computeQGLikelihood2012(input[kPt], input[kEta], input[kRhoIso],
+				 input[kMult], input[kPtD], input[kAxis2]);
 }
-
