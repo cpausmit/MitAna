@@ -79,7 +79,7 @@ namespace mithep
       Bool_t                    Run(Bool_t browse);
       void                      SetAllEvtHdrBrn(const char *n)      { fAllEvtHdrBrn   = n;        }
       void                      SetAllEvtTreeName(const char *n)    { fAllEvtTreeName = n;        }
-      void                      SetCacheSize(Int_t cache)           { fCacheSize      = cache;    }
+      void                      SetUseReadCache(Bool_t use)         { fUseReadCache   = use;      }
       void                      SetCompressionLevel(Int_t level)    { fCompLevel      = level;    }
       void                      SetConfigName(const char* name)     { fConfig         = name;     }
       void                      SetDoObjTabClean(Bool_t b)          { fDoObjTabClean  = b;        }
@@ -107,6 +107,7 @@ namespace mithep
       void                      SetUseMC(Bool_t mc)                 { fUseMC     = mc;            }
       void                      SetUseProof(Bool_t up)              { fUseProof  = up;            }
       void                      SetUseCacher(Int_t i)               { fUseCacher = i;             }
+      void                      SetPerfStatsFileName(char const* n) { fPerfStatsFileName = n;     }
       void                      Terminate();
 
       void                      PrintModuleTree() const; // for debugging
@@ -155,7 +156,7 @@ namespace mithep
       Long64_t                  fDoNEvents;       //events to process (def=TChain::kBigNumber)
       Long64_t                  fSkipNEvents;     //number of events to skip from beginning (def=0)
       UInt_t                    fPrintScale;      //scale for evt number/timings printouts (def=100)
-      Int_t                     fCacheSize;       //size of read cache for events tree
+      Bool_t                    fUseReadCache;    //use TTreeCache to prefetch all branches
       TString                   fTreeName;        //name of trees or friend trees
       TString                   fEvtHdrName;      //name of event header branch
       TString                   fRunTreeName;     //name of run info tree
@@ -167,6 +168,7 @@ namespace mithep
       TString                   fAllEvtTreeName;  //name of all-event tree
       TString                   fHLTObjsName;     //trigger objects branch name
       TString                   fMCEventInfoName; //name of MC event info
+      TString                   fPerfStatsFileName; //file name of TTree read performance study
 
     ClassDef(Analysis, 1) // Top-level analysis class 
   };

@@ -6,6 +6,7 @@
 #include "MitAna/DataTree/interface/TriggerObjectBaseCol.h"
 #include "MitAna/DataTree/interface/TriggerObjectRelCol.h"
 #include "MitAna/DataTree/interface/TriggerObjectCol.h"
+#include "MitAna/DataTree/interface/RunInfo.h"
 
 using namespace mithep;
 

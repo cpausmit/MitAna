@@ -55,6 +55,10 @@
 #ifndef TAM_TAMTreeLoader
 #include "MitAna/TAM/interface/TAMTreeLoader.h"
 #endif
+#include "TFileCacheRead.h"
+
+#include "TTreePerfStats.h"
+
 #include <map>
 
 //////////////////////////////////////////////////////////////////////////
@@ -81,7 +85,6 @@
 //////////////////////////////////////////////////////////////////////////
 
 ClassImp(TAMSelector)
-
 
 #if ROOT_VERSION_CODE < ROOT_VERSION(5,11,3)
 #define R__ASSERT(e) \
@@ -281,8 +284,7 @@ Bool_t TAMSelector::BranchProxy::Notify()
 //______________________________________________________________________________
 TAMSelector::TAMSelector() :
    fTree(0),
-   fTreeCache(0),
-   fCacheSize(0),
+   fUseReadCache(kTRUE),
    fBranchTable(TCollection::kInitHashTableCapacity, 1),
    fEventObjs(TCollection::kInitHashTableCapacity, 1),
    fAModules(new TAModule("TAMTopModule",
@@ -295,6 +297,7 @@ TAMSelector::TAMSelector() :
    fActNotify(kFALSE),
    fObjCounter(0),
    fVerbosity(0),
+   fPerfStatsFileName(""),
    fProxy(this),
    fDoProxy(kFALSE),
    fDoObjTabClean(kFALSE),
@@ -729,13 +732,8 @@ void TAMSelector::LoadBranch(TAMBranchInfo* brInfo)
       //fObjCounter=TProcessID::GetObjectCount();
    }
 
-   // load the entry (using the cache)
-   if (fTreeCache)
-     GetCurrentFile()->SetCacheRead(fTreeCache);
+   // load the entry
    Int_t ret = brInfo->GetEntry(fCurEvt);
-   if (fTreeCache)
-     GetCurrentFile()->SetCacheRead(0);
-
 
    if(ret<0) {
       Error("LoadBranch",
@@ -782,7 +780,8 @@ Bool_t TAMSelector::Notify()
      Warning("Notify","Could not get URL for file [%s].",
              (GetCurrentFile()!=0) ? (GetCurrentFile()->GetName())
              : "null");
-   } else {
+   }
+   else {
 
      if(GetCurrentFile()!=0)
        GetCurrentFile()->SetName((const_cast<TUrl*>(url)->GetUrl()));
@@ -797,30 +796,33 @@ Bool_t TAMSelector::Notify()
            fCurEvt);
    }
 
+   if (fUseReadCache) {
+     TFile* f = fTree->GetCurrentFile();
+     if (f) {
+       // cache size not set by hand -> automatically set to AutoSave size used when writing the input file
+       fTree->SetCacheSize(-1);
+       fTree->SetCacheEntryRange(0, 0x7fffffffffffffff);
+       fTree->AddBranchToCache("*", kTRUE);
+       fTree->StopCacheLearningPhase();
+
+       // Next line turns on asynchronous (threaded) prefetching, which seems to not work well in condor environment..
+       // f->GetCacheRead(fTree->GetTree())->SetEnablePrefetching(kTRUE);
+     }
+   }
+
+   if (fTree->GetTree() && fPerfStatsFileName.Length() != 0) {
+     if (gPerfStats)
+       Warning("Notify", "PerfStats object is already defined. Not creating a new object.");
+     else
+       gPerfStats = new TTreePerfStats("ioperf", fTree->GetTree());
+   }
+
    // status (return value) of notify
    Bool_t notifyStat = kTRUE;
 
-   // Set up the caching process
-   if (fCacheSize > 0) {
-     fTreeCache->SetLearnEntries(1);
-     fTree->SetCacheSize(128*1024*1024);
-     printf(" CurrentFile Name: %s\n",fTree->GetCurrentFile()->GetName());
-     if (fTreeCache)
-       delete fTreeCache;
-     fTreeCache = dynamic_cast<TTreeCache*>(fTree->GetCurrentFile()->GetCacheRead());
-     fTree->GetCurrentFile()->SetCacheRead(0);
-   
-     //// Read all data products (even if we don't use them).
-     //// Remove the below lines to read minimal sets of products.
-     //// Removing would cause many more I/O operations and slow the cluster.
-     //fTreeCache->StartLearningPhase();
-     //fTreeCache->AddBranch("*", kTRUE);
-     //fTreeCache->StopLearningPhase();
-   }
-
    // no event yet processed eg, no loaders assigned,
    // so that the notify is being delayed to LoadBranch()
-   if(fCurEvt>=0) {
+   if(fCurEvt >= 0) {
 
       TIter nextBranch(fBranchTable.MakeIterator());
       
@@ -881,7 +883,8 @@ Bool_t TAMSelector::Process(Long64_t entry)
    if (fModAborted) {
      fAModules->ResetAllActiveFlags();
      fModAborted = kFALSE;
-   } else if (fEventAborted) {
+   }
+   else if (fEventAborted) {
      fAModules->ResetAllActiveFlags();
      fEventAborted = kFALSE;
    }
@@ -1181,6 +1184,11 @@ void TAMSelector::Terminate()
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
 
+   if (fPerfStatsFileName.Length() != 0 && gPerfStats) {
+     gPerfStats->SaveAs(fPerfStatsFileName);
+     delete gPerfStats;
+   }
+
    if (fAnalysisAborted) {
       return;
    } 
@@ -1243,10 +1251,6 @@ void TAMSelector::Terminate()
       Error("Terminate",
             "Could not store output objects after terminate.");
    }
-
-   // Delete the tree cache
-   if (fTreeCache)
-      delete fTreeCache;
 }
 
 //______________________________________________________________________________
