@@ -129,3 +129,56 @@ BooleanMod::Expression::Eval() const
 
   return kFALSE;
 }
+
+std::vector<mithep::BaseMod const*>
+mithep::BooleanMod::Expression::GetMods() const
+{
+  std::vector<BaseMod const*> arr;
+
+  for (auto* subexpr : fExpr) {
+    if (!subexpr)
+      continue;
+
+    auto&& subarr = subexpr->GetMods();
+    for (auto* mod : subarr)
+      arr.push_back(mod);
+  }
+
+  if (fMod)
+    arr.push_back(fMod);
+
+  return arr;
+}
+
+void
+mithep::BooleanMod::Process()
+{
+  if (!fExpression || !fExpression->Eval())
+    SkipEvent();
+
+  if (GetFillHist()) {
+    double x = 0.;
+    for (auto* mod : fMods) {
+      if (mod->IsActive())
+        fCounter->Fill(x);
+      x += 1.;
+    }
+  }
+}
+
+void
+mithep::BooleanMod::SlaveBegin()
+{
+  if (GetFillHist()) {
+    if (!fExpression)
+      return;
+
+    fMods = fExpression->GetMods();
+    AddTH1(fCounter, "BooleanCounter", "Module decisions", fMods.size(), 0., fMods.size());
+    int iX = 1;
+    for (auto* mod : fMods) {
+      fCounter->GetXaxis()->SetBinLabel(iX, mod->GetName());
+      ++iX;
+    }
+  }
+}

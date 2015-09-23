@@ -3,6 +3,8 @@
 
 #include "MitAna/TreeMod/interface/BaseMod.h"
 
+#include "TH1D.h"
+
 namespace mithep {
 
   class BooleanMod : public BaseMod {
@@ -30,6 +32,8 @@ namespace mithep {
 
       Bool_t Eval() const;
 
+      std::vector<BaseMod const*> GetMods() const;
+
     private:
       Operator fOperator{kPASS};
       BaseMod const* fMod{0};
@@ -45,13 +49,13 @@ namespace mithep {
     void SetExpression(Expression const* expr) { fExpression = expr; }
 
   private:
-    void Process() override
-    {
-      if (!fExpression || !fExpression->Eval())
-        SkipEvent();
-    }
+    void Process() override;
+    void SlaveBegin() override;
 
     Expression const* fExpression{0};
+
+    TH1D* fCounter{0};
+    std::vector<BaseMod const*> fMods{};
 
     ClassDef(BooleanMod, 0)
   };
