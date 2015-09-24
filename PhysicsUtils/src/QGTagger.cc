@@ -15,7 +15,7 @@ QGTagger::QGTagger(bool useCHS)
 
 QGTagger::~QGTagger()
 {
-  // Destructor.
+  delete qgLikelihood_;
 }
 
 double

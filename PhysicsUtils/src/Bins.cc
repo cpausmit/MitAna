@@ -31,8 +31,10 @@ Bins::getBin(int nBins, double bins[], double value, double* x0, double* x1)
     return -1;
 
   if (value > bins[nBins]) {
-    *x0 = bins[nBins - 1];
-    *x1 = bins[nBins];
+    if (x0)
+      *x0 = bins[nBins - 1];
+    if (x1)
+      *x1 = bins[nBins];
     return nBins - 1;
   }
 
@@ -54,7 +56,7 @@ void
 Bins::getBins_int(int nBins_total, double* Lower, double xmin, double xmax, bool plotLog)
 {
   int nBins = nBins_total - 1;
-  double dx = plotLog ? TMath::Power(xmax / xmin, 1. / nBins) : xmax - xmin / nBins;
+  double dx = plotLog ? TMath::Power(xmax / xmin, 1. / nBins) : (xmax - xmin) / nBins;
 
   double lowerExact = xmin;
   Lower[0] = TMath::Ceil(lowerExact);
