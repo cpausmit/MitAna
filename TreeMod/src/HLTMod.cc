@@ -193,8 +193,11 @@ void HLTMod::Process()
   auto* bits = GetObject<TriggerMask>(fBitsName);
 
   // match trigger bits to trigger mask and obtain trigger objects
-  auto* myTrgObjs = new TriggerObjectOArr(0, fMyObjsNamePub);
-  myTrgObjs->SetOwner(kFALSE); // the objects are owned by the object table
+  TriggerObjectOArr* myTrgObjs = 0;
+  if (fExportTrigObjects) {
+    myTrgObjs = new TriggerObjectOArr(0, fMyObjsNamePub);
+    myTrgObjs->SetOwner(kFALSE); // the objects are owned by the object table
+  }
 
   BitMask1024 bitsDone{};
 
@@ -204,7 +207,8 @@ void HLTMod::Process()
     bitmask &= fTrigBitsAnd.at(iB);
     if (bitmask == fTrigBitsCmp.at(iB)) {
       accept = kTRUE;
-      AddTrigObjs(*myTrgObjs, bitsDone, iB);
+      if (fExportTrigObjects)
+        AddTrigObjs(*myTrgObjs, bitsDone, iB);
     }
   }
 
@@ -223,15 +227,16 @@ void HLTMod::Process()
   ++fNAccepted;
   IncNEventsProcessed();
   OnAccepted();
-  // here the trigger objects are attached to the event for further analysis
-  // -- NOTE: all trigger objects not just objects corresponding to your trigger(s)
-  if (!AddObjThisEvt(myTrgObjs)) {
-    SendError(kAbortAnalysis, "Process", 
-              "Could not add my trigger objects with name %s to event.",
-              myTrgObjs->GetName());
+  if (fExportTrigObjects) {
+    // here the trigger objects are attached to the event for further analysis
+    // -- NOTE: all trigger objects not just objects corresponding to your trigger(s)
+    if (!AddObjThisEvt(myTrgObjs)) {
+      SendError(kAbortAnalysis, "Process", 
+                "Could not add my trigger objects with name %s to event.",
+                myTrgObjs->GetName());
 
-    delete myTrgObjs;
-    return;
+      delete myTrgObjs;
+    }
   }
 }
 
@@ -250,10 +255,13 @@ void HLTMod::SlaveBegin()
     SendError(kAbortAnalysis, "SlaveBegin", "Could not get HLT trigger table.");
     return;
   }
-  fTrigObjs = GetHLTObjectsTable();
-  if (!fTrigObjs) {
-    SendError(kAbortAnalysis, "SlaveBegin", "Could not get HLT trigger objects table.");
-    return;
+
+  if (fExportTrigObjects) {
+    fTrigObjs = GetHLTObjectsTable();
+    if (!fTrigObjs) {
+      SendError(kAbortAnalysis, "SlaveBegin", "Could not get HLT trigger objects table.");
+      return;
+    }
   }
 }
 

@@ -56,6 +56,7 @@ namespace mithep
     Int_t       GetNFailed() const      { return fNFailed;       }
 
     void AddTrigger(const char *expr, UInt_t firstRun = 0, UInt_t lastRun = 0);
+    void SetExportTrigObjects(Bool_t b)  { fExportTrigObjects = b; }
     void SetAbortIfNotAccepted(Bool_t b) { fAbortIfNotAccepted = b; }
     void SetAbortIfNoData(Bool_t b)      { fAbortIfNoData = b; }
     void SetBitsName(const char *n)      { fBitsName = n; }
@@ -78,6 +79,7 @@ namespace mithep
     typedef std::pair<TString, RunRange> TriggerNameWithValidity;
     typedef std::vector<TriggerNameWithValidity> TriggerNames;
 
+    Bool_t       fExportTrigObjects{kTRUE};
     Bool_t       fAbortIfNotAccepted{kTRUE};
     Bool_t       fAbortIfNoData{kTRUE}; //set to false for e.g. private MC with no HLT info
     Bool_t       fPrintTable{kFALSE};    //=true then print HLT trigger table in BeginRun
