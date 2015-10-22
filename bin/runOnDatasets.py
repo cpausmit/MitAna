@@ -10,7 +10,7 @@ import shutil
 import socket
 
 # experimental full local caching
-FULL_LOCAL = True
+FULL_LOCAL = False
 
 #######################
 ## UTILITY FUNCTIONS ##
@@ -316,7 +316,7 @@ class CondorConfig(object):
             listWasGiven = False
     
         inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
-        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
+        for optionalInput in ['x509up', 'preExec.sh', 'postExec.sh']:
             if os.path.exists(env.workspace + '/' + optionalInput):
                 inputFiles.append(optionalInput)
 
@@ -450,8 +450,8 @@ def setupWorkspace(env):
         shutil.copyfile(env.postExecPath, env.workspace + '/postExec.sh')
 
     # copy the latest user proxy
-    if os.path.exists('/tmp/' + env.x509up):
-        shutil.copy('/tmp/' + env.x509up, env.workspace + '/' + env.x509up)
+    if os.path.exists('/tmp/x509up_u' + str(os.getuid())):
+        shutil.copy('/tmp/x509up_u' + str(os.getuid()), env.workspace + '/x509up')
 
     # copy the execution script
     if not env.update:
@@ -1187,8 +1187,7 @@ if __name__ == '__main__':
     if newTask:
         print ' Creating task', env.taskName
 
-    env.x509up = 'x509up_u' + str(os.getuid())
-#    if not os.path.exists('/tmp/' + env.x509up):
+#    if not os.path.exists('/tmp/x509up_u' + str(os.getuid())):
 #        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
 #        message += ' Continue?'
 #        if not yes(message):
