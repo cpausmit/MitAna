@@ -119,8 +119,9 @@ then
     exit $?
   elif [ "$localopt" = "copy" ]
   then
-    # using cp with FUSE is faster than hdfs dfs -get
-    ( cp $cache $file.cp && mv $file.cp $file ) &
+    hdfspath=$(echo $cache | sed 's#/mnt/hadoop##')
+    ( itry=0; while [ $itry -lt 10 ] && [ ! -e $file ]; do hdfs dfs -fs hdfs://t3serv002.mit.edu:9000 -get $hdfspath $file; itry=$(($itry+1)); done ) &
+#    ( cp $cache ${file}.copy && mv ${file}.copy $file ) &
     exit 0
   fi
 fi

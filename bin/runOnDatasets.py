@@ -10,11 +10,13 @@ import shutil
 import socket
 
 # experimental full local caching
-FULL_LOCAL = True
+FULL_LOCAL = False
 
 #######################
 ## UTILITY FUNCTIONS ##
 #######################
+
+YES = False
 
 def yes(message, options = []):
     """
@@ -26,16 +28,27 @@ def yes(message, options = []):
     if len(options) == 0:
         prompt = ' [y/N]:'
         print prompt
+        if YES:
+            print 'y'
+            return True
+
         optvals = {'y': True, 'N': False}
     else:
         optvals = {}
         prompt = []
+        yesopt = None
         for opt, val in options:
             print (' (%s)' % opt[0]) + opt[1:]
             optvals[opt[0]] = val
             prompt.append(opt[0])
+            if val == 1:
+                yesopt = opt[0]
 
         prompt = ' [%s]:' % ('/'.join(prompt))
+        print prompt
+        if YES and yesopt is not None:
+            print yesopt
+            return True
 
     while True:
         response = sys.stdin.readline().strip()
@@ -235,19 +248,19 @@ class JobInfo(object):
         self.status = JobInfo.SubmitReady
 
     def statusStr(self):
-        if self.status == 0:
+        if self.status == JobInfo.Unexpanded:
             statusStr = 'Unexpanded (U)'
-        elif self.status == 1:
+        elif self.status == JobInfo.Idle:
             statusStr = 'Idle (I)'
-        elif self.status == 2:
+        elif self.status == JobInfo.Running:
             statusStr = 'Running (R)'
-        elif self.status == 3:
+        elif self.status == JobInfo.Removed:
             statusStr = 'Removed (X)'
-        elif self.status == 4:
+        elif self.status == JobInfo.Completed:
             statusStr = 'Completed (C)'
-        elif self.status == 5:
+        elif self.status == JobInfo.Held:
             statusStr = 'Held (H)'
-        elif self.status == 6:
+        elif self.status == JobInfo.SubmissionErr:
             statusStr = 'Submission_err (E)'
         else:
             statusStr = 'Unknown'
@@ -303,7 +316,7 @@ class CondorConfig(object):
             listWasGiven = False
     
         inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
-        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
+        for optionalInput in ['x509up', 'preExec.sh', 'postExec.sh']:
             if os.path.exists(env.workspace + '/' + optionalInput):
                 inputFiles.append(optionalInput)
 
@@ -437,8 +450,8 @@ def setupWorkspace(env):
         shutil.copyfile(env.postExecPath, env.workspace + '/postExec.sh')
 
     # copy the latest user proxy
-    if os.path.exists('/tmp/' + env.x509up):
-        shutil.copy('/tmp/' + env.x509up, env.workspace + '/' + env.x509up)
+    if os.path.exists('/tmp/x509up_u' + str(os.getuid())):
+        shutil.copy('/tmp/x509up_u' + str(os.getuid()), env.workspace + '/x509up')
 
     # copy the execution script
     if not env.update:
@@ -933,9 +946,40 @@ def killJob(jobInfo):
     jobInfo.jobId = ''
 
 
+def printSummary(datasets):
+    for datasetInfo in datasets:
+        summary = {'initial': 0, 'idle': 0, 'running': 0, 'complete': 0, 'error': 0}
+
+        for fileset in sorted(datasetInfo.jobs.keys()):
+            if fileset == 'pilot':
+                continue
+
+            jobInfo = datasetInfo.jobs[fileset]
+
+            if jobInfo.status == JobInfo.Unexpanded or jobInfo.status == JobInfo.Idle:
+                summary['idle'] += 1
+            elif jobInfo.status == JobInfo.Running or jobInfo.status == JobInfo.Completed:
+                summary['running'] += 1
+            elif jobInfo.status == JobInfo.Removed or jobInfo.status == JobInfo.Held or jobInfo.status == JobInfo.SubmissionErr:
+                summary['error'] += 1
+            elif jobInfo.status == JobInfo.OutputExists:
+                summary['complete'] += 1
+            else:
+                summary['initial'] += 1
+
+        status = 'DONE' if summary['complete'] == sum(summary.values()) else 'INCOMPLETE'
+        print ' [' + datasetInfo.dataset + ']', status
+        print '  Initial : %4d' % summary['initial']
+        print '  In queue: %4d' % summary['idle']
+        print '  Running : %4d' % summary['running']
+        print '  Complete: %4d' % summary['complete']
+        print '  Error   : %4d' % summary['error']
+        print '  Total   : %4d' % sum(summary.values())
+
+
 def submitJobs(env, datasets, condorConf):
     for datasetInfo in datasets:
-        # loop over filesets and do actual submission
+        # loop over filesets and do actual submission or print info
         for fileset in sorted(datasetInfo.jobs.keys()):
             jobInfo = datasetInfo.jobs[fileset]
 
@@ -1002,10 +1046,14 @@ if __name__ == '__main__':
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
     argParser.add_argument('--resubmit-held', '-H', action = 'store_true', dest = 'resubmitHeld', help = 'Resubmit held jobs automatically. By default held jobs count as running and are skipped.')
+    argParser.add_argument('--summary', '-S', action = 'store_true', dest = 'showSummary', help = 'Show the summary of the task. (Implies --no-submit)')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
+    argParser.add_argument('--yes', '-Y', action = 'store_true', dest = 'yes', help = 'Answer yes to all prompts.')
     
     args = argParser.parse_args()
     sys.argv = []
+
+    YES = args.yes
     
     if args.macro and not os.path.exists(args.macro):
         print ' Analysis configuration file ' + args.macro + ' does not exist'
@@ -1139,8 +1187,7 @@ if __name__ == '__main__':
     if newTask:
         print ' Creating task', env.taskName
 
-    env.x509up = 'x509up_u' + str(os.getuid())
-#    if not os.path.exists('/tmp/' + env.x509up):
+#    if not os.path.exists('/tmp/x509up_u' + str(os.getuid())):
 #        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
 #        message += ' Continue?'
 #        if not yes(message):
@@ -1279,6 +1326,10 @@ if __name__ == '__main__':
                 sys.exit(1)
     
     if args.kill:
+        sys.exit(0)
+
+    if args.showSummary:
+        printSummary(datasets)
         sys.exit(0)
 
     # if pilot is requested, update allFilesets with the pilot information
