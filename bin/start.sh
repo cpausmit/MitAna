@@ -54,6 +54,10 @@ python run.py $FILESET $NENTRIES
 if [ -e postExec.sh ]
 then
   source postExec.sh
+  if [ $? -ne 0 ]
+  then
+    rm ${FILESET}.root
+  fi
 fi
 
 if [ ! -e ${FILESET}.root ] || [ $(stat -c %s ${FILESET}.root) -eq 0 ]
