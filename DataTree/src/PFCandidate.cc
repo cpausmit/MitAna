@@ -2,23 +2,10 @@
 #include "MitAna/DataTree/interface/Muon.h"
 #include "MitAna/DataTree/interface/Electron.h"
 #include "MitAna/DataTree/interface/Photon.h"
-#include "MitAna/DataTree/interface/Conversion.h"
 
 ClassImp(mithep::PFCandidate)
 
 // Object reference accessors ins src file to avoid circular dependence of header files
-
-mithep::Conversion const*
-mithep::PFCandidate::Conv() const
-{
-  return fConversion.Obj();
-}
-
-Bool_t
-mithep::PFCandidate::HasConversion() const
-{
-  return fConversion.IsValid();
-}
 
 mithep::Muon const*
 mithep::PFCandidate::Mu() const
@@ -36,12 +23,6 @@ mithep::Photon const*
 mithep::PFCandidate::Pho() const
 {
   return fPhoton.Obj();
-}
-
-void
-mithep::PFCandidate::SetConversion(Conversion const* c)
-{
-  fConversion = c;
 }
 
 void
@@ -75,8 +56,6 @@ mithep::PFCandidate::Mark(UInt_t ib) const
     fGsfTrack.Obj()->Mark(ib);
   if (fMuon.IsValid())
     fMuon.Obj()->Mark(ib);
-  if (fConversion.IsValid())
-    fConversion.Obj()->Mark(ib);
   if (fSCluster.IsValid())
     fSCluster.Obj()->Mark(ib);
 }

@@ -48,9 +48,14 @@ namespace mithep {
       kDiscriminationByMediumCombinedIsolationDBSumPtCorr3Hits, // byMediumCombinedIsolationDeltaBetaCorr3Hits
       kDiscriminationByTightCombinedIsolationDBSumPtCorr3Hits, // byTightCombinedIsolationDeltaBetaCorr3Hits
       kDiscriminationByRawCombinedIsolationDBSumPtCorr3Hits, // byCombinedIsolationDeltaBetaCorrRaw3Hits
-      kMVA3IsolationChargedIsoPtSum, // chargedIsoPtSum
-      kMVA3IsolationNeutralIsoPtSum, // chargedIsoPtSum
-      kMVA3IsolationPUcorrPtSum, // puCorrPtSum
+      kDiscriminationByLoosePileupWeightedIsolation3Hits, // byLoosePileupWeightedIsolation3Hits
+      kDiscriminationByMediumPileupWeightedIsolation3Hits, // byMediumPileupWeightedIsolation3Hits
+      kDiscriminationByTightPileupWeightedIsolation3Hits, // byTightPileupWeightedIsolation3Hits
+      kDiscriminationByRawPileupWeightedIsolation3Hits, // byPileupWeightedIsolationRaw3Hits
+      kDiscriminationByPhotonPtSumOutsideSignalCone, // byPhotonPtSumOutsideSignalCone
+      kChargedIsoPtSum, // chargedIsoPtSum
+      kNeutralIsoPtSum, // neutralIsoPtSum
+      kPUcorrPtSum, // puCorrPtSum
       nDiscriminators
     };
 
@@ -73,8 +78,33 @@ namespace mithep {
       kMVA3MediumElectronRejection,
       kMVA3TightElectronRejection,
       kMVA3VTightElectronRejection,
+      kMVA3IsolationChargedIsoPtSum, // chargedIsoPtSum (<= 7_4_6 ?)
+      kMVA3IsolationNeutralIsoPtSum, // chargedIsoPtSum
+      kMVA3IsolationPUcorrPtSum, // puCorrPtSum
       nAllDiscriminators,
       nLegacyDiscriminators = nAllDiscriminators - nDiscriminators
+    };
+
+    // Taken from DataFormats/TauReco/interface/PFTaus.h
+    enum HadronicDecayMode {
+      kNull = -1,
+      kOneProng0PiZero,
+      kOneProng1PiZero,
+      kOneProng2PiZero,
+      kOneProng3PiZero,
+      kOneProngNPiZero,
+      kTwoProng0PiZero,
+      kTwoProng1PiZero,
+      kTwoProng2PiZero,
+      kTwoProng3PiZero,
+      kTwoProngNPiZero,
+      kThreeProng0PiZero,
+      kThreeProng1PiZero,
+      kThreeProng2PiZero,
+      kThreeProng3PiZero,
+      kThreeProngNPiZero,
+      kRareDecayMode,
+      nHadronicDecayModes = kRareDecayMode + 2 // accounting the fact that the enum starts at -1
     };
 
     PFTau();
@@ -92,9 +122,12 @@ namespace mithep {
     Double_t ElectronPreIDOutput() const { return fElectronPreIDOutput; }
     Double_t CaloCompatibility() const { return fCaloCompatibility; }
     Double_t SegmentCompatibility() const { return fSegmentCompatibility; }
+    Double_t SignalConeSize() const { return fSignalConeSize; }
+    Double_t BendCorrMass() const { return fBendCorrMass; }
     Bool_t ElectronPreIDDecision() const { return fElectronPreIDDecision; }
     Bool_t MuonDecision() const { return fMuonDecision; }
     Double_t PFTauDiscriminator(UInt_t) const;
+    HadronicDecayMode DecayMode() const { return fHadronicDecayMode; }
     PFCandidate const* LeadPFCand() const { return fLeadPFCand.Obj(); }
     PFCandidate const* LeadChargedHadronPFCand() const { return fLeadChargedHadPFCand.Obj(); }
     PFCandidate const* LeadNeutralHadronPFCand() const { return fLeadNeutralPFCand.Obj(); }
@@ -129,6 +162,8 @@ namespace mithep {
     void SetElectronPreIDOutput(Double_t x) { fElectronPreIDOutput = x; }
     void SetCaloCompatibility(Double_t x) { fCaloCompatibility = x; }
     void SetSegmentCompatibility(Double_t x) { fSegmentCompatibility = x; }
+    void SetSignalConeSize(Double_t x) { fSignalConeSize = x; }
+    void SetBendCorrMass(Double_t x) { fBendCorrMass = x; }
     void SetElectronPreIDDecision(Bool_t b) { fElectronPreIDDecision = b; }
     void SetMuonDecision(Bool_t b) { fMuonDecision = b; }
     void SetPFTauDiscriminator(Double_t, UInt_t);
@@ -141,7 +176,8 @@ namespace mithep {
     void AddSignalPFChargedHadrCand(PFCandidate const* p) { fSignalPFChargedHadrCands.Add(p); }
     void AddSignalPFNeutrHadrCand(PFCandidate const* p) { fSignalPFNeutrHadrCands.Add(p); }
     void AddSignalPFGammaCand(PFCandidate const* p) { fSignalPFGammaCands.Add(p); }
-    void AddIsoPFCand(PFCandidate const* p) { fIsoPFCands.Add(p); }
+    void AddIsoPFCand(PFCandidate const* p) { fIsoPFCands.Add(p); }\
+    void SetDecayMode(HadronicDecayMode mode) { fHadronicDecayMode = mode; }
 
     // Some structural tools
     void Mark(UInt_t i=1) const override;
@@ -242,10 +278,14 @@ namespace mithep {
     Double32_t fElectronPreIDOutput; //[0,0,14]pfel pre id bdt output to be an el
     Double32_t fCaloCompatibility; //[0,0,14]calo comp. for this tau to be a muon
     Double32_t fSegmentCompatibility; //[0,0,14]segment comp. for this tau to be a muon
+    Double32_t fSignalConeSize; // dynamic strip reconstruction has variable cone size
+    Double32_t fBendCorrMass; // mass correction due to the use of dynamic strip
     Bool_t fElectronPreIDDecision; //pf electron pre id decision
     Bool_t fMuonDecision; //pf muon id decision
     Double32_t fPFTauDiscriminator[nDiscriminators];
     Double_t fPFTauLegacyDiscriminator[nLegacyDiscriminators]; //! only for reading old data
+
+    HadronicDecayMode fHadronicDecayMode; // decay mode
 
     Ref<PFCandidate> fLeadPFCand; //leading sig pf cand (charged or neutral)
     Ref<PFCandidate> fLeadChargedHadPFCand; //leading charged hadron signal pf cand
@@ -258,7 +298,7 @@ namespace mithep {
     RefArray<PFCandidate> fSignalPFGammaCands; //signal pf gamma candidates
     RefArray<PFCandidate> fIsoPFCands; //selected pf candidates in isolation annulus
 
-    ClassDef(PFTau, 8) // PFTau class
+    ClassDef(PFTau, 9) // PFTau class
   };
 }
 
