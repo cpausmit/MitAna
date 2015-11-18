@@ -13,7 +13,7 @@
 #
 # PACKAGES TO INSTALL
 #PACKAGES="fastjet fastjet-contrib qjets"
-PACKAGES="qjets"
+PACKAGES="qjets pwhg_cphto_reweight"
 
 # SPECIFIC PARAMETERS
 FJ_VERSION="3.1.0-odfocd"
@@ -154,6 +154,32 @@ install-qjets() {
   scram setup qjets
 }
 
+install-pwhg_cphto_reweight() {
+  # add local fastjet external to scarm config
+
+  local BASE=$(find-external pwhg_cphto_reweight)
+  local TARGET=$CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/selected/pwhg_cphto_reweight.xml
+
+  echo ""
+  echo " INFO - using pwhg_cphto_reweight at: $BASE"
+  echo ""
+
+  mv $TARGET ${TARGET}-last.$(date +%s) 2> /dev/null
+
+  echo \
+'  <tool name="pwhg_cphto_reweight" version="1">
+    <lib name="cphto"/>
+    <client>
+      <environment name="LIBDIR" default="'$BASE'"/>
+    </client>
+  </tool>
+' > $TARGET
+
+  # commit the scram config changes
+  cd $CMSSW_BASE/src
+  scram setup pwhg_cphto_reweight
+}
+
 ### Loop over PACKAGES
 
 for PACKAGE in $PACKAGES
@@ -167,6 +193,9 @@ do
       ;;
     qjets)
       install-qjets $FJ_VERSION
+      ;;
+    pwhg_cphto_reweight)
+      install-pwhg_cphto_reweight
       ;;
     *)
       echo "Unknown external $PACKAGE"
