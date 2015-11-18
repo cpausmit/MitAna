@@ -21,29 +21,14 @@ namespace mithep {
   class PFTau : public Tau {
   public:
     enum Discriminator {
-      kDiscriminationByLooseElectronRejection, // againstElectronLoose
-      kDiscriminationByMediumElectronRejection, // againstElectronMedium
-      kDiscriminationByTightElectronRejection, // againstElectronTight
       kDiscriminationByMVA5VLooseElectronRejection, // againstElectronVLooseMVA5
       kDiscriminationByMVA5LooseElectronRejection, // againstElectronLooseMVA5
       kDiscriminationByMVA5MediumElectronRejection, // againstElectronMediumMVA5
       kDiscriminationByMVA5TightElectronRejection, // againstElectronTightMVA5
-      kDiscriminationByLooseMuonRejection, // againstMuonLoose
-      kDiscriminationByMediumMuonRejection, // againstMuonMedium
-      kDiscriminationByTightMuonRejection, // againstMuonTight
-      kDiscriminationByLooseMuonRejection2, // againstMuonLoose2
-      kDiscriminationByMediumMuonRejection2, // againstMuonMedium2
-      kDiscriminationByTightMuonRejection2, // againstMuonTight2
       kDiscriminationByLooseMuonRejection3, // againstMuonLoose3
       kDiscriminationByTightMuonRejection3, // againstMuonTight3
       kDiscriminationByDecayModeFinding, // decayModeFinding
       kDiscriminationByDecayModeFindingNewDMs, // decayModeFindingNewDMs
-      kDiscriminationByDecayModeFindingOldDMs, // decayModeFindingOldDMs
-      kDiscriminationByVLooseCombinedIsolationDBSumPtCorr, // byVLooseCombinedIsolationDeltaBetaCorr
-      kDiscriminationByLooseCombinedIsolationDBSumPtCorr, // byLooseCombinedIsolationDeltaBetaCorr
-      kDiscriminationByMediumCombinedIsolationDBSumPtCorr, // byMediumCombinedIsolationDeltaBetaCorr
-      kDiscriminationByTightCombinedIsolationDBSumPtCorr, // byTightCombinedIsolationDeltaBetaCorr
-      kDiscriminationByRawCombinedIsolationDBSumPtCorr, // byCombinedIsolationDeltaBetaCorrRaw
       kDiscriminationByLooseCombinedIsolationDBSumPtCorr3Hits, // byLooseCombinedIsolationDeltaBetaCorr3Hits
       kDiscriminationByMediumCombinedIsolationDBSumPtCorr3Hits, // byMediumCombinedIsolationDeltaBetaCorr3Hits
       kDiscriminationByTightCombinedIsolationDBSumPtCorr3Hits, // byTightCombinedIsolationDeltaBetaCorr3Hits
@@ -81,6 +66,21 @@ namespace mithep {
       kMVA3IsolationChargedIsoPtSum, // chargedIsoPtSum (<= 7_4_6 ?)
       kMVA3IsolationNeutralIsoPtSum, // chargedIsoPtSum
       kMVA3IsolationPUcorrPtSum, // puCorrPtSum
+      kDiscriminationByLooseElectronRejection, // againstElectronLoose
+      kDiscriminationByMediumElectronRejection, // againstElectronMedium
+      kDiscriminationByTightElectronRejection, // againstElectronTight
+      kDiscriminationByLooseMuonRejection, // againstMuonLoose
+      kDiscriminationByMediumMuonRejection, // againstMuonMedium
+      kDiscriminationByTightMuonRejection, // againstMuonTight
+      kDiscriminationByLooseMuonRejection2, // againstMuonLoose2
+      kDiscriminationByMediumMuonRejection2, // againstMuonMedium2
+      kDiscriminationByTightMuonRejection2, // againstMuonTight2
+      kDiscriminationByDecayModeFindingOldDMs, // decayModeFindingOldDMs
+      kDiscriminationByVLooseCombinedIsolationDBSumPtCorr, // byVLooseCombinedIsolationDeltaBetaCorr
+      kDiscriminationByLooseCombinedIsolationDBSumPtCorr, // byLooseCombinedIsolationDeltaBetaCorr
+      kDiscriminationByMediumCombinedIsolationDBSumPtCorr, // byMediumCombinedIsolationDeltaBetaCorr
+      kDiscriminationByTightCombinedIsolationDBSumPtCorr, // byTightCombinedIsolationDeltaBetaCorr
+      kDiscriminationByRawCombinedIsolationDBSumPtCorr, // byCombinedIsolationDeltaBetaCorrRaw
       nAllDiscriminators,
       nLegacyDiscriminators = nAllDiscriminators - nDiscriminators
     };
