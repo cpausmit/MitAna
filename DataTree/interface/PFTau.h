@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------------------
 // PFTau
 //
-// This class holds information about reconst* ucted tau based on PFCandidates.
+// This class holds information about reconstructed tau based on PFCandidates.
 //
 // Authors: J.Bendavid, C.Paus, Y.Iiyama
 //--------------------------------------------------------------------------------------------------
