@@ -8,7 +8,7 @@
 // Using PublisherPerEvent() one can chose whether the array will be published
 // globally (ie only in SlaveBegin) or on per-event basis.
 //
-// Authors: C.Loizides
+// Authors: C.Loizides, Y.Iiyama
 //--------------------------------------------------------------------------------------------------
 
 #ifndef MITANA_PHYSICSMOD_FILTERMOD_H
@@ -46,12 +46,16 @@ namespace mithep
       void                     SetOutputName(const char *n)    { SetPublicName(n);       }
       void                     SetPtMax(Double_t pt)           { fPtMax = pt;            }
       void                     SetPtMin(Double_t pt)           { fPtMin = pt;            }
+      void                     AddParticleId(Int_t, Bool_t charged = kFALSE);
+      void                     SetVetoParticleId(Bool_t v) { fVetoParticleId = v; }
       void                     SetPublicName(const char *n)    { fPublicName=n;          }
 
     protected:
-      void                     Process();
-      void                     SlaveBegin();
-      void                     SlaveTerminate();
+      void                     Process() override;
+      void                     SlaveBegin() override;
+      void                     SlaveTerminate() override;
+
+      Bool_t                   IsAllowedParticleId(TIn const&) const { return kTRUE; }
 
       TString                  fColName;     //name of collection
       TString                  fPublicName;  //name of collection
@@ -60,6 +64,8 @@ namespace mithep
       Double_t                 fPtMax;       //maximum pt
       Double_t                 fEtaMin;      //minimum eta
       Double_t                 fEtaMax;      //maximum eta 
+      std::vector<Int_t>       fParticleIds;
+      Bool_t                   fVetoParticleId;
       Int_t                    fEntriesMax;  //maximum number of entries
       const Collection<TIn>   *fColIn;       //!pointer to collection (in) 
       ObjArray<TOut>          *fColOut;      //!pointer to collection (out)
@@ -80,9 +86,11 @@ mithep::FilterMod<TIn, TOut>::FilterMod(const char *name, const char *title) :
   fPublicName(""),
   fPubPerEvent(kTRUE),
   fPtMin(1),
-  fPtMax(1000),
+  fPtMax(14000),
   fEtaMin(-10),
   fEtaMax(10),
+  fParticleIds(),
+  fVetoParticleId(kFALSE),
   fEntriesMax(250),
   fColIn(0),
   fColOut(0),
@@ -116,6 +124,10 @@ void mithep::FilterMod<TIn, TOut>::Process()
 
   for(UInt_t i=0;i<ents;++i) {
      const TIn *p = fColIn->At(i);
+
+     if (!IsAllowedParticleId(*p))
+       continue;
+
      Double_t pt = p->Pt();
      if (pt<fPtMin) 
        continue;
@@ -180,4 +192,26 @@ void mithep::FilterMod<TIn, TOut>::SlaveTerminate()
     delete fColOut;
   }
 }
+
+template<class TIn, class TOut>
+void
+mithep::FilterMod<TIn, TOut>::AddParticleId(Int_t id, Bool_t charged/* = kFALSE*/)
+{
+  fParticleIds.push_back(id);
+  if (!charged)
+    fParticleIds.push_back(-id);
+
+  std::sort(fParticleIds.begin(), fParticleIds.end());
+}
+
+namespace mithep {
+  class PFCandidate;
+  class MCParticle;
+
+  template<>
+  Bool_t FilterMod<mithep::PFCandidate, mithep::PFCandidate>::IsAllowedParticleId(mithep::PFCandidate const&) const;
+  template<>
+  Bool_t FilterMod<mithep::MCParticle, mithep::MCParticle>::IsAllowedParticleId(mithep::MCParticle const&) const;
+}
+
 #endif

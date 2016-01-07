@@ -46,6 +46,7 @@ namespace mithep {
   typedef FilterMod<GenJet> GenJetFilterMod;
   typedef FilterMod<Jet> JetFilterMod;
   typedef FilterMod<MCParticle> MCParticleFilterMod;
+  typedef FilterMod<PFCandidate> PFCandidateFilterMod;
   typedef FilterMod<Met> MetFilterMod;
   typedef FilterMod<Muon> MuonFilterMod;
   typedef FilterMod<PFJet> PFJetFilterMod;

@@ -161,10 +161,11 @@ Bool_t Cacher::SubmitCacheRequest(const char* file, Bool_t initial) const
                +TString(file);
 
   if (fFullLocal) {
-    if (initial)
-      cmd += " -L"; // make a symbolic link under ./store/...
-    else
-      cmd += " -C"; // copy the file over to ./store/...
+    // if (initial)
+    //   cmd += " -L"; // make a symbolic link under ./store/...
+    // else
+    //   cmd += " -C"; // copy the file over to ./store/...
+    cmd += " -C";
   }
 
   // Execute the system command

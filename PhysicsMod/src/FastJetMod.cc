@@ -1,217 +1,286 @@
-#include "MitAna/DataTree/interface/Names.h"
 #include "MitAna/PhysicsMod/interface/FastJetMod.h"
+#include "MitAna/DataTree/interface/ParticleCol.h"
 #include "MitAna/DataTree/interface/PFJetCol.h"
+#include "MitAna/DataTree/interface/GenJetCol.h"
+#include "MitAna/DataTree/interface/PFCandidateCol.h"
 
-#include "MitCommon/DataFormats/interface/Vect4M.h"
-#include "MitCommon/DataFormats/interface/Vect3.h"
-#include "MitCommon/DataFormats/interface/Types.h"
-#include "MitCommon/MathTools/interface/MathUtils.h"
+#include "fastjet/PseudoJet.hh"
+#include "fastjet/JetDefinition.hh"
+#include "fastjet/GhostedAreaSpec.hh"
+#include "fastjet/AreaDefinition.hh"
+#include "fastjet/ClusterSequence.hh"
+#include "fastjet/ClusterSequenceArea.hh"
 
 using namespace mithep;
 
 ClassImp(mithep::FastJetMod)
 
 //--------------------------------------------------------------------------------------------------
-FastJetMod::FastJetMod(const char *name, const char *title) :
-  BaseMod (name,title),
-  fGetMatchBtag (kFALSE),
-  fUseBambuJets (kFALSE),
-  fBtaggedJetsName (Names::gkPFJetBrn),
-  fBtaggedJets (0),
-  fJetsName (Names::gkPFJetBrn),
-  fJets (0),
-  fPfCandidatesName (Names::gkPFCandidatesBrn),
-  fPfCandidates (0),
-  fOutputJetsName ("CA8FJCHS"),
-  fOutputJets (0),
-  fJetConeSize (0.5),
-  fFatJetConeSize (0.8),
-  fJetDef (0),
-  fActiveArea (0),
-  fAreaDefinition (0),
-  fParticleMinPt (0.001),
-  fJetMinPt (20)
+void
+FastJetMod::Process()
 {
-  // Constructor.
-}
+  fOutputJets->Reset();
 
-FastJetMod::~FastJetMod()
-{
-  // Destructor  
-  delete fOutputJets;
-  delete fJetDef;
-  
-  delete fActiveArea;
-  delete fAreaDefinition;  
-}
-
-//--------------------------------------------------------------------------------------------------
-void FastJetMod::Process()
-{
-  
-  // Get input collections
-  if (fGetMatchBtag) {
-    fBtaggedJets = GetObject<PFJetCol>(fBtaggedJetsName);
-    if (!fBtaggedJets) {
-      SendError(kAbortModule,"Process","Pointer to input b-tagged jet collection %s null.",fBtaggedJetsName.Data());
-      return;
-    }
-  }
-  if (fUseBambuJets) {
-    fJets = GetObject<PFJetCol>(fJetsName);
-    if (!fJets) {
-      SendError(kAbortModule,"Process","Pointer to input jet collection %s null.",fJetsName.Data());
-      return;
-    }
-  }
-  fPfCandidates = GetObject<PFCandidateCol>(fPfCandidatesName);
-  if (!fPfCandidates) {
-    SendError(kAbortModule,"Process","Pointer to input PF Cands collection %s null.",fPfCandidatesName.Data());
+  auto* input = GetObject<ParticleCol>(fInputName);
+  if (!input) {
+    SendError(kAbortModule, "Process", "Pointer to input collection %s null.", fInputName.Data());
     return;
   }
 
-  // Create output collections
-  fOutputJets = new JetOArr;
-  fOutputJets->SetName(fOutputJetsName);
-    
   std::vector<fastjet::PseudoJet> fjParts;
+  fjParts.reserve(input->GetEntries());
   // Push all particle flow candidates of the input PFjet into fastjet particle collection
-  for (UInt_t j=0; j<fPfCandidates->GetEntries(); ++j) {
-    const PFCandidate *pfCand = fPfCandidates->At(j);
-    // Exclude very soft (unphysical) particles
-    if (pfCand->Pt() < fParticleMinPt)
+  for (UInt_t iP = 0; iP != input->GetEntries(); ++iP) {
+    auto& part(*input->At(iP));
+
+    bool typeOK = false;
+    switch (fOutputType) {
+    case kPFJet:
+      if (part.ObjType() == kPFCandidate)
+        typeOK = true;
+      break;
+    case kGenJet:
+      if (part.ObjType() == kMCParticle) {
+        typeOK = true;
+        if (static_cast<MCParticle const&>(part).Status() != 1)
+          continue;
+      }
+      break;
+    default:
+      break;
+    }
+    if (!typeOK) {
+      Warning("Process", "Element %d of input collection %s has type %d that is incompatible with the output jet collection type %d.", iP, fInputName.Data(), part.ObjType(), fOutputType);
       continue;
-    fjParts.push_back(fastjet::PseudoJet(pfCand->Px(),pfCand->Py(),pfCand->Pz(),pfCand->E()));
-    fjParts.back().set_user_index(j);
+    }
+
+    // Exclude very soft (unphysical) particles
+    if (part.Pt() < fParticleMinPt)
+      continue;
+
+    fjParts.emplace_back(part.Px(), part.Py(), part.Pz(), part.E());
+    fjParts.back().set_user_index(iP);
   }	
-  
+
   // Setup the clusters for fastjet
-  fastjet::ClusterSequenceArea *fjClustering =
-    new fastjet::ClusterSequenceArea(fjParts,*fJetDef,*fAreaDefinition);
+  fastjet::ClusterSequence* fjClustering = 0;
+  if (fAreaDefinition)
+    fjClustering = new fastjet::ClusterSequenceArea(fjParts, *fJetDef, *fAreaDefinition);
+  else
+    fjClustering = new fastjet::ClusterSequence(fjParts, *fJetDef);
 
   // ---- Fastjet is ready ----
 
   // Produce a new set of jets based on the fastjet particle collection and the defined clustering
-  // Cut off fat jets with pt < fJetMinPt GeV
-  std::vector<fastjet::PseudoJet> fjOutJets = sorted_by_pt(fjClustering->inclusive_jets(fJetMinPt)); 
+  // Cut off jets with pt < fJetMinPt GeV
+  std::vector<fastjet::PseudoJet> fjOutJets(sorted_by_pt(fjClustering->inclusive_jets(fJetMinPt)));
 
   // Now loop over PFJets and fill the output collection
-  for (UInt_t j=0; j<fjOutJets.size(); ++j) {
-    auto * outJet = new PFJet; 
-    // Inizialize PFJet with 4-vector
-    outJet->SetRawPtEtaPhiM(fjOutJets[j].pt(),
-                            fjOutJets[j].eta(),
-                            fjOutJets[j].phi(),
-                            fjOutJets[j].m());
-    // Setup PFJet area
-    outJet->SetJetArea(fjOutJets[j].area());
-    
-    // Setup PFJet particle flow related quantities
-    FillPFJet(outJet, fjOutJets[j]);
-    fOutputJets->Add(outJet);
-                              
-  } //end loop on fastjet jets
-  
-  // Now sort the output collections
-  fOutputJets->Sort();
-      
-  // add to event for other modules to use
-  AddObjThisEvt(fOutputJets);  
-  
+  for (auto& fjet : fjOutJets) {
+    switch (fOutputType) {
+    case kPFJet:
+      {
+        auto* outJet = static_cast<PFJetArr*>(fOutputJets)->Allocate();
+        new (outJet) PFJet;
+        FillPFJet(fjet, *outJet, *input);
+      }
+      break;
+    case kGenJet:
+      {
+        auto* outJet = static_cast<GenJetArr*>(fOutputJets)->Allocate();
+        new (outJet) GenJet;
+        FillGenJet(fjet, *outJet, *input);
+      }
+      break;
+    default:
+      continue;
+    }
+  }
+
   // some memory cleanup
-  if (fjOutJets.size() > 0) 
+  if (fjOutJets.size() > 0)
     fjClustering->delete_self_when_unused();
+
   delete fjClustering;
-  
-  return;
 }
 
 //--------------------------------------------------------------------------------------------------
-void FastJetMod::SlaveBegin()
+void
+FastJetMod::SlaveBegin()
 {
+  switch (fOutputType) {
+  case kPFJet:
+    fOutputJets = new PFJetArr;
+  case kGenJet:
+    fOutputJets = new GenJetArr;
+    break;
+  default:
+    SendError(kAbortModule, "SlaveBegin", "Output collection type not supported.");
+    return;
+  }
+  fOutputJets->SetName(fOutputJetsName);
+
   // Jet definition constructor
-  if (fJetAlgorithm == kKT)
-    fJetDef = new fastjet::JetDefinition(fastjet::kt_algorithm, fJetConeSize);
-  else if (fJetAlgorithm == kAK)
-    fJetDef = new fastjet::JetDefinition(fastjet::antikt_algorithm, fJetConeSize);
-  else
+  switch (fJetAlgorithm) {
+  case kCA:
     fJetDef = new fastjet::JetDefinition(fastjet::cambridge_algorithm, fJetConeSize);
+    break;
+  case kKT:
+    fJetDef = new fastjet::JetDefinition(fastjet::kt_algorithm, fJetConeSize);
+    break;
+  case kAK:
+    fJetDef = new fastjet::JetDefinition(fastjet::antikt_algorithm, fJetConeSize);
+    break;
+  };
 
-  // Initialize area caculation (done with ghost particles)
-  int activeAreaRepeats = 1;
-  double ghostArea = 0.01;
-  double ghostEtaMax = 7.0;
-  fActiveArea = new fastjet::GhostedAreaSpec(ghostEtaMax,activeAreaRepeats,ghostArea);
-  fAreaDefinition = new fastjet::AreaDefinition(fastjet::active_area_explicit_ghosts,*fActiveArea);  
-    
-  return;
+  // // Initialize area caculation (done with ghost particles)
+  if (fActiveAreaRepeats > 0) {
+    fActiveArea = new fastjet::GhostedAreaSpec(fGhostEtaMax, fActiveAreaRepeats, fGhostArea);
+    fAreaDefinition = new fastjet::AreaDefinition(fastjet::active_area_explicit_ghosts, *fActiveArea);
+  }
+
+  PublishObj(fOutputJets);
 }
 
 //--------------------------------------------------------------------------------------------------
-void FastJetMod::SlaveTerminate()
+void
+FastJetMod::SlaveTerminate()
 {
+  RetractObj(fOutputJets->GetName());
+
+  delete fOutputJets;
+  fOutputJets = 0;
+
+  delete fJetDef;
+  delete fActiveArea;
+  delete fAreaDefinition;
+
+  fJetDef = 0;
+  fActiveArea = 0;
+  fAreaDefinition = 0;
 }
 
 //--------------------------------------------------------------------------------------------------
-void FastJetMod::FillPFJet (PFJet *pPFJet, fastjet::PseudoJet &fjJet)
+void
+FastJetMod::FillPFJet(fastjet::PseudoJet const& inJet, PFJet& outJet, ParticleCol const& outConsts)
 {
+  outJet.SetRawPtEtaPhiM(inJet.pt(), inJet.eta(), inJet.phi(), inJet.m());
+
+  outJet.SetJetArea(inJet.area());
+
   // Prepare the jet observables related to PFConstituents
-  float chargedHadronEnergy = 0.;
-  float neutralHadronEnergy = 0.;
-  float chargedEmEnergy     = 0.;
-  float chargedMuEnergy     = 0.;
-  float neutralEmEnergy     = 0.;
+  double chargedHadronEnergy = 0.;
+  double neutralHadronEnergy = 0.;
+  double chargedEmEnergy     = 0.;
+  double chargedMuEnergy     = 0.;
+  double neutralEmEnergy     = 0.;
   int chargedMultiplicity   = 0;
   int neutralMultiplicity   = 0;
   int muonMultiplicity      = 0;
-  
+
   // Loop on input jet constituents vector and discard very soft particles (ghosts)
-  for (unsigned int iPart = 0; iPart < fjJet.constituents().size(); iPart++) {
-    if (fjJet.constituents()[iPart].perp() < fParticleMinPt)
+  for (auto& part : inJet.constituents()) {
+    if (part.perp() < fParticleMinPt)
       continue;
-    int thisPFCandIndex = fjJet.constituents()[iPart].user_index();
+
     // First of all fix the linking between PFJets and PFCandidates
-    const PFCandidate *pfCand = fPfCandidates->At(thisPFCandIndex);
+    PFCandidate const* pfCand = static_cast<PFCandidate const*>(outConsts.At(part.user_index()));
     // Check that the pfCandidate exists
     if (!pfCand) {
-      printf(" FastJetMod::FillPFJet - WARNING - input PFCand pointer is null, skipping this candidate.");
+      Error("FillPFJet", "Input PFCand pointer is null, skipping this candidate.");
       continue;
-    }    
-    
-    pPFJet->AddPFCand(pfCand);      
-    
+    }
+
+    outJet.AddPFCand(pfCand);
+
     // Now take care of energy fraction and multiplicities
-    if (pfCand->PFType() == PFCandidate::eHadron) {
+    switch (pfCand->PFType()) {
+    case PFCandidate::eHadron:
       chargedHadronEnergy += pfCand->E();
-      chargedMultiplicity ++;
-    }
-    if (pfCand->PFType() == PFCandidate::eNeutralHadron) {
+      ++chargedMultiplicity;
+      break;
+    case PFCandidate::eNeutralHadron:
       neutralHadronEnergy += pfCand->E();
-      neutralMultiplicity ++;
-    }
-    if (pfCand->PFType() == PFCandidate::eGamma) {
+      ++neutralMultiplicity;
+      break;
+    case PFCandidate::eGamma:
       neutralEmEnergy += pfCand->E();
-      neutralMultiplicity ++;
-    }
-    if (pfCand->PFType() == PFCandidate::eElectron) {
+      ++neutralMultiplicity;
+      break;
+    case PFCandidate::eElectron:
       chargedEmEnergy += pfCand->E();
-      chargedMultiplicity ++;
-    }
-    if (pfCand->PFType() == PFCandidate::eMuon) {
+      ++chargedMultiplicity;
+      break;
+    case PFCandidate::eMuon:
       chargedMuEnergy += pfCand->E();
-      chargedMultiplicity ++;
-    }    
+      ++chargedMultiplicity;
+      break;
+    default:
+      break;
+    }
   }// end loop on jet constituents
-  
+
   // Fill in the energy fractions and multiplicieties
-  pPFJet->SetChargedHadronEnergy(chargedHadronEnergy);
-  pPFJet->SetNeutralHadronEnergy(neutralHadronEnergy);
-  pPFJet->SetChargedEmEnergy(chargedEmEnergy);
-  pPFJet->SetChargedMuEnergy(chargedMuEnergy);
-  pPFJet->SetNeutralEmEnergy(neutralEmEnergy);
-  pPFJet->SetChargedMultiplicity(chargedMultiplicity);
-  pPFJet->SetNeutralMultiplicity(neutralMultiplicity);
-  pPFJet->SetMuonMultiplicity(muonMultiplicity);   
-  
-  return;
+  outJet.SetChargedHadronEnergy(chargedHadronEnergy);
+  outJet.SetNeutralHadronEnergy(neutralHadronEnergy);
+  outJet.SetChargedEmEnergy(chargedEmEnergy);
+  outJet.SetChargedMuEnergy(chargedMuEnergy);
+  outJet.SetNeutralEmEnergy(neutralEmEnergy);
+  outJet.SetChargedMultiplicity(chargedMultiplicity);
+  outJet.SetNeutralMultiplicity(neutralMultiplicity);
+  outJet.SetMuonMultiplicity(muonMultiplicity);
+}
+
+void
+FastJetMod::FillGenJet(fastjet::PseudoJet const& inJet, GenJet& outJet, ParticleCol const& outConsts)
+{
+  outJet.SetPtEtaPhiM(inJet.pt(), inJet.eta(), inJet.phi(), inJet.m());
+
+  double hadEnergy = 0.;
+  double emEnergy = 0.;
+  double invEnergy = 0.;
+  double auxEnergy = 0.;
+
+  for (auto& part : inJet.constituents()) {
+    if (part.perp() < fParticleMinPt)
+      continue;
+
+    // First of all fix the linking between PFJets and PFCandidates
+    MCParticle const* genCand = static_cast<MCParticle const*>(outConsts.At(part.user_index()));
+    // Check that the pfCandidate exists
+    if (!genCand) {
+      Error("FillGenJet", "Input MCParticle pointer is null, skipping this candidate.");
+      continue;
+    }
+
+    // the following definitions of "EM", "Hadron", and "Invisible" taken from
+    // RecoJets/JetProducers/src/JetSpecific.cc
+    switch (std::abs(genCand->PdgId())) {
+    case 11: // e
+    case 22: // gamma
+      emEnergy += genCand->E();
+      break;
+    case 211: // pi
+    case 321: // K
+    case 130: // KL
+    case 2212: // p
+    case 2112: // n
+      hadEnergy += genCand->E();
+      break;
+    case 13: // muon
+    case 12: // nu_e
+    case 14: // nu_mu
+    case 16: // nu_tau
+      invEnergy += genCand->E();
+      break;
+    default:
+      auxEnergy += genCand->E();
+      break;
+    }
+  }
+
+  outJet.SetHadEnergy(hadEnergy);
+  outJet.SetEmEnergy(emEnergy);
+  outJet.SetInvisibleEnergy(invEnergy);
+  outJet.SetAuxiliaryEnergy(auxEnergy);
 }

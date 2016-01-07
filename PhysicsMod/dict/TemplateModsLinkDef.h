@@ -20,6 +20,7 @@
 #pragma link C++ class mithep::FilterMod<mithep::GenJet>+;
 #pragma link C++ class mithep::FilterMod<mithep::Jet>+;
 #pragma link C++ class mithep::FilterMod<mithep::MCParticle>+;
+#pragma link C++ class mithep::FilterMod<mithep::PFCandidate>+;
 #pragma link C++ class mithep::FilterMod<mithep::Met>+;
 #pragma link C++ class mithep::FilterMod<mithep::Muon>+;
 #pragma link C++ class mithep::FilterMod<mithep::PFJet>+;
@@ -39,6 +40,7 @@
 #pragma link C++ typedef mithep::GenJetFilterMod;
 #pragma link C++ typedef mithep::JetFilterMod;
 #pragma link C++ typedef mithep::MCParticleFilterMod;
+#pragma link C++ typedef mithep::PFCandidateFilterMod;
 #pragma link C++ typedef mithep::MetFilterMod;
 #pragma link C++ typedef mithep::MuonFilterMod;
 #pragma link C++ typedef mithep::PFJetFilterMod;

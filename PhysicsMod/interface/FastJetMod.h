@@ -1,98 +1,90 @@
 //--------------------------------------------------------------------------------------------------
-// FastJetMod 
+// FastJetMod
 //
 // This module process a collection of input PFCandidates, cluster them
 // using fastjet and then spits out Bambu PFJets collection(s)
 //
-// Authors: L.DiMatteo
+// Authors: L.DiMatteo, Y.Iiyama
 //--------------------------------------------------------------------------------------------------
 
 #ifndef MITANA_MODS_FastJetMod_H
 #define MITANA_MODS_FastJetMod_H
 
-#include "fastjet/PseudoJet.hh"
-#include "fastjet/JetDefinition.hh"
-#include "fastjet/GhostedAreaSpec.hh"
-#include "fastjet/AreaDefinition.hh"
-#include "fastjet/ClusterSequenceArea.hh"
-
 #include "MitAna/TreeMod/interface/BaseMod.h"
-#include "MitAna/DataTree/interface/JetCol.h"
-#include "MitAna/DataTree/interface/PFJetCol.h"
-#include "MitAna/DataTree/interface/PFCandidateCol.h"
+#include "MitAna/DataTree/interface/ParticleFwd.h"
+#include "MitAna/DataTree/interface/PFJetFwd.h"
+#include "MitAna/DataTree/interface/GenJetFwd.h"
+#include "MitAna/DataTree/interface/Names.h"
+
+namespace fastjet {
+  class PseudoJet;
+  class JetDefinition;
+  class GhostedAreaSpec;
+  class AreaDefinition;
+}
 
 namespace mithep
 {
-  class FastJetMod : public BaseMod
-  {
-    public:
-      FastJetMod(const char *name = "FastJetMod",
-                   const char *title = "FastJet module");
-      ~FastJetMod();
+  class FastJetMod : public BaseMod {
+  public:
+    FastJetMod(const char* name = "FastJetMod", const char* title = "FastJet module") : BaseMod(name, title) {}
+    ~FastJetMod() {}
 
-      const char *GetOutputJetsName() const { return fOutputJetsName;     }
+    const char* GetOutputJetsName() const { return fOutputJetsName; }
 
-      UInt_t GetJetAlgorithm() const        { return fJetAlgorithm;       }
-      void SetJetAlgorithm(UInt_t n)        { fJetAlgorithm = n;          }
-      
-      void GetMatchBtag(Bool_t b)               { fGetMatchBtag = b;          }
-      void UseBambuJets(Bool_t b)               { fUseBambuJets = b;          }
+    UInt_t GetJetAlgorithm() const { return fJetAlgorithm; }
+    void SetJetAlgorithm(UInt_t n) { fJetAlgorithm = n; }
 
-      void SetBtaggedJetsName(const char *n)    { fBtaggedJetsName = n;       }
-      void SetJetsName(const char *n)           { fJetsName = n;              }
-      void SetPfCandidatesName(const char *n)   { fPfCandidatesName = n;      }
+    void SetInputName(const char *n) { fInputName = n; }
+    void SetOutputJetsName(const char *n) { fOutputJetsName = n; }
+    void SetOutputType(UInt_t t) { fOutputType = t; }
 
-      void SetOutputJetsName(const char *n)     { fOutputJetsName = n;        }
-                                                                    
-      void SetConeSize(double d)                { fJetConeSize = d;           }
+    void SetConeSize(Double_t d) { fJetConeSize = d; }
+    void SetNoActiveArea(Bool_t b) { fActiveAreaRepeats = 0; }
+    void SetActiveAreaRepeats(UInt_t i) { fActiveAreaRepeats = i; }
+    void SetGhostArea(Double_t d) { fGhostArea = d; }
+    void SetGhostEtaMax(Double_t d) { fGhostEtaMax = d; }
 
-      void SetParticleMinPt(double d)           { fParticleMinPt = d;         }
-      void SetJetMinPt(double d)                { fJetMinPt = d;              }
- 
-    protected:
-      void Process();
-      void SlaveBegin();
-      void SlaveTerminate();
-      
-      // PFJet filler helper
-      void FillPFJet (PFJet *pPFJet, fastjet::PseudoJet &fjJet);    
+    void SetParticleMinPt(Double_t d) { fParticleMinPt = d; }
+    void SetJetMinPt(Double_t d) { fJetMinPt = d; }
 
-      enum JetAlgorithms {
-        kCA,
-        kKT,
-        kAK
-      };
-        
-    private:
+  protected:
+    void Process() override;
+    void SlaveBegin() override;
+    void SlaveTerminate() override;
 
-      UInt_t fJetAlgorithm = kAK;
-      Bool_t fGetMatchBtag;                //=true if b-tag obtained by match with standard jets (AK5)
-      Bool_t fUseBambuJets;                //=true if input small jets already present in bambu
-      Bool_t fUseBambuFatJets;             //=true if input large jets already present in bambu
+    // PFJet filler helper
+    void FillPFJet(fastjet::PseudoJet const&, PFJet&, ParticleCol const&);
+    void FillGenJet(fastjet::PseudoJet const&, GenJet&, ParticleCol const&);
 
-      TString fBtaggedJetsName;            //(i) name of input btagged jets
-      const PFJetCol *fBtaggedJets;        //input btagged jets
-      
-      TString fJetsName;                   //(i) name of input jets
-      const PFJetCol *fJets;               //input jets
+    enum JetAlgorithms {
+      kCA,
+      kKT,
+      kAK
+    };
 
-      TString fPfCandidatesName;           //(i) name of PF candidates coll
-      const PFCandidateCol *fPfCandidates; //particle flow candidates coll handle
- 
-      TString fOutputJetsName;             //name of output jets collection
-      JetOArr *fOutputJets;                //output jets collection
-      
-      // Objects from fastjet we want to use
-      double fJetConeSize;                 //fastjet clustering radius
-      double fFatJetConeSize;              //fastjet fat clustering radius
-      fastjet::JetDefinition *fJetDef  ;   //fastjet clustering definition
-      fastjet::GhostedAreaSpec *fActiveArea;
-      fastjet::AreaDefinition *fAreaDefinition;
+    UInt_t fJetAlgorithm{kAK};
 
-      double fParticleMinPt;               //low cutoff to avoid including unphysical PFCands
-      double fJetMinPt;                    //low cutoff to carrying on soft jets
-      
-      ClassDef(FastJetMod, 2)              //FastJet bambu producer      
+    TString fInputName{Names::gkPFCandidatesBrn}; //(i) name of input (jet constituents) collection
+    UInt_t fOutputType{kPFJet};
+
+    TString fOutputJetsName{"FastJet"};
+    BaseCollection* fOutputJets{0}; //output jets collection (need to be ParticleOArr to accommodate gen jets)
+
+    // Objects from fastjet we want to use
+    Double_t fJetConeSize{0.5}; //fastjet clustering radius
+    UInt_t fActiveAreaRepeats{1};
+    Double_t fGhostArea{0.01};
+    Double_t fGhostEtaMax{7.};
+
+    fastjet::JetDefinition* fJetDef{0}; //fastjet clustering definition
+    fastjet::GhostedAreaSpec* fActiveArea{0};
+    fastjet::AreaDefinition* fAreaDefinition{0};
+
+    Double_t fParticleMinPt{0.001}; //low cutoff to avoid including unphysical PFCands
+    Double_t fJetMinPt{20.}; //low cutoff to carrying on soft jets
+
+    ClassDef(FastJetMod, 0) //FastJet bambu producer
   };
 }
 #endif
