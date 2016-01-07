@@ -4,4 +4,4 @@ notification            = Error
 rank                    = Mips
 transfer_output_files   = {fileset}.root
 #transfer_output_remaps  = "{fileset}.root = /mnt/hscratch/{task}/{book}/{dataset}/{fileset}.root"
-accounting_group = group_t3mit
+accounting_group = group_cmsuser

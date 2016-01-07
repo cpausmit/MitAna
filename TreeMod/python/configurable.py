@@ -53,7 +53,12 @@ class Configurable(object):
             Access static members of the class.
             """
 
-            return getattr(self._cppcls, name)
+            member = getattr(self._cppcls, name)
+            if issubclass(type(member), ROOT.PyRootType):
+                # if the member is a class and its meta is PyRootType, return a generator for the class
+                return Configurable.Generator(member, self._clsName + '.' + name, Configurable)
+
+            return member
 
 
     def __init__(self, cppcls, clsName, *args, **kwargs):
@@ -67,10 +72,18 @@ class Configurable(object):
 
         # need to rely on object.__setattr__ since we mess with out setattr below
         object.__setattr__(self, 'const', False) # when True, do not allow non-const attribute calls
+        object.__setattr__(self, 'config', [('_Ctor', args, True)]) # attribute name, args, is method
 
-        self._cppobj = cppcls(*args)
         self._clsName = clsName
-        self.config = [('_Ctor', args, True)] # attribute name, args, is method
+
+        unwrapped = []
+        for arg in args:
+            if isinstance(arg, Configurable):
+                unwrapped.append(arg._cppobj)
+            else:
+                unwrapped.append(arg)
+
+        self._cppobj = cppcls(*tuple(unwrapped))
 
         self._configureFromArgs(kwargs)
 
@@ -174,10 +187,8 @@ class Configurable(object):
             else:
                 unwrapped.append(arg)
 
-        args = tuple(unwrapped)
-
         method = getattr(self._cppobj, methodName)
-        return method(*args)
+        return method(*tuple(unwrapped))
 
     def setConst(self, c = True):
         object.__setattr__(self, 'const', c)
@@ -242,9 +253,9 @@ class Configurable(object):
                     continue
 
                 auxName = 'aux' + str(len(objects))
+                objects[arg] = auxName
                 code += arg.dumpPython(varName = auxName, objects = objects)
                 code += '\n'
-                objects[arg] = auxName
 
         for attrName, args, isMethod in self.config:
             if isMethod:
