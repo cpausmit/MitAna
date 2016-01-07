@@ -120,7 +120,13 @@ then
   elif [ "$localopt" = "copy" ]
   then
     hdfspath=$(echo $cache | sed 's#/mnt/hadoop##')
-    ( itry=0; while [ $itry -lt 10 ] && [ ! -e $file ]; do hdfs dfs -fs hdfs://t3serv002.mit.edu:9000 -get $hdfspath $file; itry=$(($itry+1)); done ) &
+    if [[ $(hostname) =~ .*cmsaf.mit.edu ]]
+    then
+      cmd="hadoop dfs -get"
+    else
+      cmd="hdfs dfs -fs hdfs://t3serv002.mit.edu:9000 -get"
+    fi
+    ( itry=0; while [ $itry -lt 10 ] && [ ! -e $file ]; do $cmd $hdfspath $file; itry=$(($itry+1)); done ) &
 #    ( cp $cache ${file}.copy && mv ${file}.copy $file ) &
     exit 0
   fi

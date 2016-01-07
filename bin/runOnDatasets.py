@@ -402,6 +402,11 @@ class CondorConfig(object):
 ## MAIN EXECUTABLE FUNCTIONS (PROBABLY BETTER IN A CLASS IN FUTURE) ##
 ######################################################################
 
+def copyX509Proxy(env):
+    if os.path.exists('/tmp/' + env.x509up):
+        shutil.copy('/tmp/' + env.x509up, env.workspace + '/' + env.x509up)
+
+
 def setupWorkspace(env):
     """
     Set up the directory structure and create tarballs.
@@ -450,8 +455,7 @@ def setupWorkspace(env):
         shutil.copyfile(env.postExecPath, env.workspace + '/postExec.sh')
 
     # copy the latest user proxy
-    if os.path.exists('/tmp/x509up_u' + str(os.getuid())):
-        shutil.copy('/tmp/x509up_u' + str(os.getuid()), env.workspace + '/x509up')
+    copyX509Proxy(env)
 
     # copy the execution script
     if not env.update:
@@ -1198,6 +1202,8 @@ if __name__ == '__main__':
         ready = setupWorkspace(env)
         if not ready:
             sys.exit(1)
+
+    copyX509Proxy(env)
   
     # datasets: list of tuples (book, dataset, json)
     updateDatasetList = False
