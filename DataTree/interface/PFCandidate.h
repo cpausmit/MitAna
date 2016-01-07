@@ -21,7 +21,6 @@ namespace mithep
   class Muon;
   class Electron;
   class Photon;
-  class Conversion;
 
   class PFCandidate : public CompositeParticle
   {
@@ -66,7 +65,6 @@ namespace mithep
       void		  AddDaughter(const PFCandidate *p) { fDaughters.Add(p);                  }
       void                ClearFlag(EPFFlags f)             { fPFFlags.ClearBit(f);               }
       void                ClearFlags()                      { fPFFlags.Clear();                   }
-      const Conversion   *Conv()                   const;
       const PFCandidate  *Daughter(UInt_t i)       const;
       Double_t            EECal()                  const    { return fEECal;                      }
       Double_t            EHCal()                  const    { return fEHCal;                      }
@@ -85,7 +83,6 @@ namespace mithep
       Double_t            EtaECal()                const    { return fEtaECal;                    }
       Double_t            PhiECal()                const    { return fPhiECal;                    }
       Bool_t              Flag(EPFFlags f)         const    { return fPFFlags.TestBit(f);         }
-      Bool_t              HasConversion()          const;
       Bool_t              HasMother()              const    { return fMother.IsValid();           }
       Bool_t              HasMother(const PFCandidate *m) const;
       Bool_t              HasTrackerTrk()          const    { return fTrackerTrack.IsValid();     }
@@ -126,7 +123,6 @@ namespace mithep
       void                SetMuon(const Muon *);
       void                SetElectron(const Electron *);
       void                SetPhoton(const Photon *);
-      void                SetConversion(const Conversion *);
       void                SetSCluster(const SuperCluster *s) { fSCluster = s;                     }
       void                SetVertex(Double_t x, Double_t y, Double_t z);
       const ThreeVector   SourceVertex()           const    { return fSourceVertex.V();           }
@@ -166,12 +162,11 @@ namespace mithep
       Ref<Track>          fTrackerTrack;     //reference to (standard) track
       Ref<Track>          fGsfTrack;         //reference to gsf track (for electrons only)
       Ref<Muon>           fMuon;             //reference to corresponding reco muon
-      Ref<Conversion>     fConversion;       //reference to corresponding reco conversion
       Ref<SuperCluster>   fSCluster;         //reference to egamma supercluster
       Ref<Electron>       fElectron;         //reference to electron
       Ref<Photon>         fPhoton;           //reference to egamma photon
 
-    ClassDef(PFCandidate,3) // Particle-flow candidate class
+    ClassDef(PFCandidate,4) // Particle-flow candidate class
   };
 }
 

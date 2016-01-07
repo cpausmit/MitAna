@@ -42,12 +42,6 @@ char const*
 mithep::PFTau::PFTauDiscriminatorName(UInt_t idx)
 {
   switch(idx) {
-  case kDiscriminationByLooseElectronRejection:
-    return "DiscriminationByLooseElectronRejection";
-  case kDiscriminationByMediumElectronRejection:
-    return "DiscriminationByMediumElectronRejection";
-  case kDiscriminationByTightElectronRejection:
-    return "DiscriminationByTightElectronRejection";
   case kDiscriminationByMVA5VLooseElectronRejection:
     return "DiscriminationByMVA5VLooseElectronRejection";
   case kDiscriminationByMVA5LooseElectronRejection:
@@ -56,18 +50,6 @@ mithep::PFTau::PFTauDiscriminatorName(UInt_t idx)
     return "DiscriminationByMVA5MediumElectronRejection";
   case kDiscriminationByMVA5TightElectronRejection:
     return "DiscriminationByMVA5TightElectronRejection";
-  case kDiscriminationByLooseMuonRejection:
-    return "DiscriminationByLooseMuonRejection";
-  case kDiscriminationByMediumMuonRejection:
-    return "DiscriminationByMediumMuonRejection";
-  case kDiscriminationByTightMuonRejection:
-    return "DiscriminationByTightMuonRejection";
-  case kDiscriminationByLooseMuonRejection2:
-    return "DiscriminationByLooseMuonRejection2";
-  case kDiscriminationByMediumMuonRejection2:
-    return "DiscriminationByMediumMuonRejection2";
-  case kDiscriminationByTightMuonRejection2:
-    return "DiscriminationByTightMuonRejection2";
   case kDiscriminationByLooseMuonRejection3:
     return "DiscriminationByLooseMuonRejection3";
   case kDiscriminationByTightMuonRejection3:
@@ -76,18 +58,6 @@ mithep::PFTau::PFTauDiscriminatorName(UInt_t idx)
     return "DiscriminationByDecayModeFinding";
   case kDiscriminationByDecayModeFindingNewDMs:
     return "DiscriminationByDecayModeFindingNewDMs";
-  case kDiscriminationByDecayModeFindingOldDMs:
-    return "DiscriminationByDecayModeFindingOldDMs";
-  case kDiscriminationByVLooseCombinedIsolationDBSumPtCorr:
-    return "DiscriminationByVLooseCombinedIsolationDBSumPtCorr";
-  case kDiscriminationByLooseCombinedIsolationDBSumPtCorr:
-    return "DiscriminationByLooseCombinedIsolationDBSumPtCorr";
-  case kDiscriminationByMediumCombinedIsolationDBSumPtCorr:
-    return "DiscriminationByMediumCombinedIsolationDBSumPtCorr";
-  case kDiscriminationByTightCombinedIsolationDBSumPtCorr:
-    return "DiscriminationByTightCombinedIsolationDBSumPtCorr";
-  case kDiscriminationByRawCombinedIsolationDBSumPtCorr:
-    return "DiscriminationByRawCombinedIsolationDBSumPtCorr";
   case kDiscriminationByLooseCombinedIsolationDBSumPtCorr3Hits:
     return "DiscriminationByLooseCombinedIsolationDBSumPtCorr3Hits";
   case kDiscriminationByMediumCombinedIsolationDBSumPtCorr3Hits:
@@ -96,12 +66,22 @@ mithep::PFTau::PFTauDiscriminatorName(UInt_t idx)
     return "DiscriminationByTightCombinedIsolationDBSumPtCorr3Hits";
   case kDiscriminationByRawCombinedIsolationDBSumPtCorr3Hits:
     return "DiscriminationByRawCombinedIsolationDBSumPtCorr3Hits";
-  case kMVA3IsolationChargedIsoPtSum:
-    return "MVA3IsolationChargedIsoPtSum";
-  case kMVA3IsolationNeutralIsoPtSum:
-    return "MVA3IsolationNeutralIsoPtSum";
-  case kMVA3IsolationPUcorrPtSum:
-    return "MVA3IsolationPUcorrPtSum";
+  case kDiscriminationByLoosePileupWeightedIsolation3Hits:
+    return "DiscriminationByLoosePileupWeightedIsolation3Hits";
+  case kDiscriminationByMediumPileupWeightedIsolation3Hits:
+    return "DiscriminationByMediumPileupWeightedIsolation3Hits";
+  case kDiscriminationByTightPileupWeightedIsolation3Hits:
+    return "DiscriminationByTightPileupWeightedIsolation3Hits";
+  case kDiscriminationByRawPileupWeightedIsolation3Hits:
+    return "DiscriminationByRawPileupWeightedIsolation3Hits";
+  case kDiscriminationByPhotonPtSumOutsideSignalCone:
+    return "DiscriminationByPhotonPtSumOutsideSignalCone";
+  case kChargedIsoPtSum:
+    return "ChargedIsoPtSum";
+  case kNeutralIsoPtSum:
+    return "NeutralIsoPtSum";
+  case kPUcorrPtSum:
+    return "PUcorrPtSum";
   default:
     return "";
   }

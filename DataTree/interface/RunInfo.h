@@ -18,20 +18,22 @@ namespace mithep
   class RunInfo : public DataBase
   {
     public:
-      RunInfo() : fRunNum(0), fHltEntry(0) {}
-      RunInfo(UInt_t run) : fRunNum(run), fHltEntry(0) {}
+      RunInfo() : fRunNum(0), fHltEntry(0), fEvtSelBitsEntry(-1) {}
+      RunInfo(UInt_t run) : fRunNum(run), fHltEntry(0), fEvtSelBitsEntry(-1) {}
 
       Int_t               HltEntry()     const { return fHltEntry; }
       EObjType            ObjType()      const { return kRunInfo;  }      
       UInt_t              RunNum()       const { return fRunNum;   }
       void                SetHltEntry(Int_t i) { fHltEntry=i;      }
       void                SetRunNum(UInt_t i)  { fRunNum=i;        }
+      void                SetEvtSelBitsEntry(Int_t i) { fEvtSelBitsEntry = i; }
 
     protected:
       UInt_t              fRunNum;          //run number
       Int_t               fHltEntry;        //entry for HLT block
+      Int_t               fEvtSelBitsEntry; //entry for EvtSelData bit names
 
-    ClassDef(RunInfo, 2) // Run info class
+    ClassDef(RunInfo, 3) // Run info class
   };
 }
 #endif

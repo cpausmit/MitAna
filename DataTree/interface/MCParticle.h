@@ -24,14 +24,14 @@ namespace mithep
     public:
       enum EPartType {
         kUnknown=0, 
-        kUp=1, kDown=2, kStrange=3, kCharm=4, kBottom=5, kTop=6,
+        kDown=1, kUp, kStrange=3, kCharm=4, kBottom=5, kTop=6,
         kEl=11, kMu=13, kTau=15, 
         kElNu=12, kMuNu=14, kTauNu=16,
         kGlu=21, kGamma=22, kZ=23, kW=24, kH=25,
         kZp=32, kZpp=33, kWp=34, kH0=35, kA0=36, kHp=37,
-        kPi0=111, kEta=221, kKLong=130, kKShort=310, kK0=311,
-        kD0=413, kB0=511, kB0Bar=513, kJPsi=443, kUpsilon=553,
-        kProton=2122, kNeutron=2122, kDeltaPlusPlus = 2224,
+        kPi0=111, kPip=211, kEta=221, kKLong=130, kKShort=310, kK0=311,
+        kD0=421, kB0=511, kJPsi=443, kUpsilon=553,
+        kProton=2212, kNeutron=2112, kDeltaPlusPlus = 2224,
         kDeltaPlus = 2214, kDelta0 = 2114, kDeltaMinus=1114
       };
 
@@ -69,6 +69,7 @@ namespace mithep
       Int_t               PdgId()                  const { return fPdgId;  }
       Double_t            PdgMass()                const;
       Bool_t              StatusFlag(UInt_t i)     const { return fStatusFlags.TestBit(i); }
+      mithep::BitMask<2> const& StatusFlags()      const { return fStatusFlags; }
       void		  SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
       void		  SetMom(Double_t px, Double_t py, Double_t pz, Double_t e);
       void		  SetMother(const MCParticle *p) { fMother = p;    }
@@ -95,7 +96,7 @@ namespace mithep
       Bool_t              fIsSimulated;  //=true if simulated particle
       mithep::BitMask<2>  fStatusFlags;  //pythia8 status flags
 
-    ClassDef(MCParticle,3) // Generated particle class
+    ClassDef(MCParticle,4) // Generated particle class
   };
 }
 
