@@ -3,7 +3,7 @@
 //
 // Particle-flow candidate class, for now mostly mirroring the PFCandidate from CMSSW.
 //
-// Authors: J.Bendavid
+// Authors: J.Bendavid, Y.Iiyama
 //--------------------------------------------------------------------------------------------------
 
 #ifndef MITANA_DATATREE_PFCandidate_H
@@ -57,10 +57,7 @@ namespace mithep
 	ePFNoPileup
       };
 
-      PFCandidate() : fCharge(0), fEECal(0), fEHCal(0), fEECalRaw(0), fEHCalRaw(0),
-                      fEPS1(0), fEPS2(0), fPError(0),fMvaEPi(0), fMvaEMu(0),
-                      fMvaPiMu(0), fMvaGamma(0), fMvaNeutralH(0), fMvaGammaNeutralH(0),
-                      fEtaECal(0), fPhiECal(0), fPFType(eX) {}
+      PFCandidate() : fPFType(eX) {}
 
       void		  AddDaughter(const PFCandidate *p) { fDaughters.Add(p);                  }
       void                ClearFlag(EPFFlags f)             { fPFFlags.ClearBit(f);               }
@@ -68,18 +65,9 @@ namespace mithep
       const PFCandidate  *Daughter(UInt_t i)       const;
       Double_t            EECal()                  const    { return fEECal;                      }
       Double_t            EHCal()                  const    { return fEHCal;                      }
-      Double_t            EECalRaw()               const    { return fEECalRaw;                   }
-      Double_t            EHCalRaw()               const    { return fEHCalRaw;                   }
-      Double_t            EPS1()                   const    { return fEPS1;                       }
-      Double_t            EPS2()                   const    { return fEPS2;                       }
       Double_t            PError()                 const    { return fPError;                     }
       PFCandidate*        MakeCopy()               const    { return new PFCandidate(*this);      }
-      Double_t            MvaEPi()                 const    { return fMvaEPi;                     }
-      Double_t            MvaEMu()                 const    { return fMvaEMu;                     }
-      Double_t            MvaPiMu()                const    { return fMvaPiMu;                    }
       Double_t            MvaGamma()               const    { return fMvaGamma;                   }
-      Double_t            MvaNeutralH()            const    { return fMvaNeutralH;                }
-      Double_t            MvaGammaNeutralH()       const    { return fMvaGammaNeutralH;           }
       Double_t            EtaECal()                const    { return fEtaECal;                    }
       Double_t            PhiECal()                const    { return fPhiECal;                    }
       Bool_t              Flag(EPFFlags f)         const    { return fPFFlags.TestBit(f);         }
@@ -100,17 +88,8 @@ namespace mithep
       void                SetCharge(Double_t c)             { fCharge = c; ClearCharge();         }
       void                SetEECal(Double_t e)              { fEECal = e;                         }
       void                SetEHCal(Double_t e)              { fEHCal = e;                         }
-      void                SetEECalRaw(Double_t e)           { fEECalRaw = e;                      }
-      void                SetEHCalRaw(Double_t e)           { fEHCalRaw = e;                      }
-      void                SetEPS1(Double_t e)               { fEPS1 = e;                          }
-      void                SetEPS2(Double_t e)               { fEPS2 = e;                          }
       void                SetPError(Double_t err)           { fPError = err;                      }
-      void                SetMvaEPi(Double_t d)             { fMvaEPi = d;                        }
-      void                SetMvaEMu(Double_t d)             { fMvaEMu = d;                        }
-      void                SetMvaPiMu(Double_t d)            { fMvaPiMu = d;                       }
       void                SetMvaGamma(Double_t d)           { fMvaGamma = d;                      }
-      void                SetMvaNeutralH(Double_t d)        { fMvaNeutralH = d;                   }
-      void                SetMvaGammaNeutralH(Double_t d)   { fMvaGammaNeutralH = d;              }
       void                SetEtaECal(Double_t eta)          { fEtaECal = eta;                     }
       void                SetPhiECal(Double_t phi)          { fPhiECal = phi;                     }
       void                SetPFType(EPFType t)              { fPFType = t;                        }
@@ -143,17 +122,8 @@ namespace mithep
       Double32_t          fCharge;           //[-1,1,2]charge
       Double32_t          fEECal;            //[0,0,14]corrected Ecal energy
       Double32_t          fEHCal;            //[0,0,14]corrected Hcal energy
-      Double32_t          fEECalRaw;         //[0,0,14]uncorrected Ecal energy
-      Double32_t          fEHCalRaw;         //[0,0,14]uncorrected Hcal energy
-      Double32_t          fEPS1;             //[0,0,14]corrected PS1 energy
-      Double32_t          fEPS2;             //[0,0,14]corrected PS2 energy
       Double32_t          fPError;           //[0,0,14]uncertainty on P (three-mom magnitude)
-      Double32_t          fMvaEPi;           //[0,0,14]electron-pion discriminant
-      Double32_t          fMvaEMu;           //[0,0,14]electron-muon discriminant
-      Double32_t          fMvaPiMu;          //[0,0,14]pion-muon discriminant
       Double32_t          fMvaGamma;         //[0,0,14]photon id discriminant
-      Double32_t          fMvaNeutralH;      //[0,0,14]neutral hadron id discriminant
-      Double32_t          fMvaGammaNeutralH; //[0,0,14]photon-neutralhadron discriminant
       Double32_t          fEtaECal;          //[0,0,12]eta at ecal front face
       Double32_t          fPhiECal;          //[0,0,12]phi at ecal front face
       EPFType             fPFType;           //particle flow type
@@ -166,7 +136,7 @@ namespace mithep
       Ref<Electron>       fElectron;         //reference to electron
       Ref<Photon>         fPhoton;           //reference to egamma photon
 
-    ClassDef(PFCandidate,4) // Particle-flow candidate class
+    ClassDef(PFCandidate,5) // Particle-flow candidate class
   };
 }
 
