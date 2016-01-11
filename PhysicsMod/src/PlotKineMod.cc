@@ -82,5 +82,5 @@ mithep::PlotKineMod::SlaveBegin()
 
   AddTH1(fMultHist, "hMultiplicity", ";Number of objects in " + fColName + ";", 10, 0., 10.);
 
-  //fMultHist->SetBit(TH1::kCanRebin); // CP: looks like bit disappeared in the new root version
+  fMultHist->SetCanExtend(TH1::kXaxis);
 }
