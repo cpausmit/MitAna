@@ -39,10 +39,6 @@ namespace mithep {
     Double_t PullAngle() const    { return fPullAngle; }
     Double_t chi() const          { return fChi; }
     Int_t    nMicrojets() const   { return fNMicrojets; }
-    Double_t Tau1() const                  { return fTau1; }
-    Double_t Tau2() const                  { return fTau2; }
-    Double_t Tau3() const                  { return fTau3; }
-    Double_t Tau4() const                  { return fTau4; }
     Double_t QJetVol() const               { return fQJetVol; }
     Vect4M  const& PrunedP() const      { return fPrunedP; }
     Vect4M  const& TrimmedP() const      { return fTrimmedP; }
@@ -73,10 +69,6 @@ namespace mithep {
     void SetPullAngle(Double_t t)    { fPullAngle = t; }
     void SetChi(Double_t t)          { fChi = t; }
     void SetNMicrojets(Int_t t)      { fNMicrojets = t; }
-    void SetTau1(float t)            { fTau1        = t; }
-    void SetTau2(float t)            { fTau2        = t; }
-    void SetTau3(float t)            { fTau3        = t; }
-    void SetTau4(float t)            { fTau4        = t; }
     void SetQJetVol(float t)         { fQJetVol     = t; }
     void SetPrunedP(Vect4M p)           { fPrunedP = p; }
     void SetTrimmedP(Vect4M p)          { fTrimmedP = p; }
@@ -103,10 +95,6 @@ namespace mithep {
     //either choose 2-prong or 3-prong subclustering!
     Double32_t fChi{-999.};          // shower deconstruction probability
     Int_t      fNMicrojets{0};
-    Double32_t         fTau1{-1.};         //1-subjettiness
-    Double32_t         fTau2{-1.};         //2-subjettiness
-    Double32_t         fTau3{-1.};         //3-subjettiness
-    Double32_t         fTau4{-1.};         //4-subjettiness
     Double32_t         fQJetVol{0.};      //QJets volatility
     Vect4M             fPrunedP{};
     Vect4M             fTrimmedP{};
