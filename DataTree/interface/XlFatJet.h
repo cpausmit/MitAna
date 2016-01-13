@@ -102,7 +102,7 @@ namespace mithep {
 
     RefArray<XlSubJet> fSubJets[XlSubJet::nSubJetTypes];      //sub jets in the jet
 
-    ClassDef(XlFatJet, 6) // XlFatJet class
+    ClassDef(XlFatJet, 7) // XlFatJet class
   };
 
 }

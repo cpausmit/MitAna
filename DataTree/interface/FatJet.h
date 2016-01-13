@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------------------
+ //--------------------------------------------------------------------------------------------------
 // FatJet
 //
 // This class holds information about reconstructed jets and their substructure
@@ -159,7 +159,7 @@ namespace mithep {
     std::vector<LeptonData> fMuonData{};
     std::vector<LeptonData> fElectronData{};
 
-    ClassDef(FatJet, 2) // FatJet class
+    ClassDef(FatJet, 3) // FatJet class
   };
 
 }
