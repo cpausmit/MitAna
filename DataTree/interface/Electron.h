@@ -80,10 +80,10 @@ namespace mithep
     Double_t             ConvPartnerRadius()           const { return fConvPartnerRadius; }
     Int_t                ConvFlag()                    const { return fConvFlag; }
     Int_t                Classification()              const { return fClassification; }
-    Double_t             CovEtaEta()                   const { return fCovEtaEta; }
-    Double_t             CoviEtaiEta(Bool_t force = kFALSE) const
-    { return force || fCoviEtaiEta5x5 < 0. ? fCoviEtaiEta : fCoviEtaiEta5x5; }
-    Double_t             CoviEtaiEta5x5()              const { return fCoviEtaiEta5x5; }
+    Double_t             CoviEtaiEta()                 const;
+    Double_t             CoviEtaiEta5x5()              const;
+    Double_t             CoviPhiiPhi()                 const { return SCluster()->SigmaIPhiIPhi(); }
+    Double_t             CoviEtaiPhi()                 const { return SCluster()->SigmaIEtaIPhi(); }
     Double_t             DeltaEtaSuperClusterTrackAtVtx() const { return fDeltaEtaSuperClTrkAtVtx; }
     Double_t             DeltaEtaSeedClusterTrackAtCalo() const { return fDeltaEtaSeedClTrkAtCalo; }
     Double_t             DeltaPhiSuperClusterTrackAtVtx() const { return fDeltaPhiSuperClTrkAtVtx; }
@@ -202,7 +202,6 @@ namespace mithep
     void                 SetConvPartnerRadius(Double_t x)              { fConvPartnerRadius = x; }
     void                 SetConvFlag(Int_t n)                          { fConvFlag = n; }
     void                 SetClassification(Int_t x)                    { fClassification = x; }
-    void                 SetCovEtaEta(Double_t x)                      { fCovEtaEta = x; }
     void                 SetCoviEtaiEta(Double_t x)                    { fCoviEtaiEta = x; }
     void                 SetCoviEtaiEta5x5(Double_t x)                 { fCoviEtaiEta5x5 = x; }
     void                 SetDeltaEtaSuperClusterTrackAtVtx(Double_t x)  
@@ -311,8 +310,7 @@ namespace mithep
     Double32_t        fE15;                          //[0,0,14]1x5 crystal energy
     Double32_t        fE25Max;                       //[0,0,14]2x5 crystal energy (max of two possible sums)
     Double32_t        fE55;                          //[0,0,14]5x5 crystal energy
-    Double32_t        fCovEtaEta;                    //[0,0,14]variance eta-eta
-    Double32_t        fCoviEtaiEta;                  //[0,0,14]covariance eta-eta (in crystals)
+    Double32_t        fCoviEtaiEta = -1.;            //[0,0,14]covariance eta-eta (in crystals)
     Double32_t        fCoviEtaiEta5x5 = -1.;         //[0,0,14]covariance eta-eta (in crystals, full5x5)
     Double32_t        fHcalDepth1TowerSumEtDr04;     //[0,0,14]hcal depth1 tower based isolation dR 0.4
     Double32_t        fHcalDepth2TowerSumEtDr04;     //[0,0,14]hcal depth2 tower based isolation dR 0.4
@@ -402,15 +400,17 @@ namespace mithep
     // The following members are deprecated
     //    Double32_t        fCaloIsolation;                //[0,0,14](non-jura) ecal isolation based on rechits dR 0.3
     //    Double32_t        fHcalJurassicIsolation;        //[0,0,14]hcal jura iso dR 0.4
+    //    Double32_t        fCovEtaEta;                    //[0,0,14]variance eta-eta
     // Accessors
     //    Double_t             CaloIsolation()               const { return fCaloIsolation; }
-    //    Double_t             HcalIsolation()                  const { return fHcalJurassicIsolation; }
+    //    Double_t             HcalIsolation()               const { return fHcalJurassicIsolation; }
+    //    Double_t             CovEtaEta()                   const { return fCovEtaEta; } 
     // fPFSuperClusterRef: member object name is kept the same as <7XY so that old files can be read
     // Should in principle be possible to use schema evolution to convert it to something like fECALOnlySuperClusterRef
     // The problem is that process ID seems to be not set at the point where conversion rules are applied
     // which is strange since process ID is set in ProcIDRef::Streamer..
 
-    ClassDef(Electron, 19)                             // Electron class
+    ClassDef(Electron, 20)                             // Electron class
   };
 }
 
@@ -446,6 +446,28 @@ inline const mithep::Track *mithep::Electron::BestTrk() const
     return TrackerTrk();
 
   return 0;
+}
+
+inline
+Double_t
+mithep::Electron::CoviEtaiEta() const
+{
+  if (fCoviEtaiEta5x5 >= 0.)
+    return fCoviEtaiEta5x5;
+  else if (fCoviEtaiEta >= 0.)
+    return fCoviEtaiEta;
+  else
+    return SCluster()->SigmaIEtaIEta();
+}
+
+inline
+Double_t
+mithep::Electron::CoviEtaiEta5x5() const
+{
+  if (fCoviEtaiEta5x5 >= 0.)
+    return fCoviEtaiEta5x5;
+  else
+    return SCluster()->SigmaIEtaIEta();
 }
 
 //--------------------------------------------------------------------------------------------------

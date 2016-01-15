@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------------------
+ //--------------------------------------------------------------------------------------------------
 // FatJet
 //
 // This class holds information about reconstructed jets and their substructure
@@ -101,6 +101,11 @@ namespace mithep {
     Float_t tauDot() const                { return fTauDot; }
     Float_t zRatio() const                { return fZRatio; }
     Vect3 const& GetTauIVFAxis(UInt_t i) const { return fTauIVFAxes.at(i); }
+    Double_t Tau1() const                  { return fTau1; }
+    Double_t Tau2() const                  { return fTau2; }
+    Double_t Tau3() const                  { return fTau3; }
+    Double_t Tau4() const                  { return fTau4; }
+    Double_t MassSoftDrop() const          { return fMassSD; }
 
     Jet* MakeCopy() const override { return new FatJet(*this); }
 
@@ -115,7 +120,11 @@ namespace mithep {
     void SetTau2IVF(Float_t t)         { fTau2IVF        = t; }
     void SetTau3IVF(Float_t t)         { fTau3IVF        = t; }
     void AddTauIVFAxis(Vect3 p)         { fTauIVFAxes.push_back(p); }
-
+    void SetTau1(float t)            { fTau1        = t; }
+    void SetTau2(float t)            { fTau2        = t; }
+    void SetTau3(float t)            { fTau3        = t; }
+    void SetTau4(float t)            { fTau4        = t; }
+    void SetMassSoftDrop(float t)    { fMassSD      = t; }
     void SetTauDot(Float_t t)          { fTauDot = t; }
     void SetZRatio(Float_t t)          { fZRatio = t; }
     void AddTrackData(TrackData *t)     { fTrackData.push_back(*t); }
@@ -132,6 +141,11 @@ namespace mithep {
     Float_t         fTau1IVF{-1.};         //1-subjettiness
     Float_t         fTau2IVF{-1.};         //2-subjettiness
     Float_t         fTau3IVF{-1.};         //3-subjettiness
+    Double32_t         fTau1{-1.};         //1-subjettiness
+    Double32_t         fTau2{-1.};         //2-subjettiness
+    Double32_t         fTau3{-1.};         //3-subjettiness
+    Double32_t         fTau4{-1.};         //4-subjettiness
+    Double32_t         fMassSD{-1.};       // soft drop mass
     std::vector<Vect3> fTauIVFAxes{};
 
     std::vector<Float_t> fSubjetBtags; // ordered by decreasing subjet pT
@@ -145,7 +159,7 @@ namespace mithep {
     std::vector<LeptonData> fMuonData{};
     std::vector<LeptonData> fElectronData{};
 
-    ClassDef(FatJet, 2) // FatJet class
+    ClassDef(FatJet, 3) // FatJet class
   };
 
 }
