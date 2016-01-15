@@ -1191,6 +1191,7 @@ if __name__ == '__main__':
     if newTask:
         print ' Creating task', env.taskName
 
+    env.x509up = 'x509up_u' + str(os.getuid())
 #    if not os.path.exists('/tmp/x509up_u' + str(os.getuid())):
 #        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
 #        message += ' Continue?'
