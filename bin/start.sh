@@ -13,11 +13,10 @@ then
   exit 1
 fi
 
-if [ -e x509up ]
+if [ -e x509up_u* ]
 then
   # Certain LCG applications expect the proxy file to have a specific name
-  mv x509up x509up_u$(id -u)
-  export X509_USER_PROXY=x509up_u$(id -u)
+  export X509_USER_PROXY=$(pwd)/$(ls x509up_u*)
 fi
 
 # make sure you get a stack trace in case of failure

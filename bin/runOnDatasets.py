@@ -316,7 +316,7 @@ class CondorConfig(object):
             listWasGiven = False
     
         inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
-        for optionalInput in ['x509up', 'preExec.sh', 'postExec.sh']:
+        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
             if os.path.exists(env.workspace + '/' + optionalInput):
                 inputFiles.append(optionalInput)
 
@@ -1192,7 +1192,7 @@ if __name__ == '__main__':
         print ' Creating task', env.taskName
 
     env.x509up = 'x509up_u' + str(os.getuid())
-#    if not os.path.exists('/tmp/x509up_u' + str(os.getuid())):
+#    if not os.path.exists(env.x509up):
 #        message = ' x509 proxy missing. You will not be able to download files from T2 in case T3 cache does not exist.\n'
 #        message += ' Continue?'
 #        if not yes(message):
