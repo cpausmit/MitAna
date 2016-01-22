@@ -127,6 +127,9 @@ def runSubproc(*args, **kwargs):
             stderr.write(err)
             stderr.flush()
 
+    return proc.returncode
+
+
 #############
 ## CLASSES ##
 #############
@@ -404,6 +407,16 @@ class CondorConfig(object):
 
 def copyX509Proxy(env):
     if os.path.exists('/tmp/' + env.x509up):
+        out = []
+        runSubproc('voms-proxy-info', '-timeleft', stdout = out)
+        nHours = 8
+        if int(out[0]) < 3600 * nHours: # proxy expires within 8 hours
+            message = ' VOMS proxy is expiring in %d hours.\n' % nHours
+            message += ' Do you wish to proceed without updating the proxy?'
+            if not yes(message):
+                while runSubproc('voms-proxy-init', '--valid', '192:00', '-voms', 'cms') != 0:
+                    pass
+
         shutil.copy('/tmp/' + env.x509up, env.workspace + '/' + env.x509up)
 
 
@@ -950,6 +963,43 @@ def killJob(jobInfo):
     jobInfo.jobId = ''
 
 
+def printDiagnostics(env, datasets):
+    for datasetInfo in datasets:
+        output = ''
+        for fileset in sorted(datasetInfo.jobs.keys()):
+            jobInfo = datasetInfo.jobs[fileset]
+            errFile = '/'.join([env.logDir, datasetInfo.book, datasetInfo.dataset, fileset + '.err'])
+
+            if not (jobInfo.status == JobInfo.Removed or jobInfo.status == JobInfo.Held or jobInfo.status == JobInfo.SubmissionErr) or not os.path.exists(errFile):
+                continue
+
+            output += '  ' + fileset + ':\n'
+            
+            if os.stat(errFile).st_size == 0:
+                output += '   Error log empty\n'
+            else:
+                with open(errFile) as errorLog:
+                    lines = errorLog.readlines()
+
+                iStackTrace = -1
+                for iL in range(len(lines)):
+                    if lines[iL].startswith('#0'):
+                        iStackTrace = iL
+                        break
+
+                if iStackTrace == -1:
+                    output += '   No stack trace in error log\n'
+                else:
+                    for iL in range(iStackTrace - 6, iStackTrace):
+                        output += '   ' + lines[iL]
+
+            output += '\n'
+
+        if output:
+            print ' [' + datasetInfo.dataset + ']'
+            print output
+
+
 def printSummary(datasets):
     for datasetInfo in datasets:
         summary = {'initial': 0, 'idle': 0, 'running': 0, 'complete': 0, 'error': 0}
@@ -1050,6 +1100,7 @@ if __name__ == '__main__':
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
     argParser.add_argument('--resubmit-held', '-H', action = 'store_true', dest = 'resubmitHeld', help = 'Resubmit held jobs automatically. By default held jobs count as running and are skipped.')
+    argParser.add_argument('--diagnose-held', '-G', action = 'store_true', dest = 'diagnoseHeld', help = 'Print out the last lines of the error logs of the held jobs.')
     argParser.add_argument('--summary', '-S', action = 'store_true', dest = 'showSummary', help = 'Show the summary of the task. (Implies --no-submit)')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
     argParser.add_argument('--yes', '-Y', action = 'store_true', dest = 'yes', help = 'Answer yes to all prompts.')
@@ -1333,6 +1384,10 @@ if __name__ == '__main__':
                 sys.exit(1)
     
     if args.kill:
+        sys.exit(0)
+
+    if args.diagnoseHeld:
+        printDiagnostics(env, datasets)
         sys.exit(0)
 
     if args.showSummary:
