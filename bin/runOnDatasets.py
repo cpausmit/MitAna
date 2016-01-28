@@ -105,25 +105,23 @@ def runSubproc(*args, **kwargs):
             
     out, err = proc.communicate(stdin)
 
-    if stdout is not None:
+    if stdout is not None and out.strip() != '':
         if type(stdout) is list:
             if out.endswith('\n'):
                 out = out[:-1]
             for line in out.split('\n'):
                 stdout.append(line)
-
-        elif out.strip():
+        else:
             stdout.write(out)
             stdout.flush()
 
-    if stderr is not None:
+    if stderr is not None and err.strip() != '':
         if type(stderr) is list:
             if err.endswith('\n'):
                 err = err[:-1]
             for line in err.split('\n'):
                 stderr.append(line)
-
-        elif err.strip():
+        else:
             stderr.write(err)
             stderr.flush()
 
@@ -907,8 +905,14 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
     if len(out) == 1 and out[0].strip() == 'All queues are empty':
         out = []
 
-    for line in err:
-        print line
+    if len(err) != 0:
+        for line in err:
+            print line
+
+        print 'Error in condor_q. Exit to avoid submitting jobs multiple times.'
+        while len(datasets) != 0:
+            datasets.pop()
+        return
 
     block = {}
     for line in out:
@@ -968,12 +972,21 @@ def printDiagnostics(env, datasets):
         output = ''
         for fileset in sorted(datasetInfo.jobs.keys()):
             jobInfo = datasetInfo.jobs[fileset]
+            outFile = '/'.join([env.logDir, datasetInfo.book, datasetInfo.dataset, fileset + '.out'])
             errFile = '/'.join([env.logDir, datasetInfo.book, datasetInfo.dataset, fileset + '.err'])
 
             if not (jobInfo.status == JobInfo.Removed or jobInfo.status == JobInfo.Held or jobInfo.status == JobInfo.SubmissionErr) or not os.path.exists(errFile):
                 continue
 
-            output += '  ' + fileset + ':\n'
+            output += '  ----------- ' + fileset
+
+            if os.path.exists(outFile):
+                with open(outFile) as stdLog:
+                    host = stdLog.readline().strip()
+
+                output += ' (%s)' % host
+
+            output += ' ----------\n'
             
             if os.stat(errFile).st_size == 0:
                 output += '   Error log empty\n'
@@ -1031,7 +1044,7 @@ def printSummary(datasets):
         print '  Total   : %4d' % sum(summary.values())
 
 
-def submitJobs(env, datasets, condorConf):
+def submitJobs(env, datasets, condorConf, quiet = False):
     for datasetInfo in datasets:
         # loop over filesets and do actual submission or print info
         for fileset in sorted(datasetInfo.jobs.keys()):
@@ -1042,20 +1055,24 @@ def submitJobs(env, datasets, condorConf):
 
             # skip fileset if a job is in condor queue
             if jobInfo.jobId != '':
-                print ' ' + jobInfo.statusStr() + ':', datasetInfo.dataset, fileset, '(' + jobInfo.submitHost + ':' + jobInfo.jobId + ')'
+                if not quiet:
+                    print ' ' + jobInfo.statusStr() + ':', datasetInfo.dataset, fileset, '(' + jobInfo.submitHost + ':' + jobInfo.jobId + ')'
                 continue
 
             # skip fileset if output exists
             if jobInfo.status == JobInfo.OutputExists:
-                print ' Output exists:', datasetInfo.dataset, fileset
+                if not quiet:
+                    print ' Output exists:', datasetInfo.dataset, fileset
                 continue
 
             if jobInfo.status == JobInfo.Skip:
-                print ' Skipping (fileset not requested):', datasetInfo.dataset, fileset
+                if not quiet:
+                    print ' Skipping (fileset not requested):', datasetInfo.dataset, fileset
                 continue
 
             if env.noSubmit:
-                print ' Skipping (no-submit = true):', datasetInfo.dataset, fileset
+                if not quiet:
+                    print ' Skipping (no-submit = true):', datasetInfo.dataset, fileset
                 continue
 
             print ' Submitting:', datasetInfo.dataset, fileset
@@ -1099,7 +1116,8 @@ if __name__ == '__main__':
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
     argParser.add_argument('--submit-from', '-f', metavar = 'HOST', dest = 'submitFrom', default = '', help = 'Submit the jobs from HOST.')
     argParser.add_argument('--no-submit', '-C', action = 'store_true', dest = 'noSubmit', help = 'Prepare the workspace without submitting jobs.')
-    argParser.add_argument('--resubmit-held', '-H', action = 'store_true', dest = 'resubmitHeld', help = 'Resubmit held jobs automatically. By default held jobs count as running and are skipped.')
+    argParser.add_argument('--resubmit-held', '-H', action = 'store_true', dest = 'resubmitHeld', help = 'Resubmit jobs not submitted yet or in held state. By default held jobs count as running and are skipped.')
+    argParser.add_argument('--auto-resubmit', '-u', metavar = 'INTERVAL', dest = 'autoResubmit', type = int, nargs = '?', default = 0, const = 300, help = 'Automatically keep resubmitting jobs that are not complete and not running. The script will stay alive until all jobs are done. INTERVAL specifies the submission repeat frequency.')
     argParser.add_argument('--diagnose-held', '-G', action = 'store_true', dest = 'diagnoseHeld', help = 'Print out the last lines of the error logs of the held jobs.')
     argParser.add_argument('--summary', '-S', action = 'store_true', dest = 'showSummary', help = 'Show the summary of the task. (Implies --no-submit)')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
@@ -1127,6 +1145,10 @@ if __name__ == '__main__':
 
     if args.update and not args.taskName:
         print ' Specify the task name to update.'
+        sys.exit(1)
+
+    if args.autoResubmit != 0 and args.autoResubmit < 60:
+        print ' Auto-resubmit interval is negative or too short.'
         sys.exit(1)
 
     # create a struct to hold various directory and file names
@@ -1359,7 +1381,7 @@ if __name__ == '__main__':
 
     if args.kill:
         killStatus = range(7)
-    elif args.resubmitHeld:
+    elif args.resubmitHeld or args.autoResubmit != 0:
         killStatus = [5]
     else:
         killStatus = []
@@ -1399,5 +1421,33 @@ if __name__ == '__main__':
         for datasetInfo in datasets:
             datasetInfo.jobs = {'pilot': JobInfo(datasetInfo, 'pilot', nentries = args.pilot)}
 
-    # loop over datasets to submit
-    submitJobs(env, datasets, condorConf)
+    quiet = False
+    while True:
+        # loop over datasets to submit
+        submitJobs(env, datasets, condorConf, quiet = quiet)
+        if args.autoResubmit == 0:
+            break
+
+        print 'Checking job status in', args.autoResubmit, 'seconds for auto-resubmission..'
+        try:
+            time.sleep(args.autoResubmit)
+        except KeyboardInterrupt:
+            print 'Interrupted by user. Exiting.'
+            break
+
+        quiet = True
+
+        oldlist = list(datasets)
+        for datasetInfo in oldlist:
+            # loop over filesets and do actual submission or print info
+            for fileset in sorted(datasetInfo.jobs.keys()):
+                jobInfo = datasetInfo.jobs[fileset]
+
+                if jobInfo.status == JobInfo.OutputExists or jobInfo.status == JobInfo.Skip:
+                    datasetInfo.jobs.pop(fileset)
+                    continue
+
+            if len(datasetInfo.jobs) == 0:
+                datasets.remove(datasetInfo)
+
+        makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
