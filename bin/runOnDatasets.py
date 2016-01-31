@@ -851,7 +851,7 @@ def writeMacros(workspace, datasets, noOverwrite = True):
         datasets.remove(entry)
 
 
-def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
+def makeJobs(datasets, condorConf, limitTo = [], killStatus = [], skip = None):
     """
     Create a list of jobs (= filesets) from the catalog and set their status
     """
@@ -875,12 +875,13 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
                 filesetId = line.strip().split()[0]
                 jobInfo = JobInfo(datasetInfo, filesetId)
                 setStatus(jobInfo)
-                
-                datasetInfo.jobs[filesetId] = jobInfo
+                if skip is None or not skip(jobInfo):
+                    datasetInfo.jobs[filesetId] = jobInfo
 
         pilot = JobInfo(datasetInfo, 'pilot', nentries = 0)
         setStatus(pilot)
-        datasetInfo.jobs['pilot'] = pilot
+        if skip is None or not skip(pilot):
+            datasetInfo.jobs['pilot'] = pilot
 
         if pilot.status == JobInfo.OutputExists:
             if not removePilotOutput:
@@ -946,6 +947,9 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = []):
 
                 if jobInfo.status in killStatus:
                     killJob(jobInfo)
+
+                if skip is not None and skip(jobInfo):
+                    datasetInfo.pop(fileset)
 
             except:
                 pass
@@ -1045,6 +1049,8 @@ def printSummary(datasets):
 
 
 def submitJobs(env, datasets, condorConf, quiet = False):
+    nSubmit = 0
+
     for datasetInfo in datasets:
         # loop over filesets and do actual submission or print info
         for fileset in sorted(datasetInfo.jobs.keys()):
@@ -1081,6 +1087,10 @@ def submitJobs(env, datasets, condorConf, quiet = False):
                 runSubproc('ssh', env.submitFrom, 'condor_submit', stdin = condorConf.jdlCommand(jobInfo))
             else:
                 runSubproc('condor_submit', stdin = condorConf.jdlCommand(jobInfo))
+
+            nSubmit += 1
+
+    return nSubmit
 
 
 if __name__ == '__main__':
@@ -1424,8 +1434,8 @@ if __name__ == '__main__':
     quiet = False
     while True:
         # loop over datasets to submit
-        submitJobs(env, datasets, condorConf, quiet = quiet)
-        if args.autoResubmit == 0:
+        nSubmit = submitJobs(env, datasets, condorConf, quiet = quiet)
+        if args.autoResubmit == 0 or nSubmit == 0:
             break
 
         print 'Checking job status in', args.autoResubmit, 'seconds for auto-resubmission..'
@@ -1437,17 +1447,14 @@ if __name__ == '__main__':
 
         quiet = True
 
-        oldlist = list(datasets)
-        for datasetInfo in oldlist:
-            # loop over filesets and do actual submission or print info
-            for fileset in sorted(datasetInfo.jobs.keys()):
-                jobInfo = datasetInfo.jobs[fileset]
+        for datasetInfo in datasets:
+            datasetInfo.jobs = {}
 
-                if jobInfo.status == JobInfo.OutputExists or jobInfo.status == JobInfo.Skip:
-                    datasetInfo.jobs.pop(fileset)
-                    continue
+        makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus, skip = lambda j: j.fileset == 'pilot' or j.status == JobInfo.OutputExists or j.status == JobInfo.Skip)
 
-            if len(datasetInfo.jobs) == 0:
-                datasets.remove(datasetInfo)
-
-        makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus)
+        for datasetInfo in datasets:
+            if len(datasetInfo.jobs) != 0:
+                break
+        else:
+            # all datasets have jobs completed
+            break
