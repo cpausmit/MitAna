@@ -1431,30 +1431,48 @@ if __name__ == '__main__':
         for datasetInfo in datasets:
             datasetInfo.jobs = {'pilot': JobInfo(datasetInfo, 'pilot', nentries = args.pilot)}
 
-    quiet = False
-    while True:
-        # loop over datasets to submit
-        nSubmit = submitJobs(env, datasets, condorConf, quiet = quiet)
-        if args.autoResubmit == 0 or nSubmit == 0:
-            break
+    submitJobs(env, datasets, condorConf)
 
-        print 'Checking job status in', args.autoResubmit, 'seconds for auto-resubmission..'
-        try:
-            time.sleep(args.autoResubmit)
-        except KeyboardInterrupt:
-            print 'Interrupted by user. Exiting.'
-            break
+    if args.autoResubmit != 0:
+        def toBeSkipped(jobInfo):
+            return jobInfo.fileset == 'pilot' or jobInfo.status == JobInfo.OutputExists or jobInfo.status == JobInfo.Skip
 
-        quiet = True
+        sys.stdout.write('\n')
 
-        for datasetInfo in datasets:
-            datasetInfo.jobs = {}
-
-        makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus, skip = lambda j: j.fileset == 'pilot' or j.status == JobInfo.OutputExists or j.status == JobInfo.Skip)
-
-        for datasetInfo in datasets:
-            if len(datasetInfo.jobs) != 0:
+        message = ''
+        while True:
+            nJobs = sum([len([j for j in datasetInfo.jobs.values() if not toBeSkipped(j)]) for datasetInfo in datasets])
+    
+            # no jobs running or pending submission
+            if nJobs == 0:
+                if message:
+                    sys.stdout.write('\n')
+                    sys.stdout.flush()
+                    print '[' + args.taskName + '] All jobs have completed.'
+    
                 break
-        else:
-            # all datasets have jobs completed
-            break
+   
+            sys.stdout.write('\r' + ' ' * len(message))
+            message = '[' + args.taskName + '] ' + time.strftime('%c') + ': ' + str(nJobs) + ' '
+            if nJobs == 1:
+                message += 'job'
+            else:
+                message += 'jobs'
+            message += ' not completed (next check in ' + str(args.autoResubmit) + 's)'
+
+            sys.stdout.write('\r' + message)
+            sys.stdout.flush()
+            try:
+                time.sleep(args.autoResubmit)
+            except KeyboardInterrupt:
+                sys.stdout.write('\n')
+                sys.stdout.flush()
+                print 'Interrupted by user. Exiting.'
+                break
+    
+            for datasetInfo in datasets:
+                datasetInfo.jobs = {}
+
+            makeJobs(datasets, condorConf, limitTo = args.filesets, killStatus = killStatus, skip = toBeSkipped)
+
+            submitJobs(env, datasets, condorConf, quiet = True)
