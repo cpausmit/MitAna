@@ -5,7 +5,7 @@ from configurable import Configurable
 from cppnamespace import CppNamespace
 
 ROOT.gROOT.SetBatch(True)
-ROOT.gSystem.Load('libMitAnaTreeMod.so')
+CppNamespace.loadlib('libMitAnaTreeMod.so')
 
 class _Analysis(Configurable):
     """

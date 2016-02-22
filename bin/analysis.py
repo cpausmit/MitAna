@@ -22,7 +22,8 @@ if __name__ == '__main__':
     argParser.add_argument('--nentries', '-n', metavar = 'N', dest = 'nentries', type = int, default = -1, help = 'Number of entries to process.')
     argParser.add_argument('--data', '-D', action = 'store_true', dest = 'realData', help = 'Process real data (sets the real-data flag on various modules).')
     argParser.add_argument('--hierarchy', '-E', action = 'store_true', dest = 'hierarchy', help = 'Create hierarchical output.')
-    argParser.add_argument('--flat', '-F', action = 'store_true', dest = 'flatConfig', help = 'Input config is flat, i.e. has no imports (used for batch submission)')
+    argParser.add_argument('--flat', '-F', action = 'store_true', dest = 'flatConfig', help = 'Input config is flat, i.e. has no imports (used for batch submission).')
+    argParser.add_argument('--debug-level', '-v', metavar = 'LEVEL', dest = 'debugLevel', type = int, default = 0, help = 'gDebugLevel value.')
     
     args = argParser.parse_args()
     sys.argv = []
@@ -37,6 +38,12 @@ if __name__ == '__main__':
         sys.exit(1)
 
     from MitAna.TreeMod.bambu import analysis, mithep
+
+    if args.debugLevel > 0:
+        from MitAna.TreeMod.cppnamespace import CppNamespace
+        CppNamespace.loadlib('libMitAnaDataUtil.so')
+        ROOT.gDebugLevel = args.debugLevel
+        ROOT.gDebugMask = mithep.Debug.kGeneral | mithep.Debug.kTreeIO | mithep.Debug.kAnalysis | mithep.Debug.kModules
 
     # set up input (dataset / fileset or individual file)
     if args.dataset:
