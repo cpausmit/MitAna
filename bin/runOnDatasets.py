@@ -972,6 +972,8 @@ def killJob(jobInfo):
 
 
 def printDiagnostics(env, datasets):
+    hostCounts = {}
+
     for datasetInfo in datasets:
         output = ''
         for fileset in sorted(datasetInfo.jobs.keys()):
@@ -989,6 +991,10 @@ def printDiagnostics(env, datasets):
                     host = stdLog.readline().strip()
 
                 output += ' (%s)' % host
+                try:
+                    hostCounts[host] += 1
+                except KeyError:
+                    hostCounts[host] = 1
 
             output += ' ----------\n'
             
@@ -1015,6 +1021,11 @@ def printDiagnostics(env, datasets):
         if output:
             print ' [' + datasetInfo.dataset + ']'
             print output
+
+    if len(hostCounts) != 0:
+        print '  +++++++++++ HELD JOBS BY HOST +++++++++++'
+        for host in sorted(hostCounts.keys()):
+            print host, hostCounts[host]
 
 
 def printSummary(datasets):
