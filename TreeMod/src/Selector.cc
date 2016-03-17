@@ -233,19 +233,35 @@ void Selector::UpdateRunInfo()
   if (!fRunTree) 
     return;
 
-  Int_t ret = fRunTree->GetEvent(fEventHeader->RunEntry());
-  if (ret<0 || fRunInfo==0) {
-    Error("UpdateRunInfo", "Error updating run info for run %d, entry %d, return value %d", 
-          fEventHeader->RunNum(), fEventHeader->RunEntry(), ret);
-    return;
-  }
+  // Int_t ret = fRunTree->GetEvent(fEventHeader->RunEntry());
+  // if (ret<0 || fRunInfo==0) {
+  //   Error("UpdateRunInfo", "Error updating run info for run %d, entry %d, return value %d", 
+  //         fEventHeader->RunNum(), fEventHeader->RunEntry(), ret);
+  //   return;
+  // }
 
-  fCurRunNum = fEventHeader->RunNum();
-  if (!ValidRunInfo()) {
-    Error("UpdateRunInfo", "Error updating run info, run values do not match %d %d", 
-          fCurRunNum, fRunInfo->RunNum());
-    return;
+  // fCurRunNum = fEventHeader->RunNum();
+  // if (!ValidRunInfo()) {
+  //   Error("UpdateRunInfo", "Error updating run info, run values do not match %d %d", 
+  //         fCurRunNum, fRunInfo->RunNum());
+  //   return;
+  // }
+
+  // patch for 043: working around a bug in production
+  Int_t runEntry = fEventHeader->RunEntry();
+  do {
+    fEventHeader->SetRunEntry(runEntry++);
+
+    Int_t ret = fRunTree->GetEvent(fEventHeader->RunEntry());
+    if (ret<0 || fRunInfo==0) {
+      Error("UpdateRunInfo", "Error updating run info for run %d, entry %d, return value %d", 
+            fEventHeader->RunNum(), fEventHeader->RunEntry(), ret);
+      return;
+    }
+
+    fCurRunNum = fEventHeader->RunNum();
   }
+  while (!ValidRunInfo());
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -282,8 +298,9 @@ void Selector::UpdateRunInfoTree()
 
   fRunTransitions.clear();
   // look-ahead tree
-  // to be deprecated in 043. Keep these lines for backward compatibility!
+  // to be deprecated in the future. Keep these lines for backward compatibility!
   auto* laTree = dynamic_cast<TTree*>(f->Get(fLATreeName));
+
   if (laTree) {
     if (!laTree->GetBranch(fLAHdrName))
       Fatal("UpdateRunInfoTree", "Cannot find look-ahead branch with name %s", fLAHdrName.Data());
