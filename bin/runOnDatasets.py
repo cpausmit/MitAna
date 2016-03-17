@@ -899,9 +899,47 @@ def makeJobs(datasets, condorConf, limitTo = [], killStatus = [], skip = None):
                     pass
 
     # query condor to get real job status
+    # first use condor_status to collect the name of schedds reporting to the default collector
+    try:
+        out = []
+        err = []
+
+        runSubproc('condor_status', '-collector', '-autoformat', 'Machine', stdout = out, stderr = err)
+        if len(err) != 0:
+            raise RuntimeError('\n'.join(err))
+
+        # collector name
+        collector = out[0].lower()
+
+        out = []
+        err = []
+
+        runSubproc('condor_status', '-schedd', '-autoformat', 'Machine', 'CollectorHost', stdout = out, stderr = err)
+        if len(err) != 0:
+            raise RuntimeError('\n'.join(err))
+
+        # list of schedds
+        schedds = []
+        for line in out:
+            sched, coll = line.split()
+            if coll == collector:
+                schedds.append(sched.lower())
+
+    except RuntimeError, err:
+        print err
+        print 'Error in condor_status. Exit to avoid submitting jobs multiple times.'
+        while len(datasets) != 0:
+            datasets.pop()
+        return
+
     out = []
     err = []
-    runSubproc('condor_q', '-global', '-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments,JobStatus,GlobalJobId', stdout = out, stderr = err)
+
+    args = ['condor_q']
+    for schedd in schedds: # limit to local schedds only
+        args += ['-name', schedd]
+    args += ['-long', '-attributes', 'Owner,ClusterId,ProcId,Iwd,Args,Arguments,JobStatus,GlobalJobId']
+    runSubproc(*tuple(args), stdout = out, stderr = err)
 
     if len(out) == 1 and out[0].strip() == 'All queues are empty':
         out = []
