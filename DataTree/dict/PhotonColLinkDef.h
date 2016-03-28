@@ -18,6 +18,22 @@
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace mithep;
 
+#pragma read \
+    sourceClass="mithep::Photon" \
+    version="[-23]" \
+    source="Double32_t fCoviEtaiEta;" \
+    targetClass="mithep::Photon" \
+    target="fCoviEtaiEta" \
+    code="{ fCoviEtaiEta = onfile.fCoviEtaiEta; }" \
+
+#pragma read \
+    sourceClass="mithep::Photon" \
+    version="[-23]" \
+    source="Double32_t fCoviEtaiEta5x5;" \
+    targetClass="mithep::Photon" \
+    target="fCoviEtaiEta5x5" \
+    code="{ fCoviEtaiEta5x5 = onfile.fCoviEtaiEta5x5; }" \
+
 #pragma link C++ class mithep::Photon+;
 #pragma link C++ class mithep::Collection<mithep::Photon>+;
 #pragma link C++ class mithep::Array<mithep::Photon>+;

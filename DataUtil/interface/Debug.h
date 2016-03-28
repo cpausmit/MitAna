@@ -44,7 +44,7 @@ namespace mithep
   }; 
 }
 
-R__EXTERN mithep::Debug::EDebugMask gDebugMask;
+R__EXTERN UInt_t gDebugMask;
 R__EXTERN Int_t gDebugLevel;
 
 #define MDB(mask,level) \

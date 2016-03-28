@@ -589,6 +589,8 @@ Bool_t Analysis::InitProof()
 //--------------------------------------------------------------------------------------------------
 void Analysis::Run()
 {
+  Info("Run", "Debug level is %d debug mask is %d", gDebugLevel, gDebugMask);
+
   // Run the analysis on the created file set.
 
   if (fState == kPristine || fState == kRun) {
