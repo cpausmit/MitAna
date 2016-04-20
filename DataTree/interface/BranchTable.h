@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: BranchTable.h,v 1.2 2009/03/16 19:31:14 loizides Exp $
-//
 // BranchTable
 //
 // A convenient table to store dependencies among branches.

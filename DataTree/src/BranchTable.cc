@@ -1,5 +1,3 @@
-// $Id: BranchTable.cc,v 1.2 2009/03/16 19:31:14 loizides Exp $
-
 #include "MitAna/DataTree/interface/BranchTable.h"
 #include <TObjString.h>
 #include <TList.h>
@@ -16,7 +14,7 @@ Bool_t BranchTable::Find(const char *brname, const char *brdep) const
   if (!brname || !brdep)
     return kFALSE;
 
-  TList *l = GetListForObject(brname);
+  TList const* l = GetListForObject(brname);
   if (!l)
     return kFALSE;
 
@@ -63,7 +61,7 @@ TList *BranchTable::GetDepBranches(const char *brname) const
   // Get list of dependent branches for given branch name. 
   // This list has to be deleted by the user of this function.
 
-  TList *bl = GetListForObject(brname);
+  TList const* bl = GetListForObject(brname);
   if (!bl)
     return 0;
 
