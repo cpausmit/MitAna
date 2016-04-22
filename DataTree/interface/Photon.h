@@ -60,18 +60,6 @@ namespace mithep
     Double_t             HcalDepth2TowerSumEtDr04()   const { return fHcalDepth2TowerSumEtDr04; }
     Double_t             HcalTowerSumEtDr03()         const { return fHcalTowerSumEtDr03;    }
     Double_t             HcalTowerSumEtDr04()         const { return fHcalTowerSumEtDr04;    }
-    UShort_t             HollowConeNTrkDr03()         const { return fHollowConeNTrkDr03;    }
-    UShort_t             HollowConeNTrkDr04()         const { return fHollowConeNTrk;        }
-    Double_t             HollowConeTrkIsoDr03()       const { return fHollowConeTrkIsoDr03;  }
-    Double_t             HollowConeTrkIsoDr04()       const { return fHollowConeTrkIso;      }
-    Double_t             PFChargedHadronIso()         const { return fPFChargedHadronIso;    }
-    Double_t             PFNeutralHadronIso()         const { return fPFNeutralHadronIso;    }
-    Double_t             PFPhotonIso()                const { return fPFPhotonIso;           }
-    Bool_t               IsEB()                       const { return fIsEB;                  }
-    Bool_t               IsEE()                       const { return fIsEE;                  }
-    Bool_t               IsEBGap()                    const { return fIsEBGap;               }
-    Bool_t               IsEEGap()                    const { return fIsEEGap;               }
-    Bool_t               IsEBEEGap()                  const { return fIsEBEEGap;             }
     Bool_t               IsLoosePhoton()              const { return fIsLoosePhoton;         }
     Bool_t               IsTightPhoton()              const { return fIsTightPhoton;         }
     Bool_t               IsConverted()                const { return fIsConverted;           }
@@ -87,10 +75,6 @@ namespace mithep
     { return fFootprintCandidates.HasObject(cand); }
     Double_t             R9()                         const { return fR9;                    }
     SuperCluster const*  SCluster()                   const { return fSuperClusterRef.Obj(); }
-    Double_t             SolidConeTrkIsoDr03()        const { return fSolidConeTrkIsoDr03;   }
-    Double_t             SolidConeTrkIsoDr04()        const { return fSolidConeTrkIso;       }
-    UShort_t             SolidConeNTrkDr03()          const { return fSolidConeNTrkDr03;     }
-    UShort_t             SolidConeNTrkDr04()          const { return fSolidConeNTrk;         }
     Double_t             EtaWidth()                   const
     { return fEtaWidth >= 0. ? fEtaWidth : SCluster()->EtaWidth(); }
     Double_t             PhiWidth()                   const
@@ -98,6 +82,8 @@ namespace mithep
     Double_t             HadOverEmTow()               const { return fHadOverEmTow;       }
     Double_t             HcalIsoTowDr03()             const { return fHCalIsoTowDr03;    }
     Double_t             HcalIsoTowDr04()             const { return fHCalIsoTowDr04;    } 
+    Double_t             EcalPFClusterIso()           const { return fEcalPFClusterIso; }
+    Double_t             HcalPFClusterIso()           const { return fHcalPFClusterIso; }
     Double_t             S4Ratio()                    const
     { return fS4Ratio >= 0. ? fS4Ratio : SCluster()->Seed()->E2x2() / SCluster()->Seed()->E5x5(); }
     Double_t             EffSigmaRR()                 const
@@ -123,7 +109,6 @@ namespace mithep
     Bool_t               HasPV()                      const { return fPVRef.IsValid();      }
     const Vertex        *PV()                         const { return fPVRef.Obj();          }
     Double_t             VtxProb()                    const { return fVtxProb;              }
-    Double_t             IdMva()                      const { return fIdMva;                }
     // Some structural tools
     void                 Mark(UInt_t i=1)             const override;
 
@@ -158,42 +143,25 @@ namespace mithep
     void                 SetHcalTowerSumEtDr04(Double_t x)       { fHcalTowerSumEtDr04      = x; }
     void                 SetHcalDepth1TowerSumEtDr04(Double_t x) { fHcalDepth1TowerSumEtDr04= x; }
     void                 SetHcalDepth2TowerSumEtDr04(Double_t x) { fHcalDepth2TowerSumEtDr04= x; }
-    void                 SetSolidConeTrkIsoDr04(Double_t x)      { fSolidConeTrkIso         = x; }
-    void                 SetHollowConeTrkIsoDr04(Double_t x)     { fHollowConeTrkIso        = x; }
-    void                 SetSolidConeNTrkDr04(UShort_t x)        { fSolidConeNTrk           = x; }
-    void                 SetHollowConeNTrkDr04(UShort_t x)       { fHollowConeNTrk          = x; }
     void                 SetEcalRecHitIsoDr03(Double_t x)        { fEcalRecHitIsoDr03       = x; }
     void                 SetHcalTowerSumEtDr03(Double_t x)       { fHcalTowerSumEtDr03      = x; }
     void                 SetHcalDepth1TowerSumEtDr03(Double_t x) { fHcalDepth1TowerSumEtDr03= x; }
     void                 SetHcalDepth2TowerSumEtDr03(Double_t x) { fHcalDepth2TowerSumEtDr03= x; }
-    void                 SetSolidConeTrkIsoDr03(Double_t x)      { fSolidConeTrkIsoDr03     = x; }
-    void                 SetHollowConeTrkIsoDr03(Double_t x)     { fHollowConeTrkIsoDr03    = x; }
-    void                 SetSolidConeNTrkDr03(UShort_t x)        { fSolidConeNTrkDr03       = x; }
-    void                 SetHollowConeNTrkDr03(UShort_t x)       { fHollowConeNTrkDr03      = x; }
-    void                 SetPFChargedHadronIso(Double_t x)       { fPFChargedHadronIso      = x; }
-    void                 SetPFNeutralHadronIso(Double_t x)       { fPFNeutralHadronIso      = x; }
-    void                 SetPFPhotonIso(Double_t x)              { fPFPhotonIso             = x; }
-    void                 SetIsEB(Bool_t x)                       { fIsEB                    = x; }
-    void                 SetIsEE(Bool_t x)                       { fIsEE                    = x; }
-    void                 SetIsEBGap(Bool_t x)                    { fIsEBGap                 = x; }
-    void                 SetIsEEGap(Bool_t x)                    { fIsEEGap                 = x; }
-    void                 SetIsEBEEGap(Bool_t x)                  { fIsEBEEGap               = x; }
     void                 SetIsLoosePhoton(Bool_t x)              { fIsLoosePhoton           = x; }
     void                 SetIsTightPhoton(Bool_t x)              { fIsTightPhoton           = x; }
-    void                 SetCaloPosXYZ(Double_t x, Double_t y, Double_t z)
-    { fCaloPos.SetXYZ(x,y,z); }
     void                 SetPV(Vertex const* v)                  { fPVRef                   = v; }
     void                 SetECALOnlySuperCluster(SuperCluster const* s)
     { fPFSuperClusterRef = s;      }
     void                 AddFootprintCandidate(PFCandidate const* c)
     { fFootprintCandidates.Add(c); }
     void                 SetVtxProb(Double_t x)                  { fVtxProb                 = x; }
-    void                 SetIdMva(Double_t x)                    { fIdMva                   = x; }
     void                 SetEtaWidth(Double_t x)                 { fEtaWidth                = x; }
     void                 SetPhiWidth(Double_t x)                 { fPhiWidth                = x; }
     void                 SetHadOverEmTow(Double_t x)             { fHadOverEmTow = x;  }
     void                 SetHCalIsoTowDr03(Double_t x)           { fHCalIsoTowDr03 = x; }
     void                 SetHCalIsoTowDr04(Double_t x)           { fHCalIsoTowDr04 = x; } 
+    void                 SetEcalPFClusterIso(Double_t x)         { fEcalPFClusterIso = x; }
+    void                 SetHcalPFClusterIso(Double_t x)         { fHcalPFClusterIso = x; }
     void                 SetS4Ratio(Double_t x)                  { fS4Ratio = x;        }
     void                 SetEffSigmaRR(Double_t x)               { fEffSigmaRR = x;     }
     void                 SetMipChi2(Double_t x)                  { fMipChi2 = x;              }
@@ -223,7 +191,6 @@ namespace mithep
     void                 GetMom() const override;
 
     Vect4M               fMom;                      //four momentum vector
-    Vect3C               fCaloPos;                  //shower position
     Double32_t           fR9;                       //[0,0,14]r9=e3x3/etotal variable
     Double32_t           fHadOverEm;                //[0,0,14]hadronic over em fraction
     Double32_t           fHcalDepth1OverEcal;       //[0,0,14]hadronic over em fraction depth1
@@ -239,27 +206,11 @@ namespace mithep
     Double32_t           fHcalTowerSumEtDr04;       //[0,0,14]hcal tower bsd isodR 0.4
     Double32_t           fHcalDepth1TowerSumEtDr04; //[0,0,14]hcal dp1 tw bsd isodR 0.4
     Double32_t           fHcalDepth2TowerSumEtDr04; //[0,0,14]hcal dp2 tw bsd isodR 0.4
-    Double32_t           fSolidConeTrkIso;          //[0,0,14]sum track pT in cone dR 0.4 *RENAME*
-    Double32_t           fHollowConeTrkIso;         //[0,0,14]as above excl. core, dR 0.4 *RENAME*
-    UShort_t             fSolidConeNTrk;            //number of tracks in cone dR 0.4 *RENAME*
-    UShort_t             fHollowConeNTrk;           //as above excl. core, dR 0.4 *RENAME*
     Double32_t           fEcalRecHitIsoDr03;        //[0,0,14]ecal rechit based iso dR 0.3
     Double32_t           fHcalTowerSumEtDr03;       //[0,0,14] hcal tower based iso dR 0.3
     Double32_t           fHcalDepth1TowerSumEtDr03; //[0,0,14]hcal depth1 tower based iso dR 0.3
     Double32_t           fHcalDepth2TowerSumEtDr03; //[0,0,14]hcal depth2 tower based iso dR 0.3
-    Double32_t           fSolidConeTrkIsoDr03;      //[0,0,14]sum track pT in cone of dR 0.3
-    Double32_t           fHollowConeTrkIsoDr03;     //[0,0,14]as above excluding the core, dR 0.3
-    UShort_t             fSolidConeNTrkDr03;        //number of tracks in a cone of dR 0.3
-    UShort_t             fHollowConeNTrkDr03;       //as above excluding the core, dR 0.3
-    Double32_t           fPFChargedHadronIso;       //[0,0,14]pf iso, charged hadrons
-    Double32_t           fPFNeutralHadronIso;       //[0,0,14]pf iso, neutral hadrons
-    Double32_t           fPFPhotonIso;              //[0,0,14]pf iso, photons
     Bool_t               fHasPixelSeed = kFALSE;       //if super cluster has matched seed
-    Bool_t               fIsEB = kFALSE;               //if photon is ECal barrel
-    Bool_t               fIsEE = kFALSE;               //if photon is ECAL endcap
-    Bool_t               fIsEBGap = kFALSE;            //photon is in ECAL barrel crystal gap
-    Bool_t               fIsEEGap = kFALSE;            //photon is in ECAL endcap crystal gap
-    Bool_t               fIsEBEEGap = kFALSE;          //photon is in boundary between EB/EE
     Bool_t               fIsLoosePhoton = kFALSE;      //if loose photon cuts are passed
     Bool_t               fIsTightPhoton = kFALSE;      //if tight photon cuts are passed
     Bool_t               fIsConverted = kFALSE;        //if photon converted
@@ -273,7 +224,6 @@ namespace mithep
     Double32_t           fEnergyPhoFix;       //[0,0,14]PhotonFix energy (filler time)
     Double32_t           fEnergyErrPhoFix;    //[0,0,14]PhotonFix energy uncertainty (filler time)
     Double32_t           fVtxProb;            //[0,0,14]Probability linked PV is correct
-    Double32_t           fIdMva = -99.;              //[0,0,14]output of photon id mva
     Double32_t           fEtaWidth = -99.;           //[0,0,14]output of photon id mva
     Double32_t           fPhiWidth = -99.;           //[0,0,14]output of photon id mva
     Ref<SuperCluster>    fPFSuperClusterRef;  //ref to associated ECAL-only super cluster (PF cluster associated by geom in <=5XY, parentSuperCluster (ECAL-only PF mustache SC) in >=7XY) see below
@@ -281,6 +231,8 @@ namespace mithep
     Double32_t           fHadOverEmTow;       //[0,0,14]per-tower definition of hadronic/em energy fraction
     Double32_t           fHCalIsoTowDr03;     //[0,0,14]hcal isolation matched to per tower h/e definition
     Double32_t           fHCalIsoTowDr04;     //[0,0,14]hcal isolation matched to per tower h/e definition
+    Double32_t           fEcalPFClusterIso;   //[0,0,14]PF cluster-based isolation
+    Double32_t           fHcalPFClusterIso;   //[0,0,14]PF cluster-based isolation
     RefArray<DecayParticle> fConversionsD;        //refs to associated conversion candidates (using newer DecayParticle format)
     RefArray<DecayParticle> fConversionsS;        //refs to associated conversion candidates (using newer DecayParticle format) - single leg conversions
     Double32_t           fS4Ratio = -99.;           //[0,0,14]S4 ratio
@@ -314,6 +266,24 @@ namespace mithep
     //    Double32_t           fCovEtaEta;
     //    RefArray<PFCandidate> fPFPhotonsInMustache; //refs to photon-type PFCandidates inside of mustache region
     //    RefArray<PFCandidate> fPFPhotonsOutOfMustache; //refs to photon-type PFCandidates outside of mustache region
+    //    Vect3C               fCaloPos;                  //shower position
+    //    Double32_t           fSolidConeTrkIso;          //[0,0,14]sum track pT in cone dR 0.4 *RENAME*
+    //    Double32_t           fHollowConeTrkIso;         //[0,0,14]as above excl. core, dR 0.4 *RENAME*
+    //    UShort_t             fSolidConeNTrk;            //number of tracks in cone dR 0.4 *RENAME*
+    //    UShort_t             fHollowConeNTrk;           //as above excl. core, dR 0.4 *RENAME*
+    //    Double32_t           fSolidConeTrkIsoDr03;      //[0,0,14]sum track pT in cone of dR 0.3
+    //    Double32_t           fHollowConeTrkIsoDr03;     //[0,0,14]as above excluding the core, dR 0.3
+    //    UShort_t             fSolidConeNTrkDr03;        //number of tracks in a cone of dR 0.3
+    //    UShort_t             fHollowConeNTrkDr03;       //as above excluding the core, dR 0.3
+    //    Double32_t           fPFChargedHadronIso;       //[0,0,14]pf iso, charged hadrons
+    //    Double32_t           fPFNeutralHadronIso;       //[0,0,14]pf iso, neutral hadrons
+    //    Double32_t           fPFPhotonIso;              //[0,0,14]pf iso, photons
+    //    Bool_t               fIsEB = kFALSE;               //if photon is ECal barrel
+    //    Bool_t               fIsEE = kFALSE;               //if photon is ECAL endcap
+    //    Bool_t               fIsEBGap = kFALSE;            //photon is in ECAL barrel crystal gap
+    //    Bool_t               fIsEEGap = kFALSE;            //photon is in ECAL endcap crystal gap
+    //    Bool_t               fIsEBEEGap = kFALSE;          //photon is in boundary between EB/EE
+    //    Double32_t           fIdMva = -99.;              //[0,0,14]output of photon id mva
     // Accessors
     //    const Conversion    *ConvCand(UInt_t i)           const { return fConversions.At(i);  }
     //    Double_t             HcalRecHitIso()              const { return 0.;         }
@@ -328,13 +298,14 @@ namespace mithep
     //    void                 AddPFPhotonInMustache(const PFCandidate *c) { fPFPhotonsInMustache.Add(c); }
     //    void                 AddPFPhotonOutOfMustache(const PFCandidate *c) { fPFPhotonsOutOfMustache.Add(c); }
     //    void                 SetIsLooseEM(Bool_t x)                  { fIsLooseEM               = x; }
+    //    void                 SetCaloPosXYZ(Double_t x, Double_t y, Double_t z) { fCaloPos.SetXYZ(x,y,z); }
 
     // fPFSuperClusterRef: member object name is kept the same as <7XY so that old files can be read
     // Should in principle be possible to use schema evolution to convert it to something like fECALOnlySuperClusterRef
     // The problem is that process ID seems to be not set at the point where conversion rules are applied
     // which is strange since process ID is set in ProcIDRef::Streamer..
 
-    ClassDef(Photon, 24) // Photon class
+    ClassDef(Photon, 25) // Photon class
   };
 }
 
@@ -360,12 +331,7 @@ inline
 mithep::ThreeVectorC
 mithep::Photon::CaloPos() const
 {
-  // Get caloposition
-  mithep::ThreeVectorC calopos = fCaloPos.V();
-  if (calopos.Rho()>1.0)
-    return calopos;
-  else
-    return SCluster()->Point();
+  return SCluster()->Point();
 }
 
 inline

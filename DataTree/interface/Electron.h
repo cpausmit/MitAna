@@ -105,12 +105,15 @@ namespace mithep
     Bool_t               HasGsfTrk()                      const { return fGsfTrackRef.IsValid(); }
     Bool_t               HasTrackerTrk()                  const { return fTrackerTrackRef.IsValid(); }
     Bool_t               HasSuperCluster()                const { return fSuperClusterRef.IsValid(); }
+    Double_t             IDLikelihood()                   const { return fIDLikelihood; }
     Bool_t               IsEnergyScaleCorrected()         const { return fIsEnergyScaleCorrected; }
     Bool_t               IsMomentumCorrected()            const { return fIsMomentumCorrected; }
     Bool_t               IsEcalDriven()                   const { return fIsEcalDriven; }
     Bool_t               IsTrackerDriven()                const { return fIsTrackerDriven; }
     Double_t             NumberOfClusters()               const { return fNumberOfClusters; }
     EObjType             ObjType()                        const { return kElectron; }
+    Double_t             PassLooseID()                    const { return fPassLooseID; }
+    Double_t             PassTightID()                    const { return fPassTightID; }
     Double_t             PIn()                            const { return fPIn; }
     Double_t             POut()                           const { return fPOut; }
     const SuperCluster  *SCluster()                       const { return fSuperClusterRef.Obj(); }
@@ -206,24 +209,27 @@ namespace mithep
     void                 SetESuperClusterOverP(Double_t x)      { fESuperClusterOverP = x; }
     void                 SetFBrem(Double_t x)                   { fFBrem = x; }
     void                 SetFracSharedHits(Double_t x)          { fFracSharedHits = x; }
-    void	         SetGsfTrk(const Track* t)                     
+    void                 SetGsfTrk(const Track* t)                     
     { fGsfTrackRef = t; ClearCharge(); }
     void                 SetHadronicOverEm(Double_t x)          { fHadronicOverEm = x; }
     void                 SetHcalDepth1OverEcal(Double_t x)      { fHcalDepth1OverEcal = x; }
     void                 SetHcalDepth2OverEcal(Double_t x)      { fHcalDepth2OverEcal = x; }
+    void                 SetIDLikelihood(Double_t x) { fIDLikelihood = x; }
     void                 SetIsEnergyScaleCorrected(Bool_t x)    { fIsEnergyScaleCorrected = x; }
     void                 SetIsMomentumCorrected(Bool_t x)       { fIsMomentumCorrected = x; }
     void                 SetNumberOfClusters(Double_t x)        { fNumberOfClusters = x; }
     void                 SetPIn(Double_t pIn)                   { fPIn = pIn; }
     void                 SetPOut(Double_t pOut)                 { fPOut = pOut; }
+    void                 SetPassLooseID(Double_t passLooseID)   { fPassLooseID = passLooseID; }
+    void                 SetPassTightID(Double_t passTightID)   { fPassTightID = passTightID; }
     void                 SetPtEtaPhi(Double_t pt, Double_t eta, Double_t phi);
-    void	         SetSuperCluster(const SuperCluster* sc) 
+    void                 SetSuperCluster(const SuperCluster* sc) 
     { fSuperClusterRef = sc; }
-    void	         SetECALOnlySuperCluster(const SuperCluster* sc) 
+    void                 SetECALOnlySuperCluster(const SuperCluster* sc) 
     { fPFSuperClusterRef = sc; }                             
     void                 AddFootprintCandidate(PFCandidate const* c)
     { fFootprintCandidates.Add(c); }
-    void	         SetTrackerTrk(const Track* t)                 
+    void                 SetTrackerTrk(const Track* t)                 
     { fTrackerTrackRef = t; ClearCharge(); }
     void                 SetConvPartnerTrk(const Track *t)
     { fConvPartnerTrackRef = t; }
@@ -291,6 +297,9 @@ namespace mithep
     Double32_t        fHcalDepth1TowerSumEtDr03;     //[0,0,14]hcal depth1 tower based isolation dR 0.3
     Double32_t        fHcalDepth2TowerSumEtDr03;     //[0,0,14]hcal depth2 tower based isolation dR 0.3
     Double32_t        fEcalRecHitSumEtDr03;          //[0,0,14]ecal jura iso dR 0.3
+    Double32_t        fPassLooseID;                  //[0,0,14]pass loose id
+    Double32_t        fPassTightID;                  //[0,0,14]pass tight id
+    Double32_t        fIDLikelihood;                 //[0,0,14]likelihood value
     Double32_t        fPIn;                          //[0,0,14]momentum at vtx
     Double32_t        fPOut;                         //[0,0,14]momentum at ecal surface
     Double32_t        fFracSharedHits;               //[0,0,14]fraction of shared hits btw gsf and std. track
@@ -361,9 +370,6 @@ namespace mithep
     //    Double32_t        fCovEtaEta;                    //[0,0,14]variance eta-eta
     //    Double32_t        fTrackIsolationDr04;           //[0,0,14]isolation based on tracks dR 0.4
     //    Double32_t        fTrackIsolation;               //[0,0,14]isolation based on tracks dR 0.3 *RENAMING*
-    //    Double32_t        fPassLooseID;                  //[0,0,14]pass loose id
-    //    Double32_t        fPassTightID;                  //[0,0,14]pass tight id
-    //    Double32_t        fIDLikelihood;                 //[0,0,14]likelihood value
     //    Double32_t        fMva;                          //[0,0,14] pflow mva output
     //    Double32_t        fPFChargedHadronIso;           //[0,0,14]pf isolation, charged hadrons
     //    Double32_t        fPFNeutralHadronIso;           //[0,0,14]pf isolation, neutral hadrons
