@@ -26,7 +26,7 @@
     source="Double32_t fJetProbabilityBJetTagsDisc; \
             Double32_t fJetBProbabilityBJetTagsDisc; \
             Double32_t fSimpleSecondaryVertexHighEffBJetTagsDisc; \
-            Double32_t fTrackCountingHighEffBJetTagsDisc;"
+            Double32_t fTrackCountingHighEffBJetTagsDisc;" \
     targetClass="mithep::Jet" \
     target="fBJetTagsDisc" \
     code="{ fBJetTagsDisc[mithep::Jet::kJetProbability] = onfile.fJetProbabilityBJetTagsDisc; \
@@ -85,13 +85,6 @@
       fCorrectionScale[mithep::Jet::L7] = onfile.fL7PartonCorrectionScale; \
       fCorrectionScale[mithep::Jet::Custom] = onfile.fCustomCorrectionScale; }"
 
-/*
-  BTag enum:
-  Version 7
-
-*/
-
-
 #pragma read \
     sourceClass="mithep::Jet" \
     version="[7]" \
@@ -117,7 +110,7 @@
     target="fBJetTagsLegacyDisc" \
     code="{ enum OldBTagAlgo {lJetProbability,lJetProbabilityNegative,lJetProbabilityPositive,lJetBProbability,lJetBProbabilityNegative,lJetBProbabilityPositive,lSimpleSecondaryVertexHighEff,lSimpleSecondaryVertexHighEffNegative,lSimpleSecondaryVertexHighPur,lSimpleSecondaryVertexHighPurNegative,lCombinedSecondaryVertex,lCombinedSecondaryVertexV2,lCombinedSecondaryVertexV2Positive,lCombinedSecondaryVertexV2Negative,lCombinedSecondaryVertexSoftLepton,lCombinedInclusiveSecondaryVertexV2,lCombinedInclusiveSecondaryVertexV2Positive,lCombinedInclusiveSecondaryVertexV2Negative,lCombinedMVA,lTrackCountingHighEff,lTrackCountingHighPur,lSoftPFMuon,lSoftPFMuonNegative,lSoftPFMuonPositive,lSoftPFElectron,lSoftPFElectronNegative,lSoftPFElectronPositive,lDoubleSecondaryVertex,lSimpleSecondaryVertex,lSoftMuon,lSoftMuonByIP3d,lSoftMuonByPt,lSoftElectronByIP3d,lSoftElectronByPt,lGhostTrack}; \
       auto copyBtag([&fBJetTagsLegacyDisc, &onfile](unsigned newInd, unsigned oldInd){ \
-        if (oldInd >= oOffset)                                          \
+        if (oldInd >= lSimpleSecondaryVertex)                                          \
           fBJetTagsLegacyDisc[newInd - mithep::Jet::nBTagAlgos] = onfile.fBJetTagsLegacyDisc[oldInd - lSimpleSecondaryVertex]; \
         else                                                            \
           fBJetTagsLegacyDisc[newInd - mithep::Jet::nBTagAlgos] = onfile.fBJetTagsDisc[oldInd]; \
