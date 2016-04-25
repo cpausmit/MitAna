@@ -12,6 +12,7 @@
 #include "MitAna/DataTree/interface/Tau.h"
 #include "MitAna/DataCont/interface/RefArray.h"
 #include "MitAna/DataCont/interface/Ref.h"
+#include "MitAna/DataCont/interface/Types.h"
 #include "MitAna/DataTree/interface/PFCandidate.h"
 #include "MitAna/DataTree/interface/BasicCluster.h"
 #include "MitAna/DataTree/interface/PFJet.h"
@@ -99,7 +100,7 @@ namespace mithep {
     };
 
     enum LegacyDiscriminator {
-      kDiscriminationAgainstElectron = nIdentifiers,
+      kDiscriminationAgainstElectron = nDiscriminators,
       kDiscriminationAgainstMuon,
       kDiscriminationByMVAElectronRejection,
       kDiscriminationByVLooseIsolation,
@@ -282,7 +283,7 @@ namespace mithep {
     Ref<PFCandidate> fLeadPFCand{}; //leading sig pf cand (charged or neutral)
     Ref<PFCandidate> fLeadChargedHadPFCand{}; //leading charged hadron signal pf cand
     Ref<PFCandidate> fLeadNeutralPFCand{}; //leading neutral signal pf cand
-    Ref<PFJet> fPFJet{}; //original reconst* ucted pf jet
+    Ref<PFJet> fPFJet{}; //original reconstructed pf jet
     Ref<Track> fElectronTrack{}; //track corresp. to pot. matching el cand
     RefArray<PFCandidate> fSignalPFCands{}; //selected pf candidates in signal cone
     RefArray<PFCandidate> fSignalPFChargedHadrCands{}; //signal pf charged hadron candidates
