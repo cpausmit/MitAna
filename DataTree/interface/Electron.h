@@ -105,7 +105,6 @@ namespace mithep
     Bool_t               HasGsfTrk()                      const { return fGsfTrackRef.IsValid(); }
     Bool_t               HasTrackerTrk()                  const { return fTrackerTrackRef.IsValid(); }
     Bool_t               HasSuperCluster()                const { return fSuperClusterRef.IsValid(); }
-    Double_t             IDLikelihood()                   const { return fIDLikelihood; }
     Bool_t               IsEnergyScaleCorrected()         const { return fIsEnergyScaleCorrected; }
     Bool_t               IsMomentumCorrected()            const { return fIsMomentumCorrected; }
     Bool_t               IsEcalDriven()                   const { return fIsEcalDriven; }
@@ -214,7 +213,6 @@ namespace mithep
     void                 SetHadronicOverEm(Double_t x)          { fHadronicOverEm = x; }
     void                 SetHcalDepth1OverEcal(Double_t x)      { fHcalDepth1OverEcal = x; }
     void                 SetHcalDepth2OverEcal(Double_t x)      { fHcalDepth2OverEcal = x; }
-    void                 SetIDLikelihood(Double_t x) { fIDLikelihood = x; }
     void                 SetIsEnergyScaleCorrected(Bool_t x)    { fIsEnergyScaleCorrected = x; }
     void                 SetIsMomentumCorrected(Bool_t x)       { fIsMomentumCorrected = x; }
     void                 SetNumberOfClusters(Double_t x)        { fNumberOfClusters = x; }
@@ -299,7 +297,6 @@ namespace mithep
     Double32_t        fEcalRecHitSumEtDr03;          //[0,0,14]ecal jura iso dR 0.3
     Double32_t        fPassLooseID;                  //[0,0,14]pass loose id
     Double32_t        fPassTightID;                  //[0,0,14]pass tight id
-    Double32_t        fIDLikelihood;                 //[0,0,14]likelihood value
     Double32_t        fPIn;                          //[0,0,14]momentum at vtx
     Double32_t        fPOut;                         //[0,0,14]momentum at ecal surface
     Double32_t        fFracSharedHits;               //[0,0,14]fraction of shared hits btw gsf and std. track
@@ -374,6 +371,7 @@ namespace mithep
     //    Double32_t        fPFChargedHadronIso;           //[0,0,14]pf isolation, charged hadrons
     //    Double32_t        fPFNeutralHadronIso;           //[0,0,14]pf isolation, neutral hadrons
     //    Double32_t        fPFPhotonIso;                  //[0,0,14]pf isolation, photons
+    //    Double32_t        fIDLikelihood;                 //[0,0,14]likelihood value
     //    Bool_t            fIsEB = kFALSE;                         //is ECAL barrel
     //    Bool_t            fIsEE = kFALSE;                         //is ECAL Endcap
     //    Bool_t            fIsEBEEGap = kFALSE;                    //is in barrel-endcap gap
