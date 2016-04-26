@@ -21,10 +21,10 @@ namespace mithep
   typedef BitMaskT<UChar_t>                BitMask8;
   typedef BitMaskT<UShort_t>               BitMask16;
   typedef BitMaskT<UInt_t>                 BitMask32;
+  typedef BitMask<3>                       BitMask24;
   typedef BitMask<5>                       BitMask40;
   typedef BitMask<6>                       BitMask48;
   typedef BitMask<7>                       BitMask56;
-  typedef BitMask<8>                       BitMask64u;
   typedef BitMaskT<ULong64_t>              BitMask64;
   typedef BitMask<16>                      BitMask128;
   typedef BitMask<32>                      BitMask256;

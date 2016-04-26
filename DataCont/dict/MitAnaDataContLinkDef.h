@@ -40,12 +40,14 @@
 #pragma link C++ class mithep::BitMask<6>+;
 #pragma link C++ class mithep::BitMaskT<ULong64_t>+;
 #pragma link C++ class mithep::BitMask<2>+;
+#pragma link C++ class mithep::BitMask<3>+;
 #pragma link C++ class mithep::BitMask<8>+;
 #pragma link C++ class mithep::BitMask<16>+;
 #pragma link C++ class mithep::BitMask<32>+;
 #pragma link C++ class mithep::BitMask<128>+;
 #pragma link C++ typedef mithep::BitMask8;
 #pragma link C++ typedef mithep::BitMask16;
+#pragma link C++ typedef mithep::BitMask24;
 #pragma link C++ typedef mithep::BitMask32;
 #pragma link C++ typedef mithep::BitMask64u;
 #pragma link C++ typedef mithep::BitMask48;
