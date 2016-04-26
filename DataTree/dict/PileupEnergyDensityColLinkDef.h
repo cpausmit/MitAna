@@ -24,34 +24,73 @@
 #pragma read \
     sourceClass="mithep::PileupEnergyDensity" \
     version="[-4]" \
-    source="Double32_t fRho; Double32_t fRhoHighEta; Double32_t fRhoRandom;\
-            Double32_t fRhoRandomLowEta; Double32_t fRhoFixedGridAll;\
-            Double32_t fRhoFixedGridFastjetAll;" \
+    source="Double32_t fRho; \
+            Double32_t fRhoHighEta; \
+            Double32_t fRhoRandom; \
+            Double32_t fRhoRandomLowEta; \
+            Double32_t fRhoFixedGridAll; \
+            Double32_t fRhoFixedGridFastjetAll; \
+            Double32_t fRhoKt6CaloJets; \
+            Double32_t fRhoKt6CaloJetsCentral; \
+            Double32_t fRhoKt6PFJets; \
+            Double32_t fRhoKt6PFJetsCentralChargedPileUp; \
+            Double32_t fRhoKt6PFJetsCentralNeutral; \
+            Double32_t fRhoKt6PFJetsCentralNeutralTight;" \
     targetClass="mithep::PileupEnergyDensity" \
-    target="fRho" \
-    code="{ fRho[mithep::PileupEnergyDensity::kHighEta] = onfile.fRho;\
-      fRho[mithep::PileupEnergyDensity::kLowEta] = onfile.fRhoHighEta;\
-      fRho[mithep::PileupEnergyDensity::kRandom] = onfile.fRhoRandom;\
-      fRho[mithep::PileupEnergyDensity::kRandomLowEta] = onfile.fRhoRandomLowEta;\
-      fRho[mithep::PileupEnergyDensity::kFixedGridAll] = onfile.fRhoFixedGridAll;\
-      fRho[mithep::PileupEnergyDensity::kFixedGridFastjetAll] = onfile.fRhoFixedGridFastjetAll; }" \
+    target="fRho, fRhoLegacy" \
+    code="{ if (&fRhoLegacy); \
+      static const TString bname(Form(\"fRhoLegacy[%d]\", mithep::PileupEnergyDensity::nLegacyAlgos)); \
+      static Long_t actualOffset = cls->GetDataMemberOffset(bname); \
+      fRhoLegacy_t& fActualRhoLegacy = *(fRhoLegacy_t*)(target + actualOffset); \
+      auto setRho([&fRho](UInt_t idx, Double_t value) { fRho[idx] = value; }); \
+      auto setLegacy([&fActualRhoLegacy](UInt_t idx, Double_t value) { fActualRhoLegacy[idx - mithep::PileupEnergyDensity::nAlgos] = value; }); \
+      setRho(mithep::PileupEnergyDensity::kHighEta, onfile.fRho); \
+      setRho(mithep::PileupEnergyDensity::kLowEta, onfile.fRhoHighEta); \
+      setRho(mithep::PileupEnergyDensity::kRandom, onfile.fRhoRandom); \
+      setRho(mithep::PileupEnergyDensity::kRandomLowEta, onfile.fRhoRandomLowEta); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridAll, onfile.fRhoFixedGridAll); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridFastjetAll, onfile.fRhoFixedGridFastjetAll); \
+      setLegacy(mithep::PileupEnergyDensity::kKt6CaloJets, onfile.fRhoKt6CaloJets); \
+      setLegacy(mithep::PileupEnergyDensity::kKt6CaloJetsCentral, onfile.fRhoKt6CaloJetsCentral); \
+      setLegacy(mithep::PileupEnergyDensity::kKt6PFJets, onfile.fRhoKt6PFJets); \
+      setLegacy(mithep::PileupEnergyDensity::kKt6PFJetsCentralChargedPileUp, onfile.fRhoKt6PFJetsCentralChargedPileUp); \
+      setLegacy(mithep::PileupEnergyDensity::kKt6PFJetsCentralNeutral, onfile.fRhoKt6PFJetsCentralNeutral); \
+      setLegacy(mithep::PileupEnergyDensity::kKt6PFJetsCentralNeutralTight, onfile.fRhoKt6PFJetsCentralNeutralTight); }" \
 
 #pragma read \
     sourceClass="mithep::PileupEnergyDensity" \
-    version="[-4]" \
-    source="Double32_t fRhoKt6CaloJets;\
-            Double32_t fRhoKt6CaloJetsCentral; Double32_t fRhoKt6PFJets;\
-            Double32_t fRhoKt6PFJetsCentralChargedPileUp; Double32_t fRhoKt6PFJetsCentralNeutral;\
-            Double32_t fRhoKt6PFJetsCentralNeutralTight;" \
+    version="[5]" \
+    source="Double32_t fRho[10];" \
     targetClass="mithep::PileupEnergyDensity" \
-    target="fRhoLegacy" \
-    code="{ unsigned const aOffset = mithep::PileupEnergyDensity::nAlgos;\
-      fRhoLegacy[mithep::PileupEnergyDensity::kKt6CaloJets - aOffset] = onfile.fRhoKt6CaloJets;\
-      fRhoLegacy[mithep::PileupEnergyDensity::kKt6CaloJetsCentral - aOffset] = onfile.fRhoKt6CaloJetsCentral;\
-      fRhoLegacy[mithep::PileupEnergyDensity::kKt6PFJets - aOffset] = onfile.fRhoKt6PFJets;\
-      fRhoLegacy[mithep::PileupEnergyDensity::kKt6PFJetsCentralChargedPileUp - aOffset] = onfile.fRhoKt6PFJetsCentralChargedPileUp;\
-      fRhoLegacy[mithep::PileupEnergyDensity::kKt6PFJetsCentralNeutral - aOffset] = onfile.fRhoKt6PFJetsCentralNeutral;\
-      fRhoLegacy[mithep::PileupEnergyDensity::kKt6PFJetsCentralNeutralTight - aOffset] = onfile.fRhoKt6PFJetsCentralNeutralTight; }" \
+    target="fRho, fRhoLegacy" \
+    code="{ if (&fRhoLegacy); \
+      static const TString bname(Form(\"fRhoLegacy[%d]\", mithep::PileupEnergyDensity::nLegacyAlgos)); \
+      static Long_t actualOffset = cls->GetDataMemberOffset(bname); \
+      fRhoLegacy_t& fActualRhoLegacy = *(fRhoLegacy_t*)(target + actualOffset); \
+      enum OldAlgo { \
+        lHighEta, \
+        lLowEta, \
+        lRandom, \
+        lRandomLowEta, \
+        lFixedGridAll, \
+        lFixedGridFastjetAll, \
+        lFixedGridFastjetAllCalo, \
+        lFixedGridFastjetCentralCalo, \
+        lFixedGridFastjetCentralChargedPileUp, \
+        lFixedGridFastjetCentralNeutral \
+      }; \
+      auto setRho([&fRho, &onfile](UInt_t newIdx, UInt_t oldIdx) { fRho[newIdx] = onfile.fRho[oldIdx]; }); \
+      auto setLegacy([&fActualRhoLegacy, &onfile](UInt_t newIdx, UInt_t oldIdx) { fActualRhoLegacy[newIdx - mithep::PileupEnergyDensity::nAlgos] = onfile.fRho[oldIdx]; }); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridAll, lFixedGridAll); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridFastjetAll, lFixedGridFastjetAll); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridFastjetAllCalo, lFixedGridFastjetAllCalo); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridFastjetCentralCalo, lFixedGridFastjetCentralCalo); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridFastjetCentralChargedPileUp, lFixedGridFastjetCentralChargedPileUp); \
+      setRho(mithep::PileupEnergyDensity::kFixedGridFastjetCentralNeutral, lFixedGridFastjetCentralNeutral); \
+      setLegacy(mithep::PileupEnergyDensity::kHighEta, lHighEta); \
+      setLegacy(mithep::PileupEnergyDensity::kLowEta, lLowEta); \
+      setLegacy(mithep::PileupEnergyDensity::kRandom, lRandom); \
+      setLegacy(mithep::PileupEnergyDensity::kRandomLowEta, lRandomLowEta); }" \
 
 #pragma link C++ class mithep::PileupEnergyDensity+;
 #pragma link C++ enum mithep::PileupEnergyDensity::Algo;
