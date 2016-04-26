@@ -58,9 +58,9 @@ namespace mithep
       mutable CacheFlag         fCacheQFlag;   //||cache validity flag for charge
       mutable FourVectorM       fCachedMom;    //!cached momentum vector (filled by derived classes)
       mutable Double_t          fCachedQ;      //!chached charge value (filled by derived classes)
-      Bool_t                    fIsFakeable;   //set to true if the lepton is a fakeable object
+      Bool_t                    fIsFakeable;   //!set to true if the lepton is a fakeable object
 
-    ClassDef(Particle, 1) // Generic particle class
+    ClassDef(Particle, 2) // Generic particle class
   };
 }
 
