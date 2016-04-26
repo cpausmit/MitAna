@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: GenJet.h,v 1.5 2009/03/03 17:04:09 loizides Exp $
-//
 // GenJet
 //
 // This class holds information about reconstructed jets at generation level.

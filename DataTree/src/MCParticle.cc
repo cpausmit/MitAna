@@ -1,5 +1,3 @@
-// $Id: MCParticle.cc,v 1.6 2009/03/17 17:36:53 loizides Exp $
-
 #include "MitAna/DataTree/interface/MCParticle.h"
 
 ClassImp(mithep::MCParticle)
