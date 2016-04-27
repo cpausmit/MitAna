@@ -7,6 +7,36 @@ ClassImp(mithep::PFCandidate)
 
 // Object reference accessors in src file to avoid circular dependence of header files
 
+void
+mithep::PFCandidate::AddRef(DataObject const* obj)
+{
+  switch (obj->ObjType()) {
+  case kTrack:
+    {
+      auto* track = static_cast<Track const*>(obj);
+      if (track->IsGsf())
+        fGsfTrack = track;
+      else
+        fTrackerTrack = track;
+    }
+    break;
+  case kMuon:
+    fMuon = static_cast<Muon const*>(obj);
+    break;
+  case kSuperCluster:
+    fSCluster = static_cast<SuperCluster const*>(obj);
+    break;
+  case kElectron:
+    fElectron = static_cast<Electron const*>(obj);
+    break;
+  case kPhoton:
+    fPhoton = static_cast<Photon const*>(obj);
+    break;
+  default:
+    break;
+  }
+}
+
 mithep::Track const*
 mithep::PFCandidate::TrackerTrk() const
 {

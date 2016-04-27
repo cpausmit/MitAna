@@ -95,7 +95,8 @@ namespace mithep
       void                SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
       void		  SetMom(Double_t px, Double_t py, Double_t pz, Double_t e);
       void		  SetMother(const PFCandidate *p)   { fMother = p;                        }
-      void                AddRef(DataObject const* obj)     { fRefs.Add(obj);                     }
+      //      void                AddRef(DataObject const* obj)     { fRefs.Add(obj);                     }
+      void                AddRef(DataObject const* obj);
       void                SetVertex(Double_t x, Double_t y, Double_t z);
       const ThreeVector   SourceVertex()           const    { return fSourceVertex.V();           }
       const Track        *TrackerTrk()             const;
@@ -121,13 +122,13 @@ namespace mithep
       BitMask24           fPFFlagBits;       //various PF flags
       EPFType             fPFType;           //particle flow type
       Ref<PFCandidate>    fMother;           //reference to mother
-      RefArray<DataObject> fRefs;            //references to standard track, gsf track, muon, supercluster, electron, or photon
-      Ref<Track>          fTrackerTrack;     //! (deprecated) reference to (standard) track
-      Ref<Track>          fGsfTrack;         //! (deprecated) reference to gsf track (for electrons only)
-      Ref<Muon>           fMuon;             //! (deprecated) reference to corresponding reco muon
-      Ref<SuperCluster>   fSCluster;         //! (deprecated) reference to egamma supercluster
-      Ref<Electron>       fElectron;         //! (deprecated) reference to electron
-      Ref<Photon>         fPhoton;           //! (deprecated) reference to egamma photon
+      RefArray<DataObject> fRefs;            //! references to standard track, gsf track, muon, supercluster, electron, or photon
+      Ref<Track>          fTrackerTrack;     //(deprecated) reference to (standard) track
+      Ref<Track>          fGsfTrack;         //(deprecated) reference to gsf track (for electrons only)
+      Ref<Muon>           fMuon;             //(deprecated) reference to corresponding reco muon
+      Ref<SuperCluster>   fSCluster;         //(deprecated) reference to egamma supercluster
+      Ref<Electron>       fElectron;         //(deprecated) reference to electron
+      Ref<Photon>         fPhoton;           //(deprecated) reference to egamma photon
 
     ClassDef(PFCandidate,6) // Particle-flow candidate class
   };
