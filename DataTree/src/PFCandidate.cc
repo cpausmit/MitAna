@@ -123,6 +123,9 @@ mithep::PFCandidate::Mark(UInt_t ib) const
   // mark my dependencies if they are there
   if (fMother.IsValid())
     fMother.Obj()->Mark(ib);
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR)
-    fRefs.Mark(iR);
+  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
+    auto* obj = fRefs.At(iR);
+    if (obj)
+      obj->Mark(ib);
+  }
 }
