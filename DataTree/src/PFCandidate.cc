@@ -2,147 +2,102 @@
 #include "MitAna/DataTree/interface/Muon.h"
 #include "MitAna/DataTree/interface/Electron.h"
 #include "MitAna/DataTree/interface/Photon.h"
+#include "MitAna/DataTree/interface/Track.h"
+#include "MitAna/DataTree/interface/SuperCluster.h"
 
 ClassImp(mithep::PFCandidate)
 
 // Object reference accessors in src file to avoid circular dependence of header files
 
-void
-mithep::PFCandidate::AddRef(DataObject const* obj)
+Bool_t
+mithep::PFCandidate::HasTrackerTrk() const
 {
-  switch (obj->ObjType()) {
-  case kTrack:
-    {
-      auto* track = static_cast<Track const*>(obj);
-      if (track->IsGsf())
-        fGsfTrack = track;
-      else
-        fTrackerTrack = track;
-    }
-    break;
-  case kMuon:
-    fMuon = static_cast<Muon const*>(obj);
-    break;
-  case kSuperCluster:
-    fSCluster = static_cast<SuperCluster const*>(obj);
-    break;
-  case kElectron:
-    fElectron = static_cast<Electron const*>(obj);
-    break;
-  case kPhoton:
-    fPhoton = static_cast<Photon const*>(obj);
-    break;
-  default:
-    break;
-  }
+  return fTrackerTrack.IsValid();
+}
+
+Bool_t
+mithep::PFCandidate::HasGsfTrk() const
+{
+  return fGsfTrack.IsValid();
+}
+
+Bool_t
+mithep::PFCandidate::HasSCluster() const
+{
+  return fSCluster.IsValid();
+
+}
+
+void
+mithep::PFCandidate::SetMuon(Muon const* m)
+{
+  fMuon = m;
+}
+
+void
+mithep::PFCandidate::SetElectron(Electron const* e)
+{
+  fElectron = e;
+}
+
+void
+mithep::PFCandidate::SetPhoton(Photon const* p)
+{
+  fPhoton = p;
+}
+
+void
+mithep::PFCandidate::SetTrackerTrk(Track const* t)
+{
+  fTrackerTrack = t;
+}
+
+void
+mithep::PFCandidate::SetGsfTrk(Track const* t)
+{
+  fGsfTrack = t;
+}
+
+void
+mithep::PFCandidate::SetSCluster(SuperCluster const* s)
+{
+  fSCluster = s;
 }
 
 mithep::Track const*
 mithep::PFCandidate::TrackerTrk() const
 {
-  if (fTrackerTrack.IsValid()) {
-    // reading pre-version 6 object
-    return fTrackerTrack.Obj();
-  }
-
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj && obj->ObjType() == kTrack) {
-      auto* track = static_cast<Track const*>(obj);
-      if (!track->IsGsf())
-        return track;
-    }
-  }
-
-  return 0;
+  return fTrackerTrack.Obj();
 }
 
 mithep::Track const*
 mithep::PFCandidate::GsfTrk() const
 {
-  if (fGsfTrack.IsValid()) {
-    // reading pre-version 6 object
-    return fGsfTrack.Obj();
-  }
-
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj && obj->ObjType() == kTrack) {
-      auto* track = static_cast<Track const*>(obj);
-      if (track->IsGsf())
-        return track;
-    }
-  }
-
-  return 0;
+  return fGsfTrack.Obj();
 }
 
 mithep::SuperCluster const*
 mithep::PFCandidate::SCluster() const
 {
-  if (fSCluster.IsValid()) {
-    // reading pre-version 6 object
-    return fSCluster.Obj();
-  }
-
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj && obj->ObjType() == kSuperCluster)
-      return static_cast<SuperCluster const*>(obj);
-  }
-
-  return 0;
+  return fSCluster.Obj();
 }
 
 mithep::Muon const*
 mithep::PFCandidate::Mu() const
 {
-  if (fMuon.IsValid()) {
-    // reading pre-version 6 object
-    return fMuon.Obj();
-  }
-
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj && obj->ObjType() == kMuon)
-      return static_cast<Muon const*>(obj);
-  }
-
-  return 0;
+  return fMuon.Obj();
 }
 
 mithep::Electron const*
 mithep::PFCandidate::Ele() const
 {
-  if (fElectron.IsValid()) {
-    // reading pre-version 6 object
-    return fElectron.Obj();
-  }
-
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj && obj->ObjType() == kElectron)
-      return static_cast<Electron const*>(obj);
-  }
-
-  return 0;
+  return fElectron.Obj();
 }
 
 mithep::Photon const*
 mithep::PFCandidate::Pho() const
 {
-  if (fPhoton.IsValid()) {
-    // reading pre-version 6 object
-    return fPhoton.Obj();
-  }
-
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj && obj->ObjType() == kPhoton)
-      return static_cast<Photon const*>(obj);
-  }
-
-  return 0;
+  return fPhoton.Obj();
 }
 
 void
@@ -150,12 +105,16 @@ mithep::PFCandidate::Mark(UInt_t ib) const
 {
   // mark myself
   mithep::DataObject::Mark(ib);
+
   // mark my dependencies if they are there
   if (fMother.IsValid())
     fMother.Obj()->Mark(ib);
-  for (UInt_t iR = 0; iR != fRefs.GetEntries(); ++iR) {
-    auto* obj = fRefs.At(iR);
-    if (obj)
-      obj->Mark(ib);
-  }
+  if (fTrackerTrack.IsValid())
+    fTrackerTrack.Obj()->Mark(ib);
+  if (fGsfTrack.IsValid())
+    fGsfTrack.Obj()->Mark(ib);
+  if (fMuon.IsValid())
+    fMuon.Obj()->Mark(ib);
+  if (fSCluster.IsValid())
+    fSCluster.Obj()->Mark(ib);
 }

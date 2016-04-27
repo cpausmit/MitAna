@@ -23,11 +23,11 @@
 
 #pragma read \
     sourceClass="mithep::PFCandidate" \
-    version="[-5]" \
-    source="mithep::BitMask32 fPFFlags;" \
+    version="[1-5]" \
+    source="Double32_t fEECal; Double32_t fEHCal;" \
     targetClass="mithep::PFCandidate" \
-    target="fPFFlagBits" \
-    code="{ fPFFlagBits.SetBits(onfile.fPFFlags.Bits()); }" \
+    target="fECalEFraction, fHCalEFraction, fENormalized" \
+    code="{ fECalEFraction = onfile.fEECal; fHCalEFraction = onfile.fEHCal; fENormalized = kFALSE; }" \
 
 #pragma link C++ class mithep::Ref<mithep::PFCandidate>+;
 #pragma link C++ class mithep::PFCandidate+;

@@ -16,6 +16,7 @@
 #include "MitAna/DataTree/interface/PFCandidate.h"
 #include "MitAna/DataTree/interface/BasicCluster.h"
 #include "MitAna/DataTree/interface/PFJet.h"
+#include "MitAna/DataTree/interface/Track.h"
 
 namespace mithep {
 
@@ -316,22 +317,22 @@ mithep::PFTau::Mark(UInt_t ib) const
   // mark myself
   mithep::DataObject::Mark(ib);
   // mark my dependencies if they are there
-  if (fLeadPFCand .IsValid())
-    fLeadPFCand .Obj()->Mark(ib);
+  if (fLeadPFCand.IsValid())
+    fLeadPFCand.Obj()->Mark(ib);
   if (fLeadChargedHadPFCand.IsValid())
     fLeadChargedHadPFCand.Obj()->Mark(ib);
-  if (fLeadNeutralPFCand .IsValid())
-    fLeadNeutralPFCand .Obj()->Mark(ib);
-  if (fPFJet .IsValid())
-    fPFJet .Obj()->Mark(ib);
-  if (fElectronTrack .IsValid())
-    fElectronTrack .Obj()->Mark(ib);
+  if (fLeadNeutralPFCand.IsValid())
+    fLeadNeutralPFCand.Obj()->Mark(ib);
+  if (fPFJet.IsValid())
+    fPFJet.Obj()->Mark(ib);
+  if (fElectronTrack.IsValid())
+    fElectronTrack.Obj()->Mark(ib);
 
-  fSignalPFCands .Mark(ib);
+  fSignalPFCands.Mark(ib);
   fSignalPFChargedHadrCands.Mark(ib);
-  fSignalPFNeutrHadrCands .Mark(ib);
-  fSignalPFGammaCands .Mark(ib);
-  fIsoPFCands .Mark(ib);
+  fSignalPFNeutrHadrCands.Mark(ib);
+  fSignalPFGammaCands.Mark(ib);
+  fIsoPFCands.Mark(ib);
 }
 
 inline
