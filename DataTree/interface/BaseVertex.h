@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: BaseVertex.h,v 1.7 2009/03/20 18:23:27 loizides Exp $
-//
 // BaseVertex
 //
 // Base vertex class implemented as holding a 3d vector as a point in space including errors.
@@ -29,7 +27,7 @@ namespace mithep
         fPosition(pos), fXErr(0), fYErr(0), fZErr(0)            {}
       
       EObjType            ObjType()   const { return kBaseVertex;      }
-      const ThreeVector   Position()  const { return fPosition.V();    }
+      ThreeVector         Position()  const { return fPosition.V();    }
       Double_t            X()         const { return fPosition.X();    }
       Double_t            XErr()      const { return fXErr;            }
       Double_t            Y()         const { return fPosition.Y();    }

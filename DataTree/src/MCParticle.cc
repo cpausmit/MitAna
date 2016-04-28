@@ -5,6 +5,22 @@ ClassImp(mithep::MCParticle)
 using namespace mithep;
 
 //--------------------------------------------------------------------------------------------------
+ThreeVector
+MCParticle::DecayVertex() const
+{
+  for (UInt_t iD = 0; iD != NDaughters(); ++iD) {
+    auto* daughter = Daughter(iD);
+    if (daughter) {
+      auto* vtx = daughter->SourceVertex();
+      if (vtx)
+        return vtx->Position();
+    }
+  }
+
+  return fDecayVertex.V();
+}
+
+//--------------------------------------------------------------------------------------------------
 const MCParticle *MCParticle::FindDaughter(Int_t pid, 
                                            Bool_t checkCharge, const MCParticle *start) const
 {
