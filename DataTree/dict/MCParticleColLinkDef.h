@@ -24,12 +24,10 @@
 #pragma read \
     sourceClass="mithep::MCParticle" \
     version="[-4]" \
-    source="Bool_t fIsSimulated; \
-            mithep::BitMask<2> fStatusFlags;" \
+    source="Bool_t fIsSimulated;" \
     targetClass="mithep::MCParticle" \
     target="fStatusFlags" \
-    code="{ fStatusFlags.SetBits(onfile.fStatusFlags.Bits()); \
-      fStatusFlags.SetBit(mithep::MCParticle::kIsSimulated, onfile.fIsSimulated); }" \
+    code="{ fStatusFlags.SetBit(mithep::MCParticle::kIsSimulated, onfile.fIsSimulated); }" \
 
 #pragma link C++ class mithep::Ref<mithep::MCParticle>+;
 #pragma link C++ class mithep::MCParticle+;

@@ -91,7 +91,7 @@ namespace mithep
       Int_t               PdgId()                  const { return fPdgId;  }
       Double_t            PdgMass()                const;
       Bool_t              StatusFlag(UInt_t i)     const { return fStatusFlags.TestBit(i); }
-      mithep::BitMask16 const& StatusFlags()      const { return fStatusFlags; }
+      mithep::BitMask<2> const& StatusFlags()      const { return fStatusFlags; }
       void		  SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
       void		  SetMom(Double_t px, Double_t py, Double_t pz, Double_t e);
       void		  SetMother(const MCParticle *p) { fMother = p;    }
@@ -115,7 +115,7 @@ namespace mithep
       Int_t               fPdgId{0};      //pdg identifier
       Ref<MCParticle>     fMother{};      //reference to mother
       Short_t             fStatus{0};     //status flag of generator or simulation
-      mithep::BitMask16   fStatusFlags{}; //pythia8 status flags
+      mithep::BitMask<2>  fStatusFlags{}; //pythia8 status flags
 
     ClassDef(MCParticle,5) // Generated particle class
   };
