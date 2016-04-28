@@ -21,13 +21,22 @@
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace mithep;
 
+/* #pragma read \ */
+/*     sourceClass="mithep::PFCandidate" \ */
+/*     version="[1-5]" \ */
+/*     source="Double32_t fEECal; Double32_t fEHCal;" \ */
+/*     targetClass="mithep::PFCandidate" \ */
+/*     target="fECalEFraction, fHCalEFraction, fENormalized" \ */
+/*     code="{ fECalEFraction = onfile.fEECal; fHCalEFraction = onfile.fEHCal; fENormalized = kFALSE; }" \ */
+
+// feeding deprecated variables
 #pragma read \
     sourceClass="mithep::PFCandidate" \
     version="[1-5]" \
-    source="Double32_t fEECal; Double32_t fEHCal;" \
+    source="Double32_t fEECal; Double32_t fEHCal; Double32_t fEtaECal; Double32_t fPhiECal;" \
     targetClass="mithep::PFCandidate" \
-    target="fECalEFraction, fHCalEFraction, fENormalized" \
-    code="{ fECalEFraction = onfile.fEECal; fHCalEFraction = onfile.fEHCal; fENormalized = kFALSE; }" \
+    target="fEECal, fEHCal, fEtaECal, fPhiECal" \
+    code="{ fEECal = onfile.fEECal; fEHCal = onfile.fEHCal; fEtaECal = onfile.fEtaECal; fPhiECal = onfile.fPhiECal; }" \
 
 #pragma link C++ class mithep::Ref<mithep::PFCandidate>+;
 #pragma link C++ class mithep::PFCandidate+;

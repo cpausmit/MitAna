@@ -14,6 +14,8 @@
 #include "MitAna/DataCont/interface/Ref.h"
 #include "MitAna/DataTree/interface/CompositeParticle.h"
 
+#include "TMath.h"
+
 namespace mithep 
 {
   class Muon;
@@ -63,12 +65,15 @@ namespace mithep
       void                ClearFlag(EPFFlags f)             { fPFFlags.ClearBit(f);            }
       void                ClearFlags()                      { fPFFlags.Clear();                }
       const PFCandidate  *Daughter(UInt_t i)       const;
-      Double_t            EECal()                  const    { return fENormalized ? fECalEFraction * E() : fECalEFraction; }
-      Double_t            EHCal()                  const    { return fENormalized ? fHCalEFraction * E() : fHCalEFraction; }
+      Double_t            ECalo()                  const    { return (TMath::Exp(fCompressedECalo) - 1.) * E(); }
+      Double_t            EECal()                  const    { return fEECal < -99. ? fECalEFraction / 256. * ECalo() : fEECal; }
+      Double_t            EHCal()                  const    { return fEHCal < -99. ? (1. - fECalEFraction / 256.) * ECalo() : fEHCal; }
       Double_t            PError()                 const    { return fPError;                     }
       PFCandidate*        MakeCopy()               const    { return new PFCandidate(*this);      }
-      Double_t            EtaECal()                const    { return fEtaECal;                    }
-      Double_t            PhiECal()                const    { return fPhiECal;                    }
+      Double_t            EtaECal()                const
+      { return fEtaECal < -99. ? fEtaECalFraction / 256. * 7. + -3.5 : fEtaECal; }
+      Double_t            PhiECal()                const
+      { return fPhiECal < -99. ? fPhiECalFraction / 256. * 6.28318530 - 3.14159265 : fPhiECal; }
       Bool_t              Flag(EPFFlags f)         const    { return fPFFlags.TestBit(f);      }
       Bool_t              HasMother()              const    { return fMother.IsValid();           }
       Bool_t              HasMother(const PFCandidate *m) const;
@@ -76,11 +81,10 @@ namespace mithep
       EObjType            ObjType()                const    { return kPFCandidate;                }
       EPFType             PFType()                 const    { return EPFType(fPFType);            }
       void                SetCharge(Double_t c)             { fCharge = c; ClearCharge();         }
-      void                SetECalEFraction(Double_t e)      { fECalEFraction = e;                 }
-      void                SetHCalEFraction(Double_t e)      { fHCalEFraction = e;                 }
+      void                SetECalo(Double_t e, Double_t h);
       void                SetPError(Double_t err)           { fPError = err;                      }
-      void                SetEtaECal(Double_t eta)          { fEtaECal = eta;                     }
-      void                SetPhiECal(Double_t phi)          { fPhiECal = phi;                     }
+      void                SetEtaECal(Double_t eta)          { fEtaECalFraction = (eta + 3.5) / 7. * 256.; }
+      void                SetPhiECal(Double_t phi)          { fPhiECalFraction = (phi + 3.14159265) / 6.28318530 * 256.; }
       void                SetPFType(EPFType t)              { fPFType = t;                        }
       void                SetFlag(EPFFlags f, Bool_t b = kTRUE) { fPFFlags.SetBit(f, b);       }
       void                SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
@@ -120,10 +124,10 @@ namespace mithep
       Vect3               fSourceVertex;     //pflow source vertex
       Double32_t          fCharge;           //[-1,1,2]charge
       Float16_t           fPError;           //[0,0,8]uncertainty on P (three-mom magnitude)
-      Float16_t           fECalEFraction;    //[0,1,16]corrected Ecal energy fraction
-      Float16_t           fHCalEFraction;    //[0,1,16]corrected Hcal energy fraction
-      Float16_t           fEtaECal;          //[-3.5,3.5,16]eta at ecal front face
-      Float16_t           fPhiECal;          //[-pi,pi,16]phi at ecal front face
+      Double32_t          fCompressedECalo;  //[0,0,14] log[(calo energy) / (energy) + 1]
+      Byte_t              fECalEFraction;    //corrected Ecal energy fraction in 1/256 steps
+      Byte_t              fEtaECalFraction;  //eta at ecal front face in 7/256 steps from -3.5 to 3.5
+      Byte_t              fPhiECalFraction;  //phi at ecal front face in 2pi/256 steps from -pi to pi
       Byte_t              fPFType;           //particle flow type
       BitMask32           fPFFlags;          //various PF flags
       Ref<PFCandidate>    fMother;           //reference to mother
@@ -133,7 +137,10 @@ namespace mithep
       Ref<SuperCluster>   fSCluster;         //reference to egamma supercluster
       Ref<Electron>       fElectron;         //reference to electron
       Ref<Photon>         fPhoton;           //reference to egamma photon
-      Bool_t              fENormalized{kTRUE}; //! when reading version <= 5, f*EFraction is not normalized
+      Double32_t          fEECal{-100.};     //! (deprecated)
+      Double32_t          fEHCal{-100.};     //! (deprecated)
+      Double32_t          fEtaECal{-100.};   //! (deprecated)
+      Double32_t          fPhiECal{-100.};   //! (deprecated)
 
     ClassDef(PFCandidate,6) // Particle-flow candidate class
   };
@@ -220,6 +227,19 @@ inline void mithep::PFCandidate::SetVertex(Double_t x, Double_t y, Double_t z)
   // Set decay vertex.
 
   fSourceVertex.SetXYZ(x,y,z);
+}
+
+inline
+void
+mithep::PFCandidate::SetECalo(Double_t e, Double_t h)
+{
+  if (e < 0.)
+    e = 0.;
+  if (h < 0.)
+    h = 0.;
+
+  fCompressedECalo = TMath::Log((e + h) / E() + 1.);
+  fECalEFraction = e / (e + h) * 256.;
 }
 
 #endif
