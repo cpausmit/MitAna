@@ -1,6 +1,4 @@
 //--------------------------------------------------------------------------------------------------
-// $Id: BitMask.h,v 1.1 2009/03/08 12:08:31 loizides Exp $
-//
 // BitMask
 //
 // Helper class implementing a Nx8 bit bitmask where N is a template parameter.
@@ -87,8 +85,7 @@ namespace mithep
       void                    Print(Option_t *opt="") const 
         { printf("%llX\n", ULong64_t(fBitMask));      }
 
-      void                    SetBit(UInt_t n, Bool_t b=1)
-        { if ((n>=sizeof(T)*8) || (TestBit(n)==b)) return; fBitMask = fBitMask ^ (1 << n);   }
+      void                    SetBit(UInt_t n, Bool_t b = kTRUE);
       void                    SetBits(const BitMaskT<T> &b) { fBitMask = b.Mask();           }
       void                    SetBits(const Char_t *bits)   { fBitMask = T(*bits);           }
       void                    SetBits(T mask)               { fBitMask = mask;               }
@@ -123,7 +120,7 @@ namespace mithep
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline UInt_t mithep::BitMask<N>::NBitsSet(UInt_t first, UInt_t last) const
+UInt_t mithep::BitMask<N>::NBitsSet(UInt_t first, UInt_t last) const
 {
   // Count number of bits which are set.
 
@@ -135,7 +132,7 @@ inline UInt_t mithep::BitMask<N>::NBitsSet(UInt_t first, UInt_t last) const
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline void mithep::BitMask<N>::Print(Option_t */*opt*/) const
+void mithep::BitMask<N>::Print(Option_t */*opt*/) const
 {
   // Print bitmask.
 
@@ -146,7 +143,7 @@ inline void mithep::BitMask<N>::Print(Option_t */*opt*/) const
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline void mithep::BitMask<N>::SetBit(UInt_t n, Bool_t b)
+void mithep::BitMask<N>::SetBit(UInt_t n, Bool_t b)
 {
   // Set nth bit to given value.
 
@@ -163,7 +160,7 @@ inline void mithep::BitMask<N>::SetBit(UInt_t n, Bool_t b)
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline void mithep::BitMask<N>::SetBits(Long64_t bits)
+void mithep::BitMask<N>::SetBits(Long64_t bits)
 {
   // Set bits given by bits.
 
@@ -173,7 +170,7 @@ inline void mithep::BitMask<N>::SetBits(Long64_t bits)
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline Bool_t mithep::BitMask<N>::TestBit(UInt_t n) const
+Bool_t mithep::BitMask<N>::TestBit(UInt_t n) const
 {
   // Return true if nth bit is set.
 
@@ -189,7 +186,7 @@ inline Bool_t mithep::BitMask<N>::TestBit(UInt_t n) const
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline Bool_t mithep::BitMask<N>::operator==(const mithep::BitMask<N> &other) const
+Bool_t mithep::BitMask<N>::operator==(const mithep::BitMask<N> &other) const
 {
   // Equal operator.
 
@@ -202,7 +199,7 @@ inline Bool_t mithep::BitMask<N>::operator==(const mithep::BitMask<N> &other) co
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline Bool_t mithep::BitMask<N>::operator!=(const mithep::BitMask<N> &other) const
+Bool_t mithep::BitMask<N>::operator!=(const mithep::BitMask<N> &other) const
 {
   // Unequal operator.
 
@@ -215,7 +212,7 @@ inline Bool_t mithep::BitMask<N>::operator!=(const mithep::BitMask<N> &other) co
 
 //--------------------------------------------------------------------------------------------------
 template<UInt_t N>
-inline mithep::BitMask<N> mithep::BitMask<N>::operator~() const
+mithep::BitMask<N> mithep::BitMask<N>::operator~() const
 {
   // bitwise inversion operator
   BitMask<N> bits;
@@ -228,7 +225,7 @@ inline mithep::BitMask<N> mithep::BitMask<N>::operator~() const
 
 //--------------------------------------------------------------------------------------------------
 template<class T>
-inline UInt_t mithep::BitMaskT<T>::NBitsSet(UInt_t first, UInt_t last) const
+UInt_t mithep::BitMaskT<T>::NBitsSet(UInt_t first, UInt_t last) const
 {
   // Count number of bits which are set.
 
@@ -238,9 +235,22 @@ inline UInt_t mithep::BitMaskT<T>::NBitsSet(UInt_t first, UInt_t last) const
   return numBits;
 }
 
+template<class T>
+void
+mithep::BitMaskT<T>::SetBit(UInt_t n, Bool_t b/* = kTRUE*/)
+{
+  if ((n >= sizeof(T) * 8))
+    return;
+
+  if (b)
+    fBitMask |= (1 << n);
+  else
+    fBitMask &= ~(1 << n);
+}
+
 //--------------------------------------------------------------------------------------------------
 template<class T>
-inline Bool_t mithep::BitMaskT<T>::TestBit(UInt_t n) const
+Bool_t mithep::BitMaskT<T>::TestBit(UInt_t n) const
 {
   // Return true if nth bit is set.
 

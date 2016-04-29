@@ -18,13 +18,10 @@ namespace mithep
   class PileupEnergyDensity : public DataBase {
   public:
     enum Algo {
-      kHighEta,
-      kLowEta,
-      kRandom,
-      kRandomLowEta,
       kFixedGridAll,
       kFixedGridFastjetAll,
       kFixedGridFastjetAllCalo,
+      kFixedGridFastjetCentral,
       kFixedGridFastjetCentralCalo,
       kFixedGridFastjetCentralChargedPileUp,
       kFixedGridFastjetCentralNeutral,
@@ -38,6 +35,10 @@ namespace mithep
       kKt6PFJetsCentralChargedPileUp,
       kKt6PFJetsCentralNeutral,
       kKt6PFJetsCentralNeutralTight,
+      kHighEta,
+      kLowEta,
+      kRandom,
+      kRandomLowEta,
       nAllAlgos,
       nLegacyAlgos = nAllAlgos - nAlgos
     };
@@ -48,9 +49,9 @@ namespace mithep
     }
 
     Double_t RhoDefault() const { return Rho(kRandom); }
-    Double_t Rho(UInt_t = kHighEta) const;
+    Double_t Rho(UInt_t = kFixedGridAll) const;
 
-    void SetRho(Double_t, UInt_t = kHighEta);
+    void SetRho(Double_t, UInt_t = kFixedGridAll);
 
     virtual PileupEnergyDensity *MakeCopy() const { return new PileupEnergyDensity(*this); }
 
@@ -75,13 +76,13 @@ namespace mithep
     Double32_t fRho[nAlgos]; //rho from various fastjet algos
     Double_t   fRhoLegacy[nLegacyAlgos]; //! only for reading old files
 
-    ClassDef(PileupEnergyDensity, 5) // Pileup Energy Density class
+    ClassDef(PileupEnergyDensity, 6) // Pileup Energy Density class
   };
 }
 
 inline
 Double_t
-mithep::PileupEnergyDensity::Rho(UInt_t a/* = mithep::PileupEnergyDensity::kHighEta*/) const
+mithep::PileupEnergyDensity::Rho(UInt_t a/* = mithep::PileupEnergyDensity::kFixedGridAll*/) const
 {
   if (a < nAlgos)
     return fRho[a];
@@ -93,7 +94,7 @@ mithep::PileupEnergyDensity::Rho(UInt_t a/* = mithep::PileupEnergyDensity::kHigh
 
 inline
 void
-mithep::PileupEnergyDensity::SetRho(Double_t r, UInt_t a/* = mithep::PileupEnergyDensity::kHighEta*/)
+mithep::PileupEnergyDensity::SetRho(Double_t r, UInt_t a/* = mithep::PileupEnergyDensity::kFixedGridAll*/)
 {
   if (a < nAlgos)
     fRho[a] = r;

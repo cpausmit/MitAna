@@ -20,48 +20,51 @@
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace mithep;
 
+// fBJetTagsLegacyDisc: array branch with a "!" (not written to file)
+// For those branches, pragma read target only recognizes the array name, but GetDataMemberOffset requires the full array length.
+// Therefore need to setup the target object by hand in the user code below.
+
 #pragma read \
     sourceClass="mithep::Jet" \
     version="[-6]" \
     source="Double32_t fJetProbabilityBJetTagsDisc; \
             Double32_t fJetBProbabilityBJetTagsDisc; \
             Double32_t fSimpleSecondaryVertexHighEffBJetTagsDisc; \
+            Double32_t fTrackCountingHighEffBJetTagsDisc; \
+            Double32_t fSimpleSecondaryVertexBJetTagsDisc; \
             Double32_t fSimpleSecondaryVertexHighPurBJetTagsDisc; \
             Double32_t fCombinedSecondaryVertexBJetTagsDisc; \
             Double32_t fCombinedSecondaryVertexMVABJetTagsDisc; \
-            Double32_t fTrackCountingHighEffBJetTagsDisc; \
-            Double32_t fTrackCountingHighPurBJetTagsDisc;" \
-    targetClass="mithep::Jet" \
-    target="fBJetTagsDisc" \
-    code="{ fBJetTagsDisc[mithep::Jet::kJetProbability] = onfile.fJetProbabilityBJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kJetBProbability] = onfile.fJetBProbabilityBJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kSimpleSecondaryVertexHighEff] = onfile.fSimpleSecondaryVertexHighEffBJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kSimpleSecondaryVertexHighPur] = onfile.fSimpleSecondaryVertexHighPurBJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kCombinedSecondaryVertex] = onfile.fCombinedSecondaryVertexBJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kCombinedMVA] = onfile.fCombinedSecondaryVertexMVABJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kTrackCountingHighEff] = onfile.fTrackCountingHighEffBJetTagsDisc; \
-      fBJetTagsDisc[mithep::Jet::kTrackCountingHighPur] = onfile.fTrackCountingHighPurBJetTagsDisc; }" \
-
-#pragma read \
-    sourceClass="mithep::Jet" \
-    version="[-6]" \
-    source="Double32_t fSimpleSecondaryVertexBJetTagsDisc; \
             Double32_t fSoftMuonBJetTagsDisc; \
             Double32_t fSoftMuonByIP3dBJetTagsDisc; \
             Double32_t fSoftMuonByPtBJetTagsDisc; \
             Double32_t fSoftElectronByIP3dBJetTagsDisc; \
             Double32_t fSoftElectronByPtBJetTagsDisc; \
-            Double32_t fGhostTrackBJetTagsDisc;" \
+            Double32_t fGhostTrackBJetTagsDisc; \
+            Double32_t fTrackCountingHighPurBJetTagsDisc;" \
     targetClass="mithep::Jet" \
-    target="fBJetTagsLegacyDisc" \
-    code="{ unsigned const aOffset = mithep::Jet::nBTagAlgos; \
-      fBJetTagsLegacyDisc[mithep::Jet::kSimpleSecondaryVertex - aOffset] = onfile.fSimpleSecondaryVertexBJetTagsDisc; \
-      fBJetTagsLegacyDisc[mithep::Jet::kSoftMuon - aOffset] = onfile.fSoftMuonBJetTagsDisc; \
-      fBJetTagsLegacyDisc[mithep::Jet::kSoftMuonByIP3d - aOffset] = onfile.fSoftMuonByIP3dBJetTagsDisc; \
-      fBJetTagsLegacyDisc[mithep::Jet::kSoftMuonByPt - aOffset] = onfile.fSoftMuonByPtBJetTagsDisc; \
-      fBJetTagsLegacyDisc[mithep::Jet::kSoftElectronByIP3d - aOffset] = onfile.fSoftElectronByIP3dBJetTagsDisc; \
-      fBJetTagsLegacyDisc[mithep::Jet::kSoftElectronByPt - aOffset] = onfile.fSoftElectronByPtBJetTagsDisc; \
-      fBJetTagsLegacyDisc[mithep::Jet::kGhostTrack - aOffset] = onfile.fGhostTrackBJetTagsDisc; }" \
+    target="fBJetTagsDisc, fBJetTagsLegacyDisc" \
+    code="{ if (&fBJetTagsLegacyDisc); \
+      static const TString bname(Form(\"fBJetTagsLegacyDisc[%d]\", mithep::Jet::nBTagLegacyAlgos)); \
+      static Long_t actualOffset = cls->GetDataMemberOffset(bname); \
+      fBJetTagsLegacyDisc_t& fActualBJetTagsLegacyDisc = *(fBJetTagsLegacyDisc_t*)(target + actualOffset); \
+      auto setDisc([&fBJetTagsDisc](UInt_t idx, Double_t value) { fBJetTagsDisc[idx] = value; }); \
+      auto setLegacy([&fActualBJetTagsLegacyDisc](UInt_t idx, Double_t value) { fActualBJetTagsLegacyDisc[idx - mithep::Jet::nBTagAlgos] = value; }); \
+      setDisc(mithep::Jet::kJetProbability, onfile.fJetProbabilityBJetTagsDisc); \
+      setDisc(mithep::Jet::kJetBProbability, onfile.fJetBProbabilityBJetTagsDisc); \
+      setDisc(mithep::Jet::kSimpleSecondaryVertexHighEff, onfile.fSimpleSecondaryVertexHighEffBJetTagsDisc); \
+      setDisc(mithep::Jet::kTrackCountingHighEff, onfile.fTrackCountingHighEffBJetTagsDisc); \
+      setLegacy(mithep::Jet::kSimpleSecondaryVertex, onfile.fSimpleSecondaryVertexBJetTagsDisc); \
+      setLegacy(mithep::Jet::kSimpleSecondaryVertexHighPur, onfile.fSimpleSecondaryVertexHighPurBJetTagsDisc); \
+      setLegacy(mithep::Jet::kCombinedSecondaryVertex, onfile.fCombinedSecondaryVertexBJetTagsDisc); \
+      setLegacy(mithep::Jet::kCombinedMVA, onfile.fCombinedSecondaryVertexMVABJetTagsDisc); \
+      setLegacy(mithep::Jet::kSoftMuon, onfile.fSoftMuonBJetTagsDisc); \
+      setLegacy(mithep::Jet::kSoftMuonByIP3d, onfile.fSoftMuonByIP3dBJetTagsDisc); \
+      setLegacy(mithep::Jet::kSoftMuonByPt, onfile.fSoftMuonByPtBJetTagsDisc); \
+      setLegacy(mithep::Jet::kSoftElectronByIP3d, onfile.fSoftElectronByIP3dBJetTagsDisc); \
+      setLegacy(mithep::Jet::kSoftElectronByPt, onfile.fSoftElectronByPtBJetTagsDisc); \
+      setLegacy(mithep::Jet::kGhostTrack, onfile.fGhostTrackBJetTagsDisc); \
+      setLegacy(mithep::Jet::kTrackCountingHighPur, onfile.fTrackCountingHighPurBJetTagsDisc); }" \
 
 #pragma read \
     sourceClass="mithep::Jet" \
@@ -83,7 +86,78 @@
       fCorrectionScale[mithep::Jet::L5] = onfile.fL5FlavorCorrectionScale; \
       fCorrectionScale[mithep::Jet::L6] = onfile.fL6LSBCorrectionScale; \
       fCorrectionScale[mithep::Jet::L7] = onfile.fL7PartonCorrectionScale; \
-      fCorrectionScale[mithep::Jet::Custom] = onfile.fCustomCorrectionScale; }" \
+      fCorrectionScale[mithep::Jet::Custom] = onfile.fCustomCorrectionScale; }"
+
+#pragma read \
+    sourceClass="mithep::Jet" \
+    version="[7]" \
+    source="Double32_t fBJetTagsDisc[28];" \
+    targetClass="mithep::Jet" \
+    target="fBJetTagsDisc, fBJetTagsLegacyDisc" \
+    code="{ if (&fBJetTagsLegacyDisc); \
+      static const TString bname(Form(\"fBJetTagsLegacyDisc[%d]\", mithep::Jet::nBTagLegacyAlgos)); \
+      static Long_t actualOffset = cls->GetDataMemberOffset(bname); \
+      fBJetTagsLegacyDisc_t& fActualBJetTagsLegacyDisc = *(fBJetTagsLegacyDisc_t*)(target + actualOffset); \
+      enum OldAlgo { \
+        lJetProbability, \
+        lJetProbabilityNegative, \
+        lJetProbabilityPositive, \
+        lJetBProbability, \
+        lJetBProbabilityNegative, \
+        lJetBProbabilityPositive, \
+        lSimpleSecondaryVertexHighEff, \
+        lSimpleSecondaryVertexHighEffNegative, \
+        lSimpleSecondaryVertexHighPur, \
+        lSimpleSecondaryVertexHighPurNegative, \
+        lCombinedSecondaryVertex, \
+        lCombinedSecondaryVertexV2, \
+        lCombinedSecondaryVertexV2Positive, \
+        lCombinedSecondaryVertexV2Negative, \
+        lCombinedSecondaryVertexSoftLepton, \
+        lCombinedInclusiveSecondaryVertexV2, \
+        lCombinedInclusiveSecondaryVertexV2Positive, \
+        lCombinedInclusiveSecondaryVertexV2Negative, \
+        lCombinedMVA, \
+        lTrackCountingHighEff, \
+        lTrackCountingHighPur, \
+        lSoftPFMuon, \
+        lSoftPFMuonNegative, \
+        lSoftPFMuonPositive, \
+        lSoftPFElectron, \
+        lSoftPFElectronNegative, \
+        lSoftPFElectronPositive, \
+        lDoubleSecondaryVertex \
+      }; \
+      auto copyBTag([&fBJetTagsDisc, &onfile](UInt_t newInd, UInt_t oldInd) { fBJetTagsDisc[newInd] = onfile.fBJetTagsDisc[oldInd]; } ); \
+      auto copyLegacy([&fActualBJetTagsLegacyDisc, &onfile](unsigned newInd, unsigned oldInd){ fActualBJetTagsLegacyDisc[newInd - mithep::Jet::nBTagAlgos] = onfile.fBJetTagsDisc[oldInd]; }); \
+      copyBTag(mithep::Jet::kJetProbability, lJetProbability); \
+      copyBTag(mithep::Jet::kJetBProbability, lJetBProbability); \
+      copyBTag(mithep::Jet::kSimpleSecondaryVertexHighEff, lSimpleSecondaryVertexHighEff); \
+      copyBTag(mithep::Jet::kCombinedSecondaryVertexV2, lCombinedSecondaryVertexV2); \
+      copyBTag(mithep::Jet::kCombinedInclusiveSecondaryVertexV2, lCombinedInclusiveSecondaryVertexV2); \
+      copyBTag(mithep::Jet::kTrackCountingHighEff, lTrackCountingHighEff); \
+      copyBTag(mithep::Jet::kSoftPFMuon, lSoftPFMuon); \
+      copyBTag(mithep::Jet::kSoftPFElectron, lSoftPFElectron); \
+      copyLegacy(mithep::Jet::kJetProbabilityNegative, lJetProbabilityNegative); \
+      copyLegacy(mithep::Jet::kJetProbabilityPositive, lJetProbabilityPositive); \
+      copyLegacy(mithep::Jet::kJetBProbabilityNegative, lJetBProbabilityNegative); \
+      copyLegacy(mithep::Jet::kJetBProbabilityPositive, lJetBProbabilityPositive); \
+      copyLegacy(mithep::Jet::kSimpleSecondaryVertexHighEffNegative, lSimpleSecondaryVertexHighEffNegative); \
+      copyLegacy(mithep::Jet::kSimpleSecondaryVertexHighPur, lSimpleSecondaryVertexHighPur); \
+      copyLegacy(mithep::Jet::kSimpleSecondaryVertexHighPurNegative, lSimpleSecondaryVertexHighPurNegative); \
+      copyLegacy(mithep::Jet::kCombinedSecondaryVertex, lCombinedSecondaryVertex); \
+      copyLegacy(mithep::Jet::kCombinedSecondaryVertexV2Positive, lCombinedSecondaryVertexV2Positive); \
+      copyLegacy(mithep::Jet::kCombinedSecondaryVertexV2Negative, lCombinedSecondaryVertexV2Negative); \
+      copyLegacy(mithep::Jet::kCombinedSecondaryVertexSoftLepton, lCombinedSecondaryVertexSoftLepton); \
+      copyLegacy(mithep::Jet::kCombinedInclusiveSecondaryVertexV2Positive, lCombinedInclusiveSecondaryVertexV2Positive); \
+      copyLegacy(mithep::Jet::kCombinedInclusiveSecondaryVertexV2Negative, lCombinedInclusiveSecondaryVertexV2Negative); \
+      copyLegacy(mithep::Jet::kCombinedMVA, lCombinedMVA); \
+      copyLegacy(mithep::Jet::kTrackCountingHighPur, lTrackCountingHighPur); \
+      copyLegacy(mithep::Jet::kSoftPFMuonNegative, lSoftPFMuonNegative); \
+      copyLegacy(mithep::Jet::kSoftPFMuonPositive, lSoftPFMuonPositive); \
+      copyLegacy(mithep::Jet::kSoftPFElectronNegative, lSoftPFElectronNegative); \
+      copyLegacy(mithep::Jet::kSoftPFElectronPositive, lSoftPFElectronPositive); \
+      copyLegacy(mithep::Jet::kDoubleSecondaryVertex, lDoubleSecondaryVertex); }" \
 
 #pragma link C++ class mithep::Jet+;
 #pragma link C++ class mithep::Collection<mithep::Jet>+;
@@ -96,4 +170,6 @@
 #pragma link C++ enum mithep::Jet::BTagAlgo;
 #pragma link C++ enum mithep::Jet::BTagLegacyAlgo;
 #endif
+
+
 

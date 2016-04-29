@@ -3,6 +3,7 @@
 #include "MitAna/DataTree/interface/PFJetCol.h"
 #include "MitAna/DataTree/interface/GenJetCol.h"
 #include "MitAna/DataTree/interface/PFCandidateCol.h"
+#include "MitAna/DataTree/interface/MCParticleCol.h"
 
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/JetDefinition.hh"

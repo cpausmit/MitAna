@@ -2,6 +2,7 @@
 #define MITANA_DATATREE_DATAOBJECTCOLLINKDEF_H
 
 #include "MitAna/DataCont/interface/Ref.h"
+#include "MitAna/DataCont/interface/RefArray.h"
 #include "MitAna/DataTree/interface/DataObjectCol.h"
 #endif
 
@@ -28,6 +29,7 @@
 #pragma link C++ class mithep::Array<mithep::DataObject>+;
 #pragma link C++ class mithep::ObjArray<mithep::DataObject>+;
 #pragma link C++ class mithep::Ref<mithep::DataObject>+;
+#pragma link C++ class mithep::RefArray<mithep::DataObject>+;
 #pragma link C++ typedef mithep::DataObjectCol;
 #pragma link C++ typedef mithep::DataObjectArr;
 #pragma link C++ typedef mithep::DataObjectOArr;

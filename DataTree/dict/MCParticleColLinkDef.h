@@ -1,5 +1,3 @@
-// $Id: MCParticleColLinkDef.h,v 1.2 2010/01/07 11:03:42 bendavid Exp $
-
 #ifndef MITANA_DATATREE_MCPARTICLECOLLINKDEF_H
 #define MITANA_DATATREE_MCPARTICLECOLLINKDEF_H
 
@@ -22,6 +20,14 @@
 #pragma link C++ nestedclass;
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace mithep;
+
+#pragma read \
+    sourceClass="mithep::MCParticle" \
+    version="[-4]" \
+    source="Bool_t fIsSimulated;" \
+    targetClass="mithep::MCParticle" \
+    target="fStatusFlags" \
+    code="{ fStatusFlags.SetBit(mithep::MCParticle::kIsSimulated, onfile.fIsSimulated); }" \
 
 #pragma link C++ class mithep::Ref<mithep::MCParticle>+;
 #pragma link C++ class mithep::MCParticle+;

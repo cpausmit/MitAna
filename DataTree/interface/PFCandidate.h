@@ -13,14 +13,16 @@
 #include "MitCommon/DataFormats/interface/Vect4M.h"
 #include "MitAna/DataCont/interface/Ref.h"
 #include "MitAna/DataTree/interface/CompositeParticle.h"
-#include "MitAna/DataTree/interface/Track.h"
-#include "MitAna/DataTree/interface/SuperCluster.h"
+
+#include "TMath.h"
 
 namespace mithep 
 {
   class Muon;
   class Electron;
   class Photon;
+  class Track;
+  class SuperCluster;
 
   class PFCandidate : public CompositeParticle
   {
@@ -60,55 +62,56 @@ namespace mithep
       PFCandidate() : fPFType(eX) {}
 
       void		  AddDaughter(const PFCandidate *p) { fDaughters.Add(p);                  }
-      void                ClearFlag(EPFFlags f)             { fPFFlags.ClearBit(f);               }
-      void                ClearFlags()                      { fPFFlags.Clear();                   }
+      void                ClearFlag(EPFFlags f)             { fPFFlags.ClearBit(f);            }
+      void                ClearFlags()                      { fPFFlags.Clear();                }
       const PFCandidate  *Daughter(UInt_t i)       const;
-      Double_t            EECal()                  const    { return fEECal;                      }
-      Double_t            EHCal()                  const    { return fEHCal;                      }
+      Double_t            ECalo()                  const    { return (TMath::Exp(fCompressedECalo) - 1.) * E(); }
+      Double_t            EECal()                  const    { return fEECal < -99. ? fECalEFraction / 256. * ECalo() : fEECal; }
+      Double_t            EHCal()                  const    { return fEHCal < -99. ? (1. - fECalEFraction / 256.) * ECalo() : fEHCal; }
       Double_t            PError()                 const    { return fPError;                     }
       PFCandidate*        MakeCopy()               const    { return new PFCandidate(*this);      }
-      Double_t            MvaGamma()               const    { return fMvaGamma;                   }
-      Double_t            EtaECal()                const    { return fEtaECal;                    }
-      Double_t            PhiECal()                const    { return fPhiECal;                    }
-      Bool_t              Flag(EPFFlags f)         const    { return fPFFlags.TestBit(f);         }
+      Double_t            EtaECal()                const
+      { return fEtaECal < -99. ? fEtaECalFraction / 256. * 7. + -3.5 : fEtaECal; }
+      Double_t            PhiECal()                const
+      { return fPhiECal < -99. ? fPhiECalFraction / 256. * 6.28318530 - 3.14159265 : fPhiECal; }
+      Bool_t              Flag(EPFFlags f)         const    { return fPFFlags.TestBit(f);      }
       Bool_t              HasMother()              const    { return fMother.IsValid();           }
       Bool_t              HasMother(const PFCandidate *m) const;
-      Bool_t              HasTrackerTrk()          const    { return fTrackerTrack.IsValid();     }
-      Bool_t              HasGsfTrk()              const    { return fGsfTrack.IsValid();         }
-      Bool_t              HasTrk()                 const 
-                            { return (HasTrackerTrk() || HasGsfTrk()); }
-      Bool_t              HasSCluster()            const    { return fSCluster.IsValid();         }
       const PFCandidate  *Mother()                 const    { return fMother.Obj();               }
-      const Muon         *Mu()                     const;
-      const Electron     *Ele()                    const;
-      const Photon       *Pho()                    const;
       EObjType            ObjType()                const    { return kPFCandidate;                }
-      EPFType             PFType()                 const    { return fPFType;                     }
-      const SuperCluster *SCluster()               const    { return fSCluster.Obj();             }
+      EPFType             PFType()                 const    { return EPFType(fPFType);            }
       void                SetCharge(Double_t c)             { fCharge = c; ClearCharge();         }
-      void                SetEECal(Double_t e)              { fEECal = e;                         }
-      void                SetEHCal(Double_t e)              { fEHCal = e;                         }
+      void                SetECalo(Double_t e, Double_t h);
       void                SetPError(Double_t err)           { fPError = err;                      }
-      void                SetMvaGamma(Double_t d)           { fMvaGamma = d;                      }
-      void                SetEtaECal(Double_t eta)          { fEtaECal = eta;                     }
-      void                SetPhiECal(Double_t phi)          { fPhiECal = phi;                     }
+      void                SetEtaECal(Double_t eta)          { fEtaECalFraction = (eta + 3.5) / 7. * 256.; }
+      void                SetPhiECal(Double_t phi)          { fPhiECalFraction = (phi + 3.14159265) / 6.28318530 * 256.; }
       void                SetPFType(EPFType t)              { fPFType = t;                        }
-      void                SetFlag(EPFFlags f, Bool_t b=1)   { fPFFlags.SetBit(f,b);               }
+      void                SetFlag(EPFFlags f, Bool_t b = kTRUE) { fPFFlags.SetBit(f, b);       }
       void                SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
       void		  SetMom(Double_t px, Double_t py, Double_t pz, Double_t e);
       void		  SetMother(const PFCandidate *p)   { fMother = p;                        }
-      void                SetTrackerTrk(const Track *t)     { fTrackerTrack = t;                  }
-      void                SetGsfTrk(const Track *t)         { fGsfTrack = t;                      }
+      void                SetVertex(Double_t x, Double_t y, Double_t z);
+      const ThreeVector   SourceVertex()           const    { return fSourceVertex.V();           }
+
+      Bool_t              HasTrackerTrk()          const;
+      Bool_t              HasGsfTrk()              const;
+      Bool_t              HasTrk()                 const
+                            { return (HasTrackerTrk() || HasGsfTrk()); }
+      Bool_t              HasSCluster()            const;
       void                SetMuon(const Muon *);
       void                SetElectron(const Electron *);
       void                SetPhoton(const Photon *);
-      void                SetSCluster(const SuperCluster *s) { fSCluster = s;                     }
-      void                SetVertex(Double_t x, Double_t y, Double_t z);
-      const ThreeVector   SourceVertex()           const    { return fSourceVertex.V();           }
-      const Track        *TrackerTrk()             const    { return fTrackerTrack.Obj();         }
-      const Track        *GsfTrk()                 const    { return fGsfTrack.Obj();             }
+      void                SetTrackerTrk(const Track *);
+      void                SetGsfTrk(const Track *);
+      void                SetSCluster(const SuperCluster *);
+      const Muon         *Mu()                     const;
+      const Electron     *Ele()                    const;
+      const Photon       *Pho()                    const;
+      const Track        *TrackerTrk()             const;
+      const Track        *GsfTrk()                 const;
       const Track        *BestTrk()                const;
       const Track        *Trk()                    const    { return BestTrk();                   }
+      const SuperCluster *SCluster()               const;
       
       // Some structural tools
       void                Mark(UInt_t i=1)         const;
@@ -120,13 +123,12 @@ namespace mithep
       Vect4M              fMom;              //four momentum vector
       Vect3               fSourceVertex;     //pflow source vertex
       Double32_t          fCharge;           //[-1,1,2]charge
-      Double32_t          fEECal;            //[0,0,14]corrected Ecal energy
-      Double32_t          fEHCal;            //[0,0,14]corrected Hcal energy
-      Double32_t          fPError;           //[0,0,14]uncertainty on P (three-mom magnitude)
-      Double32_t          fMvaGamma;         //[0,0,14]photon id discriminant
-      Double32_t          fEtaECal;          //[0,0,12]eta at ecal front face
-      Double32_t          fPhiECal;          //[0,0,12]phi at ecal front face
-      EPFType             fPFType;           //particle flow type
+      Float16_t           fPError;           //[0,0,8]uncertainty on P (three-mom magnitude)
+      Double32_t          fCompressedECalo;  //[0,0,14] log[(calo energy) / (energy) + 1]
+      Byte_t              fECalEFraction;    //corrected Ecal energy fraction in 1/256 steps
+      Byte_t              fEtaECalFraction;  //eta at ecal front face in 7/256 steps from -3.5 to 3.5
+      Byte_t              fPhiECalFraction;  //phi at ecal front face in 2pi/256 steps from -pi to pi
+      Byte_t              fPFType;           //particle flow type
       BitMask32           fPFFlags;          //various PF flags
       Ref<PFCandidate>    fMother;           //reference to mother
       Ref<Track>          fTrackerTrack;     //reference to (standard) track
@@ -135,8 +137,12 @@ namespace mithep
       Ref<SuperCluster>   fSCluster;         //reference to egamma supercluster
       Ref<Electron>       fElectron;         //reference to electron
       Ref<Photon>         fPhoton;           //reference to egamma photon
+      Double32_t          fEECal{-100.};     //! (deprecated)
+      Double32_t          fEHCal{-100.};     //! (deprecated)
+      Double32_t          fEtaECal{-100.};   //! (deprecated)
+      Double32_t          fPhiECal{-100.};   //! (deprecated)
 
-    ClassDef(PFCandidate,5) // Particle-flow candidate class
+    ClassDef(PFCandidate,6) // Particle-flow candidate class
   };
 }
 
@@ -222,4 +228,18 @@ inline void mithep::PFCandidate::SetVertex(Double_t x, Double_t y, Double_t z)
 
   fSourceVertex.SetXYZ(x,y,z);
 }
+
+inline
+void
+mithep::PFCandidate::SetECalo(Double_t e, Double_t h)
+{
+  if (e < 0.)
+    e = 0.;
+  if (h < 0.)
+    h = 0.;
+
+  fCompressedECalo = TMath::Log((e + h) / E() + 1.);
+  fECalEFraction = e / (e + h) * 256.;
+}
+
 #endif

@@ -1,10 +1,24 @@
-// $Id: MCParticle.cc,v 1.6 2009/03/17 17:36:53 loizides Exp $
-
 #include "MitAna/DataTree/interface/MCParticle.h"
 
 ClassImp(mithep::MCParticle)
 
 using namespace mithep;
+
+//--------------------------------------------------------------------------------------------------
+ThreeVector
+MCParticle::DecayVertex() const
+{
+  for (UInt_t iD = 0; iD != NDaughters(); ++iD) {
+    auto* daughter = Daughter(iD);
+    if (daughter) {
+      auto* vtx = daughter->SourceVertex();
+      if (vtx)
+        return vtx->Position();
+    }
+  }
+
+  return fDecayVertex.V();
+}
 
 //--------------------------------------------------------------------------------------------------
 const MCParticle *MCParticle::FindDaughter(Int_t pid, 

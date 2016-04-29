@@ -9,20 +9,14 @@ char const*
 mithep::PileupEnergyDensity::AlgoName(UInt_t a)
 {
   switch (a) {
-  case kHighEta:
-    return "HighEta";
-  case kLowEta:
-    return "LowEta";
-  case kRandom:
-    return "Random";
-  case kRandomLowEta:
-    return "RandomLowEta";
   case kFixedGridAll:
     return "FixedGridAll";
   case kFixedGridFastjetAll:
     return "FixedGridFastjetAll";
   case kFixedGridFastjetAllCalo:
     return "FixedGridFastjetAllCalo";
+  case kFixedGridFastjetCentral:
+    return "FixedGridFastjetCentral";
   case kFixedGridFastjetCentralCalo:
     return "FixedGridFastjetCentralCalo";
   case kFixedGridFastjetCentralChargedPileUp:
@@ -41,6 +35,14 @@ mithep::PileupEnergyDensity::AlgoName(UInt_t a)
     return "Kt6PFJetsCentralNeutral";
   case kKt6PFJetsCentralNeutralTight:
     return "Kt6PFJetsCentralNeutralTight";
+  case kHighEta:
+    return "HighEta";
+  case kLowEta:
+    return "LowEta";
+  case kRandom:
+    return "Random";
+  case kRandomLowEta:
+    return "RandomLowEta";
   default:
     return "";
   }

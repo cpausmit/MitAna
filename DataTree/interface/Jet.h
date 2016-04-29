@@ -17,33 +17,17 @@ namespace mithep {
   public:
     enum BTagAlgo {
       kJetProbability,
-      kJetProbabilityNegative,
-      kJetProbabilityPositive,
       kJetBProbability,
-      kJetBProbabilityNegative,
-      kJetBProbabilityPositive,
       kSimpleSecondaryVertexHighEff,
-      kSimpleSecondaryVertexHighEffNegative,
-      kSimpleSecondaryVertexHighPur,
-      kSimpleSecondaryVertexHighPurNegative,
-      kCombinedSecondaryVertex,
+      kSimpleInclusiveSecondaryVertexHighEff,
       kCombinedSecondaryVertexV2,
-      kCombinedSecondaryVertexV2Positive,
-      kCombinedSecondaryVertexV2Negative,
-      kCombinedSecondaryVertexSoftLepton,
       kCombinedInclusiveSecondaryVertexV2,
-      kCombinedInclusiveSecondaryVertexV2Positive,
-      kCombinedInclusiveSecondaryVertexV2Negative,
-      kCombinedMVA,
+      kCombinedMVAV2,
       kTrackCountingHighEff,
-      kTrackCountingHighPur,
       kSoftPFMuon,
-      kSoftPFMuonNegative,
-      kSoftPFMuonPositive,
       kSoftPFElectron,
-      kSoftPFElectronNegative,
-      kSoftPFElectronPositive,
-      kDoubleSecondaryVertex,
+      kCombinedCvs,
+      kCombinedCvsLightFlavor,
       nBTagAlgos
     };
 
@@ -55,6 +39,26 @@ namespace mithep {
       kSoftElectronByIP3d,
       kSoftElectronByPt,
       kGhostTrack,
+      kJetProbabilityNegative,
+      kJetProbabilityPositive,
+      kJetBProbabilityNegative,
+      kJetBProbabilityPositive,
+      kSimpleSecondaryVertexHighEffNegative,
+      kSimpleSecondaryVertexHighPur,
+      kSimpleSecondaryVertexHighPurNegative,
+      kCombinedSecondaryVertex,
+      kCombinedSecondaryVertexV2Positive,
+      kCombinedSecondaryVertexV2Negative,
+      kCombinedSecondaryVertexSoftLepton,
+      kCombinedInclusiveSecondaryVertexV2Positive,
+      kCombinedInclusiveSecondaryVertexV2Negative,
+      kCombinedMVA,
+      kTrackCountingHighPur,
+      kSoftPFMuonNegative,
+      kSoftPFMuonPositive,
+      kSoftPFElectronNegative,
+      kSoftPFElectronPositive,
+      kDoubleSecondaryVertex,
       nAllBTagAlgos,
       nBTagLegacyAlgos = nAllBTagAlgos - nBTagAlgos
     };
@@ -176,7 +180,7 @@ namespace mithep {
     Double32_t fJetArea; //[0,0,14]infrared safe jet area
     BitMask8 fCorrections; //mask of corrections to be applied
 
-    ClassDef(Jet, 7) // Jet class
+    ClassDef(Jet, 8) // Jet class
   };
 }
 

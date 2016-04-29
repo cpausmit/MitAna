@@ -31,22 +31,24 @@ mithep::Jet::BTagAlgoName(UInt_t idx)
     return "JetBProbability";
   case kSimpleSecondaryVertexHighEff:
     return "SimpleSecondaryVertexHighEff";
-  case kSimpleSecondaryVertexHighPur:
-    return "SimpleSecondaryVertexHighPur";
-  case kCombinedSecondaryVertex:
-    return "CombinedSecondaryVertex";
+  case kSimpleInclusiveSecondaryVertexHighEff:
+    return "SimpleInclusiveSecondaryVertexHighEff";
   case kCombinedSecondaryVertexV2:
     return "CombinedSecondaryVertexV2";
-  case kCombinedSecondaryVertexSoftLepton:
-    return "CombinedSecondaryVertexSoftLepton";
   case kCombinedInclusiveSecondaryVertexV2:
     return "CombinedInclusiveSecondaryVertexV2";
-  case kCombinedMVA:
-    return "CombinedMVA";
+  case kCombinedMVAV2:
+    return "CombinedMVAV2";
   case kTrackCountingHighEff:
     return "TrackCountingHighEff";
-  case kTrackCountingHighPur:
-    return "TrackCountingHighPur";
+  case kSoftPFMuon:
+    return "SoftPFMuon";
+  case kSoftPFElectron:
+    return "SoftPFElectron";
+  case kCombinedCvs:
+    return "CombinedCvs";
+  case kCombinedCvsLightFlavor:
+    return "CombinedCvsL";
   default:
     return "";
   }

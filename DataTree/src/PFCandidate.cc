@@ -2,10 +2,85 @@
 #include "MitAna/DataTree/interface/Muon.h"
 #include "MitAna/DataTree/interface/Electron.h"
 #include "MitAna/DataTree/interface/Photon.h"
+#include "MitAna/DataTree/interface/Track.h"
+#include "MitAna/DataTree/interface/SuperCluster.h"
 
 ClassImp(mithep::PFCandidate)
 
-// Object reference accessors ins src file to avoid circular dependence of header files
+// Object reference accessors in src file to avoid circular dependence of header files
+
+Bool_t
+mithep::PFCandidate::HasTrackerTrk() const
+{
+  return fTrackerTrack.IsValid();
+}
+
+Bool_t
+mithep::PFCandidate::HasGsfTrk() const
+{
+  return fGsfTrack.IsValid();
+}
+
+Bool_t
+mithep::PFCandidate::HasSCluster() const
+{
+  return fSCluster.IsValid();
+
+}
+
+void
+mithep::PFCandidate::SetMuon(Muon const* m)
+{
+  fMuon = m;
+}
+
+void
+mithep::PFCandidate::SetElectron(Electron const* e)
+{
+  fElectron = e;
+}
+
+void
+mithep::PFCandidate::SetPhoton(Photon const* p)
+{
+  fPhoton = p;
+}
+
+void
+mithep::PFCandidate::SetTrackerTrk(Track const* t)
+{
+  fTrackerTrack = t;
+}
+
+void
+mithep::PFCandidate::SetGsfTrk(Track const* t)
+{
+  fGsfTrack = t;
+}
+
+void
+mithep::PFCandidate::SetSCluster(SuperCluster const* s)
+{
+  fSCluster = s;
+}
+
+mithep::Track const*
+mithep::PFCandidate::TrackerTrk() const
+{
+  return fTrackerTrack.Obj();
+}
+
+mithep::Track const*
+mithep::PFCandidate::GsfTrk() const
+{
+  return fGsfTrack.Obj();
+}
+
+mithep::SuperCluster const*
+mithep::PFCandidate::SCluster() const
+{
+  return fSCluster.Obj();
+}
 
 mithep::Muon const*
 mithep::PFCandidate::Mu() const
@@ -26,27 +101,11 @@ mithep::PFCandidate::Pho() const
 }
 
 void
-mithep::PFCandidate::SetMuon(Muon const* m)
-{
-  fMuon = m;
-}
-
-void
-mithep::PFCandidate::SetElectron(Electron const* e)
-{
-  fElectron = e;
-}
-void
-mithep::PFCandidate::SetPhoton(Photon const* p)
-{
-  fPhoton = p;
-}
-
-void
 mithep::PFCandidate::Mark(UInt_t ib) const
 {
   // mark myself
   mithep::DataObject::Mark(ib);
+
   // mark my dependencies if they are there
   if (fMother.IsValid())
     fMother.Obj()->Mark(ib);

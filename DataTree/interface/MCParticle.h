@@ -16,6 +16,7 @@
 #include "MitAna/DataCont/interface/Ref.h"
 #include "MitAna/DataCont/interface/BitMask.h"
 #include "MitAna/DataTree/interface/CompositeParticle.h"
+#include "MitAna/DataTree/interface/BaseVertex.h"
 
 namespace mithep 
 {
@@ -35,11 +36,33 @@ namespace mithep
         kDeltaPlus = 2214, kDelta0 = 2114, kDeltaMinus=1114
       };
 
-      MCParticle() : fPdgId(0), fStatus(0), fIsGenerated(kFALSE), fIsSimulated(kFALSE) {}
+      // copied from DataFormats/HepMCCandidate/interface/GenStatusFlags.h (CMSSW_8_0_3)
+      enum EStatusFlag {
+        kIsPrompt,
+        kIsDecayedLeptonHadron,
+        kIsTauDecayProduct,
+        kIsPromptTauDecayProduct,
+        kIsDirectTauDecayProduct,
+        kIsDirectPromptTauDecayProduct,
+        kIsDirectHadronDecayProduct,
+        kIsHardProcess,
+        kFromHardProcess,
+        kIsHardProcessTauDecayProduct,
+        kIsDirectHardProcessTauDecayProduct,
+        kFromHardProcessBeforeFSR,
+        kIsFirstCopy,
+        kIsLastCopy,
+        kIsLastCopyBeforeFSR,
+        kIsSimulated = 15, // not a part of CMSSW status flag
+        nStatusFlags
+      };
+
+      MCParticle() {}
 
       Int_t               AbsPdgId()               const   { return (fPdgId<0 ? -fPdgId:fPdgId); }
       void		  AddDaughter(const MCParticle *p) { fDaughters.Add(p);                  }
-      const ThreeVector   DecayVertex()            const   { return fDecayVertex.V();            }
+      ThreeVector         DecayVertex()            const;
+      BaseVertex const*   SourceVertex()           const   { return fVertexRef.Obj();            }
       const MCParticle   *Daughter(UInt_t i)       const;
       const MCParticle   *DistinctMother()         const;
       using CompositeParticle::HasDaughter;
@@ -52,7 +75,7 @@ namespace mithep
       Bool_t              HasMother(Int_t pid, Bool_t checkCharge=kFALSE)   const;
       Bool_t              Is(Int_t pid, Bool_t checkCharge=kFALSE)          const;
       Bool_t              IsCharged()              const { return !IsNeutral();      }
-      Bool_t              IsGenerated()            const { return fIsGenerated;      }
+      Bool_t              IsGenerated()            const { return !fStatusFlags.TestBit(kIsSimulated); }
       Bool_t              IsGluon()                const { return fPdgId == kGlu;    }
       Bool_t              IsLepton()               const;
       Bool_t              IsNeutral()              const;
@@ -60,11 +83,10 @@ namespace mithep
       Bool_t              IsNot(Int_t pid, Bool_t checkCharge=kFALSE)       const;
       Bool_t              IsParton()               const { return (IsGluon() || IsQuark());       }
       Bool_t              IsQuark()                const { return (AbsPdgId()>0 && AbsPdgId()<7); }
-      Bool_t              IsSimulated()            const { return fIsSimulated;  }
+      Bool_t              IsSimulated()            const { return fStatusFlags.TestBit(kIsSimulated);  }
       const MCParticle   *Mother()                 const { return fMother.Obj(); }
       EObjType            ObjType()                const { return kMCParticle;   }      
-      void                SetIsGenerated(Bool_t t=kTRUE) { fIsGenerated = t;     }
-      void                SetIsSimulated(Bool_t t=kTRUE) { fIsSimulated = t;     }
+      void                SetIsSimulated(Bool_t t=kTRUE) { fStatusFlags.SetBit(kIsSimulated, t);  }
       TParticlePDG       *PdgEntry()               const;
       Int_t               PdgId()                  const { return fPdgId;  }
       Double_t            PdgMass()                const;
@@ -73,8 +95,8 @@ namespace mithep
       void		  SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
       void		  SetMom(Double_t px, Double_t py, Double_t pz, Double_t e);
       void		  SetMother(const MCParticle *p) { fMother = p;    }
+      void                SetVertex(mithep::BaseVertex const* v) { fVertexRef = v; }
       void                SetStatus(Int_t s)             { fStatus = s;    }
-      void                SetVertex(Double_t x, Double_t y, Double_t z);
       void                SetPdgId(Int_t s)              {  fPdgId = s;    }
       void                SetStatusFlag(UInt_t i, Bool_t b) { fStatusFlags.SetBit(i, b); }
       Int_t               Status()                 const { return fStatus; }
@@ -87,16 +109,15 @@ namespace mithep
       Double_t            GetCharge()              const;
       void                GetMom()                 const;
 
-      Int_t               fPdgId;        //pdg identifier
-      Short_t             fStatus;       //status flag of generator or simulation
-      Vect4M              fMom;          //four momentum vector
-      Vect3               fDecayVertex;  //gen decay vertex
-      Ref<MCParticle>     fMother;       //reference to mother
-      Bool_t              fIsGenerated;  //=true if generated particle
-      Bool_t              fIsSimulated;  //=true if simulated particle
-      mithep::BitMask<2>  fStatusFlags;  //pythia8 status flags
+      Vect4M              fMom{};         //four momentum vector
+      Vect3               fDecayVertex{}; //! (deprecated) gen decay vertex
+      Ref<BaseVertex>     fVertexRef{};   //reference to source vertex
+      Int_t               fPdgId{0};      //pdg identifier
+      Ref<MCParticle>     fMother{};      //reference to mother
+      Short_t             fStatus{0};     //status flag of generator or simulation
+      mithep::BitMask<2>  fStatusFlags{}; //pythia8 status flags
 
-    ClassDef(MCParticle,4) // Generated particle class
+    ClassDef(MCParticle,5) // Generated particle class
   };
 }
 
@@ -315,11 +336,4 @@ inline void mithep::MCParticle::SetMom(Double_t px, Double_t py, Double_t pz, Do
   ClearMom();
 }
 
-//--------------------------------------------------------------------------------------------------
-inline void mithep::MCParticle::SetVertex(Double_t x, Double_t y, Double_t z)
-{
-  // Set decay vertex.
-
-  fDecayVertex.SetXYZ(x,y,z);
-}
 #endif
