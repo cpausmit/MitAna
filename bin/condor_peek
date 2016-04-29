@@ -74,7 +74,7 @@ for arg in sys.argv[1:]:
 
     # What were the arguments
     args = "EMPTY"
-    cmd = 'condor_q -global -l ' + arg + ' | grep ^Args'
+    cmd = 'condor_q -global -l ' + arg + ' | egrep \(^Args\|^Arguments\)'
     for line in os.popen(cmd).readlines():  # run find command
         line = line[:-1]                    # strip '\n'
         # split into the two pieces
