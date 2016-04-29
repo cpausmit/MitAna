@@ -268,6 +268,31 @@ void TAModule::Exec(Option_t* option)
    // This function must not be overridden!
 
    R__ASSERT(option);
+
+  if (fVerbose > 0 || (fSelector && fSelector->GetVerbosity() > 0)) {
+    switch (*option) {
+    case kExecSlaveBegin:
+      Info("SlaveBegin", GetName());
+      break;
+    case kExecProcess:
+      Info("Process", GetName());
+      break;
+    case kExecBeginRun:
+      Info("BeginRun", GetName());
+      break;
+    case kExecEndRun:
+      Info("EndRun", GetName());
+      break;
+    case kExecSlaveTerminate:
+      Info("SlaveTerminate", GetName());
+      break;
+    case kExecTerminate:
+      Info("Terminate", GetName());
+      break;
+    default:
+      break;
+    }
+  }
    
    if (option == &kExecBegin) {
       Begin();
