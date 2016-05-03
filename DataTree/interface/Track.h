@@ -186,7 +186,9 @@ namespace mithep
       void                 ClearHit(EHitLayer l)  { fHits.ClearBit(l);            } 
       Double_t	           D0()             const { return -fDxy;                 }
       Double_t             D0Corrected(const BaseVertex &iVertex) const;
+      Double_t             D0Corrected(const ThreeVector &iVertex) const;
       Double_t             DzCorrected(const BaseVertex &iVertex) const;
+      Double_t             DzCorrected(const ThreeVector &iVertex) const;
       Double_t	           D0Err()          const { return fDxyErr;               }
       Double_t             Dsz()            const { return fDsz;                  }
       Double_t             DszErr()         const { return fDszErr;               }
@@ -345,7 +347,21 @@ inline const mithep::ThreeVectorC &mithep::Track::Mom() const
 }
 
 //--------------------------------------------------------------------------------------------------
-inline Double_t mithep::Track::D0Corrected(const BaseVertex &iVertex) const
+inline Double_t mithep::Track::D0Corrected(const mithep::BaseVertex &iVertex) const
+{
+  // Return corrected d0 with respect to primary vertex or beamspot.
+
+  Double_t lXM =  -TMath::Sin(Phi()) * D0();
+  Double_t lYM =   TMath::Cos(Phi()) * D0();
+  Double_t lDX = (lXM + iVertex.X());
+  Double_t lDY = (lYM + iVertex.Y());
+  Double_t d0Corr = (Px()*lDY - Py()*lDX)/Pt();
+  
+  return d0Corr;
+}
+
+//--------------------------------------------------------------------------------------------------
+inline Double_t mithep::Track::D0Corrected(const mithep::ThreeVector &iVertex) const
 {
   // Return corrected d0 with respect to primary vertex or beamspot.
 
@@ -360,6 +376,16 @@ inline Double_t mithep::Track::D0Corrected(const BaseVertex &iVertex) const
 
 //--------------------------------------------------------------------------------------------------
 inline Double_t mithep::Track::DzCorrected(const mithep::BaseVertex &iVertex) const
+{
+  // Compute Dxy with respect to a given position
+  mithep::ThreeVector momPerp(Px(),Py(),0);
+  mithep::ThreeVector posPerp(X0()-iVertex.X(),Y0()-iVertex.Y(),0);
+  return Z0() - iVertex.Z() - posPerp.Dot(momPerp)/Pt() * (Pz()/Pt());
+  
+}
+
+//--------------------------------------------------------------------------------------------------
+inline Double_t mithep::Track::DzCorrected(const mithep::ThreeVector &iVertex) const
 {
   // Compute Dxy with respect to a given position
   mithep::ThreeVector momPerp(Px(),Py(),0);
