@@ -1,5 +1,3 @@
-// $Id: XlMetColLinkDef.h,v 1.1 2009/06/15 15:00:15 loizides Exp $
-
 #ifndef MITANA_DATATREE_XLMETCOLLINKDEF_H
 #define MITANA_DATATREE_XLMETCOLLINKDEF_H
 
