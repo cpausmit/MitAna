@@ -16,8 +16,8 @@
 PACKAGES="qjets pwhg_cphto_reweight"
 
 # SPECIFIC PARAMETERS
-FJ_VERSION="3.1.0-odfocd"
-FJCONTRIB_VERSION="1.014-odfocd"
+FJ_VERSION="3.1.0"
+FJCONTRIB_VERSION="1.020"
 #---------------------
 
 if ! [ "$CMSSW_BASE" ]
@@ -123,9 +123,14 @@ install-fastjet-contrib() {
 
 # Install qjets
 install-qjets() {
-  # add local fastjet-contrib external to scarm config
   # Qjets itself is not versioned, but since it is compiled against fastjet libraries
-  # we use the fastjet version to tag the packages
+  # we use the fastjet version to tag the packages.
+  # Currently we compile the libraries by hand:
+  # 1. Create a directory with fastjet version name
+  # 2. Copy over source codes (including example.cc) from /cvmfs/cvmfs.cmsaf.mit.edu/hidsk0001/cmsprod/cms/external/Qjets
+  # 3. Set FASTJET_DIR to $FASTJET_BASE/bin
+  # 4. make
+  # 5. tar the directory up and copy over to hidsk0001
 
   local VERSION=$1
   local QJETS_BASE=$(find-external Qjets/$VERSION)
