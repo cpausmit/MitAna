@@ -4,6 +4,31 @@
 
 ClassImp(mithep::PileupEnergyDensity)
 
+/*
+  Defining the following functions non-inline for safety measure. Oddities seen in PFTau
+  (uses similar scheme with enums and arrays) and gcc >= 5.3.0
+*/
+
+Double_t
+mithep::PileupEnergyDensity::Rho(UInt_t a/* = mithep::PileupEnergyDensity::kFixedGridAll*/) const
+{
+  if (a < nAlgos)
+    return fRho[a];
+  else if (a < nAllAlgos)
+    return fRhoLegacy[a - nAlgos];
+  else
+    return 0.;
+}
+
+void
+mithep::PileupEnergyDensity::SetRho(Double_t r, UInt_t a/* = mithep::PileupEnergyDensity::kFixedGridAll*/)
+{
+  if (a < nAlgos)
+    fRho[a] = r;
+  else if (a < nAllAlgos)
+    fRhoLegacy[a - nAlgos] = r;
+}
+
 /*static*/
 char const*
 mithep::PileupEnergyDensity::AlgoName(UInt_t a)

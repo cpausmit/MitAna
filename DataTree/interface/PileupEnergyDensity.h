@@ -80,26 +80,4 @@ namespace mithep
   };
 }
 
-inline
-Double_t
-mithep::PileupEnergyDensity::Rho(UInt_t a/* = mithep::PileupEnergyDensity::kFixedGridAll*/) const
-{
-  if (a < nAlgos)
-    return fRho[a];
-  else if (a < nAllAlgos)
-    return fRhoLegacy[a - nAlgos];
-  else
-    return 0.;
-}
-
-inline
-void
-mithep::PileupEnergyDensity::SetRho(Double_t r, UInt_t a/* = mithep::PileupEnergyDensity::kFixedGridAll*/)
-{
-  if (a < nAlgos)
-    fRho[a] = r;
-  else if (a < nAllAlgos)
-    fRhoLegacy[a - nAlgos] = r;
-}
-
 #endif

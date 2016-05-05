@@ -198,18 +198,6 @@ mithep::Jet::GetMom() const
 
 inline
 Double_t
-mithep::Jet::BJetTagsDisc(UInt_t a) const
-{
-  if (a < nBTagAlgos)
-    return fBJetTagsDisc[a];
-  else if (a < nAllBTagAlgos)
-    return fBJetTagsLegacyDisc[a - nBTagAlgos];
-  else
-    return -9999.;
-}
-
-inline
-Double_t
 mithep::Jet::CombinedCorrectionScale() const
 {
   // compute combined correction scale from all enabled corrections
@@ -221,16 +209,6 @@ mithep::Jet::CombinedCorrectionScale() const
   }
 
   return scale;
-}
-
-inline
-void
-mithep::Jet::SetBJetTagsDisc(Double_t d, UInt_t a)
-{
-  if (a < nBTagAlgos)
-    fBJetTagsDisc[a] = d;
-  else if (a < nAllBTagAlgos)
-    fBJetTagsLegacyDisc[a - nBTagAlgos] = d;
 }
 
 #endif
