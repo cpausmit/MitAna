@@ -4,6 +4,52 @@
 
 ClassImp(mithep::PFTau)
 
+/*
+  The following functions are trivial and would fit better with inline definitions in the header file.
+  However gcc >= 5.3.0 does some optimization BS which causes unexplainable behavior when BitMask and
+  on-the-fly subtraction of enums from integers are involved.
+*/
+
+Double_t
+mithep::PFTau::PFTauDiscriminant(UInt_t idx) const
+{
+  if (idx < nDiscriminants)
+    return fPFTauDiscriminants[idx];
+  else
+    return -1.;
+}
+
+Bool_t
+mithep::PFTau::PFTauIdentifier(UInt_t idx) const
+{
+  return fPFTauIdentifiers.TestBit(idx - nDiscriminants);
+}
+
+Double_t
+mithep::PFTau::PFTauDiscriminator(UInt_t idx) const
+{
+  if (idx < nDiscriminants)
+    return fPFTauDiscriminants[idx];
+  else if (idx < nDiscriminators)
+    return fPFTauIdentifiers.TestBit(idx - nDiscriminants) ? 1. : 0.;
+  else if (idx < nAllDiscriminators)
+    return fPFTauLegacyDiscriminator[idx - nDiscriminators];
+  else
+    return -1.;
+}
+
+void
+mithep::PFTau::SetPFTauDiscriminant(Double_t x, UInt_t i)
+{
+  fPFTauDiscriminants[i] = x;
+}
+
+void
+mithep::PFTau::SetPFTauIdentifier(Bool_t b, UInt_t i)
+{
+  fPFTauIdentifiers.SetBit(i - nDiscriminants, b);
+}
+
 /*static*/
 char const*
 mithep::PFTau::PFTauDiscriminantName(UInt_t idx)

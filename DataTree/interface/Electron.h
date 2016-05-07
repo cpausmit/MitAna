@@ -132,6 +132,9 @@ namespace mithep
     Double_t             HcalTowerSumEtDr03()             const { return fCaloTowerIsolation; }
     Double_t             HcalDepth1TowerSumEtDr03()       const { return fHcalDepth1TowerSumEtDr03; }
     Double_t             HcalDepth2TowerSumEtDr03()       const { return fHcalDepth2TowerSumEtDr03; }
+    Double_t             PFChargedHadronIso()             const { return fPFChargedHadronIso; }
+    Double_t             PFNeutralHadronIso()             const { return fPFNeutralHadronIso; }
+    Double_t             PFPhotonIso()                    const { return fPFPhotonIso; }
     Double_t             EcalPFClusterIso()               const { return fEcalPFClusterIso; }
     Double_t             HcalPFClusterIso()               const { return fHcalPFClusterIso; }
     Bool_t               MatchesVertexConversion()        const { return fMatchesVertexConversion; }
@@ -238,6 +241,9 @@ namespace mithep
     void                 SetHcalTowerSumEtDr03(Double_t x)       { fCaloTowerIsolation = x; }
     void                 SetHcalDepth1TowerSumEtDr03(Double_t x) { fHcalDepth1TowerSumEtDr03 = x; }
     void                 SetHcalDepth2TowerSumEtDr03(Double_t x) { fHcalDepth2TowerSumEtDr03 = x; }
+    void                 SetPFChargedHadronIso(Double_t x)       { fPFChargedHadronIso = x; }
+    void                 SetPFNeutralHadronIso(Double_t x)       { fPFNeutralHadronIso = x; }
+    void                 SetPFPhotonIso(Double_t x)              { fPFPhotonIso = x; }
     void                 SetEcalPFClusterIso(Double_t x)         { fEcalPFClusterIso = x; }
     void                 SetHcalPFClusterIso(Double_t x)         { fHcalPFClusterIso = x; }
     void                 SetIsEcalDriven(Bool_t b)               { fIsEcalDriven = b; }
@@ -339,6 +345,9 @@ namespace mithep
     Double32_t        fConvPartnerDCotTheta;         //[0,0,14]delta cot theta to nearest conversion partner track
     Double32_t        fConvPartnerDist;              //[0,0,14]distance in x-y plane to nearest conversion partner track
     Double32_t        fConvPartnerRadius;            //[0,0,14]radius of helix intersection with conversion partner track
+    Double32_t        fPFChargedHadronIso;           //[0,0,14]pf isolation, charged hadrons
+    Double32_t        fPFNeutralHadronIso;           //[0,0,14]pf isolation, neutral hadrons
+    Double32_t        fPFPhotonIso;                  //[0,0,14]pf isolation, photons
     Double32_t        fEcalPFClusterIso;             //[0,0,14]pf cluster isolation, ECAL
     Double32_t        fHcalPFClusterIso;             //[0,0,14]pf cluster isolation, HCAL
     Int_t             fConvFlag;                     //conversion flag indicating which track combination was used
@@ -368,9 +377,6 @@ namespace mithep
     //    Double32_t        fTrackIsolationDr04;           //[0,0,14]isolation based on tracks dR 0.4
     //    Double32_t        fTrackIsolation;               //[0,0,14]isolation based on tracks dR 0.3 *RENAMING*
     //    Double32_t        fMva;                          //[0,0,14] pflow mva output
-    //    Double32_t        fPFChargedHadronIso;           //[0,0,14]pf isolation, charged hadrons
-    //    Double32_t        fPFNeutralHadronIso;           //[0,0,14]pf isolation, neutral hadrons
-    //    Double32_t        fPFPhotonIso;                  //[0,0,14]pf isolation, photons
     //    Double32_t        fIDLikelihood;                 //[0,0,14]likelihood value
     //    Bool_t            fIsEB = kFALSE;                         //is ECAL barrel
     //    Bool_t            fIsEE = kFALSE;                         //is ECAL Endcap
@@ -385,7 +391,7 @@ namespace mithep
     // The problem is that process ID seems to be not set at the point where conversion rules are applied
     // which is strange since process ID is set in ProcIDRef::Streamer..
 
-    ClassDef(Electron, 21)                             // Electron class
+    ClassDef(Electron, 22)                             // Electron class
   };
 }
 

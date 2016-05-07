@@ -191,8 +191,8 @@ namespace mithep {
     Bool_t ElectronPreIDDecision() const { return fElectronPreIDDecision; }
     Bool_t MuonDecision() const { return fMuonDecision; }
     Double_t PFTauDiscriminator(UInt_t) const; // accepts discriminant, identifier, and legacy indices. returns 0.0 or 1.0 for identifiers
-    Double_t PFTauDiscriminant(UInt_t i) const { return fPFTauDiscriminants[i]; }
-    Bool_t PFTauIdentifier(UInt_t i) const { return fPFTauIdentifiers.TestBit(i - nDiscriminators); }
+    Double_t PFTauDiscriminant(UInt_t) const;
+    Bool_t PFTauIdentifier(UInt_t) const;
     HadronicDecayMode DecayMode() const { return fHadronicDecayMode; }
     PFCandidate const* LeadPFCand() const { return fLeadPFCand.Obj(); }
     PFCandidate const* LeadChargedHadronPFCand() const { return fLeadChargedHadPFCand.Obj(); }
@@ -232,8 +232,8 @@ namespace mithep {
     void SetBendCorrMass(Double_t x) { fBendCorrMass = x; }
     void SetElectronPreIDDecision(Bool_t b) { fElectronPreIDDecision = b; }
     void SetMuonDecision(Bool_t b) { fMuonDecision = b; }
-    void SetPFTauDiscriminant(Double_t x, UInt_t i) { fPFTauDiscriminants[i] = x; }
-    void SetPFTauIdentifier(Bool_t b, UInt_t i) { fPFTauIdentifiers.SetBit(i - nDiscriminants, b); }
+    void SetPFTauDiscriminant(Double_t, UInt_t);
+    void SetPFTauIdentifier(Bool_t, UInt_t);
     void SetLeadPFCand(PFCandidate const* p) { fLeadPFCand = p; }
     void SetLeadChargedHadronPFCand(PFCandidate const* p) { fLeadChargedHadPFCand = p; }
     void SetLeadNeutralPFCand(PFCandidate const* p) { fLeadNeutralPFCand = p; }
@@ -243,7 +243,7 @@ namespace mithep {
     void AddSignalPFChargedHadrCand(PFCandidate const* p) { fSignalPFChargedHadrCands.Add(p); }
     void AddSignalPFNeutrHadrCand(PFCandidate const* p) { fSignalPFNeutrHadrCands.Add(p); }
     void AddSignalPFGammaCand(PFCandidate const* p) { fSignalPFGammaCands.Add(p); }
-    void AddIsoPFCand(PFCandidate const* p) { fIsoPFCands.Add(p); }\
+    void AddIsoPFCand(PFCandidate const* p) { fIsoPFCands.Add(p); }
     void SetDecayMode(HadronicDecayMode mode) { fHadronicDecayMode = mode; }
 
     // Some structural tools
@@ -294,20 +294,6 @@ namespace mithep {
 
     ClassDef(PFTau, 10) // PFTau class
   };
-}
-
-inline
-Double_t
-mithep::PFTau::PFTauDiscriminator(UInt_t idx) const
-{
-  if (idx < nDiscriminants)
-    return fPFTauDiscriminants[idx];
-  else if (idx < nDiscriminators)
-    return fPFTauIdentifiers.TestBit(idx - nDiscriminants) ? 1. : 0.;
-  else if (idx < nAllDiscriminators)
-    return fPFTauLegacyDiscriminator[idx - nDiscriminators];
-  else
-    return 0.;
 }
 
 inline

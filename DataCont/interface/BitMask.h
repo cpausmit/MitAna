@@ -254,10 +254,10 @@ Bool_t mithep::BitMaskT<T>::TestBit(UInt_t n) const
 {
   // Return true if nth bit is set.
 
-  if(n>=sizeof(T)*8) 
-    return 0;
+  if(n >= sizeof(T) * 8) 
+    return kFALSE;
 
-  Bool_t result = (fBitMask & (1<<n)) != 0;
-  return result;
+  T masked = (fBitMask & (1 << n));
+  return masked != 0;
 }
 #endif
