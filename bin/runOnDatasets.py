@@ -59,17 +59,10 @@ def yes(message, options = []):
 
 
 def parseValueStr(value):
-    strmatch = re.match('["\'](.*)["\']$', value)
-    if strmatch:
-        value = strmatch.group(1)
-    else:
-        try:
-            value = int(value)
-        except ValueError:
-            try:
-                value = float(value)
-            except ValueError:
-                pass
+    try:
+        value = eval(value)
+    except:
+        pass
 
     return value
 
