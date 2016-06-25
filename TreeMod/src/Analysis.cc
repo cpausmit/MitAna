@@ -34,6 +34,7 @@ Analysis::Analysis(Bool_t useproof) :
   fCheckMC(0),
   fUseProof(useproof),
   fUseCacher(0),
+  fCacherTimeout(1800),
   fUseHLT(1),
   fUseMC(kFALSE),
   fHierarchy(kTRUE),

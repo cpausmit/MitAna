@@ -107,6 +107,7 @@ namespace mithep
       void                      SetUseMC(Bool_t mc)                 { fUseMC     = mc;            }
       void                      SetUseProof(Bool_t up)              { fUseProof  = up;            }
       void                      SetUseCacher(Int_t i)               { fUseCacher = i;             }
+      void                      SetCacherTimeout(Int_t t)           { fCacherTimeout = t;         }
       void                      SetPerfStatsFileName(char const* n) { fPerfStatsFileName = n;     }
       void                      Terminate();
 
@@ -131,6 +132,7 @@ namespace mithep
       UInt_t                    fCheckMC;         //=0 no data/MC check, =1 abort if not MC, =2 warn if not MC
       Bool_t                    fUseProof;        //=true if PROOF is to be used (def=0)
       Int_t                     fUseCacher;       //=1 use file caching, =2 use full-local caching (def=0)
+      Int_t                     fCacherTimeout;   //=1800 timeout for cacher
       UInt_t                    fUseHLT;          //=1 if HLTFwkMod is to be used, 2 to process input with no HLT info (def=1)
       Bool_t                    fUseMC;           //=true if MCFwkMod is to be used (def=false)
       Bool_t                    fHierarchy;       //=true if module hierachy to be stored (def=1)
