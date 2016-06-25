@@ -267,8 +267,11 @@ class CondorConfig(object):
     Condor job description with preset parameter values.
     """
 
-    def __init__(self, taskName):
+    def __init__(self, env):
         self.jdl = {
+            'requirements': 'Arch == "X86_64" && HasFileTransfer && OpSysAndVer == "SL6"',
+            'notification': 'Error',
+            'rank': 'Mips',
             'arguments': '"{book} {dataset} {fileset} {nentries}"',
             'initialdir': env.outDir + '/{book}/{dataset}',
             'output': env.logDir + '/{book}/{dataset}/{fileset}.out',
@@ -277,73 +280,81 @@ class CondorConfig(object):
             'universe': 'vanilla',
             'getenv': 'False',
             'input': '/dev/null',
+            'executable': env.workspace + '/start.sh',
             'should_transfer_files': 'YES',
-            'when_to_transfer_output': 'ON_EXIT'
+            'transfer_input_files': [env.workspace + '/{book}/{dataset}/run.py', env.workspace + '/' + env.cmsswPack, env.workspace + '/env.sh'],
+            'transfer_output_files': ['{fileset}.root'],
+            'transfer_output_remaps': {},
+            'when_to_transfer_output': 'ON_EXIT',
+            'accounting_group': 'group_cmsuser'
         }
-        self.taskName = taskName
 
-    def readFromFile(self, path, env):
+        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
+            fullPath = env.workspace + '/' + optionalInput
+            if os.path.exists(fullPath):
+                self.jdl['transfer_input_files'].append(fullPath)
+
+        self.taskName = env.taskName
+
+    def readFromFile(self, path, update = False):
         with open(path) as confFile:
             for line in confFile:
                 if not line.strip() or line.strip().startswith('#'):
                     continue
     
                 key, eq, value = line.partition('=')
-                if key in self.jdl:
-                    print ' Ignoring key ' + key + ' found in condor template.'
+                key = key.strip().lower()
+                value = value.strip()
+
+                if key in ['arguments', 'initialdir', 'output', 'error', 'log', 'universe', 'input', 'should_transfer_files', 'when_to_transfer_output']:
+                    if update:
+                        print ' Ignoring key ' + key + ' found in condor template.'
+
                     continue
-    
-                self.jdl[key.strip().lower()] = value.strip()
 
-        if 'executable' not in self.jdl:
-            self.jdl['executable'] = env.workspace + '/start.sh'
+                if key == 'transfer_input_files' or key == 'transfer_output_files':
+                    self.jdl[key].extend(value.split(','))
+                    self.jdl[key] = list(set(self.jdl[key]))
 
-        if '{fileset}.root' in self.outputRemaps():
+                    if update and 'input' in key:
+                        print ' Adding', value, 'to transfer_input_files.'
+
+                elif key == 'transfer_output_remaps':
+                    remapstrs = value.strip('"').split(';')
+                    for remapstr in remapstrs:
+                        original, eq, target = remapstr.partition('=')
+                        self.jdl[key][original.strip()] = target.strip()
+
+                else:
+                    self.jdl[key] = value
+
+    def addOutput(self, fname, remap = ''):
+        self.jdl['transfer_output_files'].append(fname)
+        if remap:
+            self.jdl['transfer_output_remaps'][fname] = remap
+
+    def writeToFile(self, path):
+        if '{fileset}.root' in self.jdl['transfer_output_remaps']:
             print ' Remap of {fileset}.root is not supported.'
             sys.exit(1)
-    
-        try:
-            inputList = map(str.strip, self.jdl['transfer_input_files'].split(','))
-            listWasGiven = True
-        except KeyError:
-            inputList = []
-            listWasGiven = False
-    
-        inputFiles = ['{book}/{dataset}/run.py', env.cmsswPack, 'env.sh']
-        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
-            if os.path.exists(env.workspace + '/' + optionalInput):
-                inputFiles.append(optionalInput)
 
-        for inputFile in inputFiles:
-            fullPath = env.workspace + '/' + inputFile
-            if fullPath not in inputList:
-                if listWasGiven:
-                    print ' Adding', fullPath, 'to transfer_input_files.'
-    
-                inputList.append(fullPath)
-    
-        self.jdl['transfer_input_files'] = ','.join(inputList)
-    
-    def writeToFile(self, path):
+        for oname in self.jdl['transfer_output_remaps'].keys():
+            if oname not in self.jdl['transfer_output_files']:
+                self.jdl['transfer_output_remaps'].pop(oname)
+
         with open(path, 'w') as jdlFile:
             for key, value in self.jdl.items():
-                jdlFile.write(key + ' = ' + value + '\n')
-
-    def outputRemaps(self):
-        if 'transfer_output_remaps' not in self.jdl:
-            return {}
-
-        remapDict = {}
-        remapDefs = map(str.strip, self.jdl['transfer_output_remaps'].strip('"').split(';'))
-        for remapDef in remapDefs:
-            source, eq, target = map(str.strip, remapDef.partition('='))
-            remapDict[source] = target
-
-        return remapDict
+                if key == 'transfer_input_files' or key == 'transfer_output_files':
+                    jdlFile.write(key + ' = ' + ','.join(value) + '\n')
+                elif key == 'transfer_output_remaps':
+                    if len(value) != 0:
+                        jdlFile.write(key + ' = ' + '"' + ' ; '.join([src + ' = ' + trg for src, trg in value.items()]) + '"\n')
+                else:
+                    jdlFile.write(key + ' = ' + value + '\n')
 
     def outputList(self, jobInfo):
-        outPaths = map(str.strip, self.jdl['transfer_output_files'].split(','))
-        remaps = self.outputRemaps()
+        outPaths = self.jdl['transfer_output_files']
+        remaps = self.jdl['transfer_output_remaps']
 
         for iP in range(len(outPaths)):
             outPath = outPaths[iP]
@@ -362,8 +373,8 @@ class CondorConfig(object):
     def outputDirList(self, datasetInfo):
         outDirs = []
 
-        outPaths = map(str.strip, self.jdl['transfer_output_files'].split(','))
-        remaps = self.outputRemaps()
+        outPaths = self.jdl['transfer_output_files']
+        remaps = self.jdl['transfer_output_remaps']
 
         for outPath in outPaths:
             if outPath in remaps:
@@ -1163,6 +1174,8 @@ if __name__ == '__main__':
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
+    argParser.add_argument('--add-output', '-x', metavar = 'MAPS', dest = 'outputMapStrs', nargs = '+', default = [], help = 'Additional output files (e.g. tuples) to be transferred back. Each item must be a name mapping of form "<original name> = <output name>" where output name must contain a string {fileset}. {task}, {book}, {dataset} are also useable.')
+#    argParser.add_argument('--merge-output', '-g', metavar = 'FILES', dest = 'outputToBeMerged', nargs = '+', default = [], help = 'Output ROOT files of each job that should be merged into {fileset}.root.')
     argParser.add_argument('--pre-exec', '-e', metavar = 'FILE', dest = 'preExecPath', default = '', help = 'Bash script to be sourced before the job.')
     argParser.add_argument('--post-exec', '-o', metavar = 'FILE', dest = 'postExecPath', default = '', help = 'Bash script to be sourced after the job.')
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
@@ -1405,17 +1418,19 @@ if __name__ == '__main__':
         updateDatasetList = writeDatasetList(env.workspace + '/datasets.list', datasets)
 
     # create the condor jdl object
-    condorConf = CondorConfig(env.taskName)
+    condorConf = CondorConfig(env)
    
-    if newTask or (args.update and args.condorTemplatePath):
-        path = args.condorTemplatePath
-        if not path:
-            path = env.cmsswbase + '/src/MitAna/config/condor_template.jdl'
+    if newTask or (args.update and (args.condorTemplatePath or len(args.outputMapStrs) != 0)):
+        if args.condorTemplatePath:
+            condorConf.readFromFile(path, update = True)
 
-        condorConf.readFromFile(path, env)
+        for mapStr in args.outputMapStrs:
+            src, eq, trg = mapStr.partition('=')
+            condorConf.addOutput(src.strip(), trg.strip())
+
         condorConf.writeToFile(env.workspace + '/condor.jdl')
     else:
-        condorConf.readFromFile(env.workspace + '/condor.jdl', env)
+        condorConf.readFromFile(env.workspace + '/condor.jdl')
 
     # set directory names and make directories if needed
     for datasetInfo in datasets:
