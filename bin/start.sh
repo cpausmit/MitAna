@@ -68,4 +68,9 @@ then
   done
 fi
 
+if [ -e mergeOutput.py ]
+then
+  python mergeOutput.py $FILESET $MERGE_OUTPUT
+fi
+
 ls -l

@@ -56,6 +56,7 @@ namespace mithep {
     void                 SetMCRunInfoName(const char* n)  { fMCRunInfoName  = n; }
     void                 SetRunTreeName(const char* n)    { fRunTreeName    = n; }
     void                 SetUseCacher(Int_t i)            { fUseCacher      = i; }
+    void                 SetCacherTimeout(Int_t t)        { fCacherTimeout  = t; }
     void                 AddOutputMod(OutputMod*);
 
     class ObjInfo : public TNamed {
@@ -121,6 +122,7 @@ namespace mithep {
 
     Bool_t               fDoRunInfo;      //=true then get RunInfo (def=1)
     Int_t                fUseCacher;      //switch on caching of files
+    Int_t                fCacherTimeout;  //timeout for cacher
     Cacher              *fCacher;         //caching tool
     TString              fEvtHdrName;     //name of event header branch
     TString              fRunTreeName;    //name of run info tree

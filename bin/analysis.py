@@ -87,19 +87,13 @@ if __name__ == '__main__':
             key, eq, value = expr.partition('=')
             if not value:
                 continue
-            strmatch = re.match('["\'](.*)["\']$', value)
-            if strmatch:
-                value = strmatch.group(1)
-            else:
-                try:
-                    value = int(value)
-                except ValueError:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        pass
 
-            print 'Adding a custom variable', key, '=', value
+            try:
+                value = eval(value)
+            except:
+                pass
+
+            print 'Adding a custom variable', key, '=', ('"%s"' % value if type(value) is str else value)
             analysis.custom[key] = value
 
     # load macro
