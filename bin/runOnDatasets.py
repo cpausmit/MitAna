@@ -289,7 +289,7 @@ class CondorConfig(object):
             'accounting_group': 'group_cmsuser'
         }
 
-        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh']:
+        for optionalInput in [env.x509up, 'preExec.sh', 'postExec.sh', 'mergeOutput.py']:
             fullPath = env.workspace + '/' + optionalInput
             if os.path.exists(fullPath):
                 self.jdl['transfer_input_files'].append(fullPath)
@@ -333,6 +333,20 @@ class CondorConfig(object):
         if remap:
             self.jdl['transfer_output_remaps'][fname] = remap
 
+    def toString(self):
+        jdlstr = ''
+
+        for key, value in self.jdl.items():
+            if key == 'transfer_input_files' or key == 'transfer_output_files':
+                jdlstr += key + ' = ' + ','.join(value) + '\n'
+            elif key == 'transfer_output_remaps':
+                if len(value) != 0:
+                    jdlstr += key + ' = ' + '"' + ' ; '.join([src + ' = ' + trg for src, trg in value.items()]) + '"\n'
+            else:
+                jdlstr += key + ' = ' + value + '\n'
+
+        return jdlstr
+
     def writeToFile(self, path):
         if '{fileset}.root' in self.jdl['transfer_output_remaps']:
             print ' Remap of {fileset}.root is not supported.'
@@ -343,14 +357,7 @@ class CondorConfig(object):
                 self.jdl['transfer_output_remaps'].pop(oname)
 
         with open(path, 'w') as jdlFile:
-            for key, value in self.jdl.items():
-                if key == 'transfer_input_files' or key == 'transfer_output_files':
-                    jdlFile.write(key + ' = ' + ','.join(value) + '\n')
-                elif key == 'transfer_output_remaps':
-                    if len(value) != 0:
-                        jdlFile.write(key + ' = ' + '"' + ' ; '.join([src + ' = ' + trg for src, trg in value.items()]) + '"\n')
-                else:
-                    jdlFile.write(key + ' = ' + value + '\n')
+            jdlFile.write(self.toString())
 
     def outputList(self, jobInfo):
         outPaths = self.jdl['transfer_output_files']
@@ -400,8 +407,7 @@ class CondorConfig(object):
             return s
 
     def jdlCommand(self, jobInfo):
-        return '\n'.join([key + ' = ' + self.format(value, jobInfo) for key, value in self.jdl.items()]) + '\nqueue\n'
-
+        return self.format(self.toString(), jobInfo) + '\nqueue\n'
 
 ######################################################################
 ## MAIN EXECUTABLE FUNCTIONS (PROBABLY BETTER IN A CLASS IN FUTURE) ##
@@ -459,7 +465,6 @@ def setupWorkspace(env):
             envFile.write('export CMSSW_NAME="' + env.cmsswname + '"\n')
             envFile.write('export MIT_DATA="' + env.mitdata + '"\n')
 
-
     if env.inMacroPath: # including update case
         shutil.copyfile(env.inMacroPath, env.workspace + '/macro.py')
 
@@ -468,6 +473,18 @@ def setupWorkspace(env):
 
     if env.postExecPath: # including update case
         shutil.copyfile(env.postExecPath, env.workspace + '/postExec.sh')
+
+    if env.outputToBeMerged: # including update case
+        with open(env.workspace + '/env_tmp.sh', 'w') as envOut:
+            with open(env.workspace + '/env.sh') as envIn:
+                for line in envIn:
+                    if not line.startswith('export MERGE_OUTPUT'):
+                        envOut.write(line)
+                        
+            envOut.write('export MERGE_OUTPUT="%s"' % ' '.join(env.outputToBeMerged))
+
+        shutil.copyfile(env.workspace + '/env_tmp.sh', env.workspace + '/env.sh')
+        shutil.copyfile(env.cmsswbase + '/src/MitAna/bin/mergeOutput.py', env.workspace + '/mergeOutput.py')
 
     # copy the latest user proxy
     copyX509Proxy(env)
@@ -1175,7 +1192,7 @@ if __name__ == '__main__':
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
     argParser.add_argument('--add-output', '-x', metavar = 'MAPS', dest = 'outputMapStrs', nargs = '+', default = [], help = 'Additional output files (e.g. tuples) to be transferred back. Each item must be a name mapping of form "<original name> = <output name>" where output name must contain a string {fileset}. {task}, {book}, {dataset} are also useable.')
-#    argParser.add_argument('--merge-output', '-g', metavar = 'FILES', dest = 'outputToBeMerged', nargs = '+', default = [], help = 'Output ROOT files of each job that should be merged into {fileset}.root.')
+    argParser.add_argument('--merge-output', '-g', metavar = 'FILES', dest = 'outputToBeMerged', nargs = '+', help = 'Output ROOT files of each job that should be merged into {fileset}.root.')
     argParser.add_argument('--pre-exec', '-e', metavar = 'FILE', dest = 'preExecPath', default = '', help = 'Bash script to be sourced before the job.')
     argParser.add_argument('--post-exec', '-o', metavar = 'FILE', dest = 'postExecPath', default = '', help = 'Bash script to be sourced after the job.')
     argParser.add_argument('--pilot', '-p', metavar = 'N', dest = 'pilot', type = int, nargs = '?', default = 0, const = 1000, help = 'Submit a pilot job that processes N events from each dataset.')
@@ -1249,6 +1266,7 @@ if __name__ == '__main__':
     env.inMacroPath = args.macro
     env.update = args.update
     env.condorTemplatePath = args.condorTemplatePath
+    env.outputToBeMerged = args.outputToBeMerged
     env.preExecPath = args.preExecPath
     env.postExecPath = args.postExecPath
     env.submitFrom = args.submitFrom
@@ -1310,6 +1328,8 @@ if __name__ == '__main__':
                 message += ' . List of datasets\n'
             if args.condorTemplatePath:
                 message += ' . Condor job description\n'
+            if args.outputToBeMerged:
+                message += ' . List of output files to merge\n'
             if args.preExecPath:
                 message += ' . Pre-exec script\n'
             if args.postExecPath:
@@ -1420,13 +1440,14 @@ if __name__ == '__main__':
     # create the condor jdl object
     condorConf = CondorConfig(env)
    
-    if newTask or (args.update and (args.condorTemplatePath or len(args.outputMapStrs) != 0)):
+    if newTask or (args.update and (args.condorTemplatePath or args.outputMapStrs)):
         if args.condorTemplatePath:
-            condorConf.readFromFile(path, update = True)
+            condorConf.readFromFile(args.condorTemplatePath, update = True)
 
-        for mapStr in args.outputMapStrs:
-            src, eq, trg = mapStr.partition('=')
-            condorConf.addOutput(src.strip(), trg.strip())
+        if args.outputMapStrs:
+            for mapStr in args.outputMapStrs:
+                src, eq, trg = mapStr.partition('=')
+                condorConf.addOutput(src.strip(), trg.strip())
 
         condorConf.writeToFile(env.workspace + '/condor.jdl')
     else:
