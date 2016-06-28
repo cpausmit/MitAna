@@ -113,6 +113,7 @@ namespace mithep {
     std::vector<SVData> const&     GetSVData() const       { return fSVData; }
     std::vector<LeptonData> const& GetMuonData() const     { return fMuonData; }
     std::vector<LeptonData> const& GetElectronData() const { return fElectronData; }
+    std::vector<Vect4M> const& GetSubJetMomenta() const     { return fSubjetMomenta; }
     std::vector<Float_t> const& GetSubJetBtags() const     { return fSubjetBtags; }
 
     void SetCharge()                    { fCharge  = this->GetCharge(); }
@@ -132,7 +133,7 @@ namespace mithep {
     void AddMuonData(LeptonData *s)     { fMuonData.push_back(*s); }
     void AddElectronData(LeptonData *s) { fElectronData.push_back(*s); }
     void AddSubJetBtag(Float_t btag) { fSubjetBtags.push_back(btag); }
-
+    void AddSubJetPtEtaPhiM(Double_t, Double_t, Double_t, Double_t);
 
   protected:
     Double_t GetCharge() const override;
@@ -148,8 +149,9 @@ namespace mithep {
     Double32_t         fMassSD{-1.};       // soft drop mass
     std::vector<Vect3> fTauIVFAxes{};
 
-    std::vector<Float_t> fSubjetBtags; // ordered by decreasing subjet pT
-
+    // ordered by decreasing subjet pT
+    std::vector<Vect4M> fSubjetMomenta;
+    std::vector<Float_t> fSubjetBtags;
 
     // IVF variables
     Float_t         fTauDot{-1.};
@@ -159,7 +161,7 @@ namespace mithep {
     std::vector<LeptonData> fMuonData{};
     std::vector<LeptonData> fElectronData{};
 
-    ClassDef(FatJet, 3) // FatJet class
+    ClassDef(FatJet, 4) // FatJet class
   };
 
 }
@@ -176,6 +178,14 @@ mithep::FatJet::GetCharge() const
     charge += PFCand(i)->Charge() * PFCand(i)->Pt();
 
   return charge / Pt();
+}
+
+//--------------------------------------------------------------------------------------------------
+inline
+void
+mithep::FatJet::AddSubJetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m)
+{
+  fSubjetMomenta.emplace_back(pt, eta, phi, m);
 }
 
 #endif
