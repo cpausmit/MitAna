@@ -194,14 +194,13 @@ void mithep::FastArrayBasic<ArrayElement, IsDouble32>::Resize(UInt_t s)
 {
   if (!fArray)
     Init(s);
-  else {
-    fSize = s;
 
-    if (fSize >= fCapacity)
-      Expand(TMath::Max(16, 2 * fSize));
+  fSize = s;
 
-    BaseCollection::Clear();
-  }
+  if (fSize >= fCapacity)
+    Expand(TMath::Max(16, 2 * fSize));
+
+  BaseCollection::Clear();
 }
 
 //-------------------------------------------------------------------------------------------------
