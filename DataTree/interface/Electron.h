@@ -80,10 +80,12 @@ namespace mithep
     Double_t             ConvPartnerRadius()           const { return fConvPartnerRadius; }
     Int_t                ConvFlag()                    const { return fConvFlag; }
     Int_t                Classification()              const { return fClassification; }
-    Double_t             CoviEtaiEta()                 const;
-    Double_t             CoviEtaiEta5x5()              const;
-    Double_t             CoviPhiiPhi()                 const { return SCluster()->SigmaIPhiIPhi(); }
+    Double_t             CoviEtaiEta(Bool_t zs = kFALSE) const;
     Double_t             CoviEtaiPhi()                 const { return SCluster()->SigmaIEtaIPhi(); }
+    Double_t             CoviPhiiPhi()                 const { return SCluster()->SigmaIPhiIPhi(); }
+    Double_t             CoviEtaiEta5x5()              const { return fCoviEtaiEta5x5; }
+    Double_t             CoviEtaiPhi5x5()              const { return fCoviEtaiPhi5x5; }
+    Double_t             CoviPhiiPhi5x5()              const { return fCoviPhiiPhi5x5; }
     Double_t             DeltaEtaSuperClusterTrackAtVtx() const { return fDeltaEtaSuperClTrkAtVtx; }
     Double_t             DeltaEtaSeedClusterTrackAtCalo() const { return fDeltaEtaSeedClTrkAtCalo; }
     Double_t             DeltaPhiSuperClusterTrackAtVtx() const { return fDeltaPhiSuperClTrkAtVtx; }
@@ -195,6 +197,8 @@ namespace mithep
     void                 SetClassification(Int_t x)                    { fClassification = x; }
     void                 SetCoviEtaiEta(Double_t x)                    { fCoviEtaiEta = x; }
     void                 SetCoviEtaiEta5x5(Double_t x)                 { fCoviEtaiEta5x5 = x; }
+    void                 SetCoviEtaiPhi5x5(Double_t x)                 { fCoviEtaiPhi5x5 = x; }
+    void                 SetCoviPhiiPhi5x5(Double_t x)                 { fCoviPhiiPhi5x5 = x; }
     void                 SetDeltaEtaSuperClusterTrackAtVtx(Double_t x)  
     { fDeltaEtaSuperClTrkAtVtx = x; }
     void                 SetDeltaEtaSeedClusterTrackAtCalo(Double_t x)  
@@ -294,6 +298,8 @@ namespace mithep
     Double32_t        fE55;                          //[0,0,14]5x5 crystal energy
     Double32_t        fCoviEtaiEta = -1.;            //[0,0,14]covariance eta-eta (in crystals)
     Double32_t        fCoviEtaiEta5x5 = -1.;         //[0,0,14]covariance eta-eta (in crystals, full5x5)
+    Double32_t        fCoviEtaiPhi5x5;               //[0,0,14]covariance eta-eta (in crystals, full5x5)
+    Double32_t        fCoviPhiiPhi5x5;               //[0,0,14]covariance eta-eta (in crystals, full5x5)
     Double32_t        fHcalDepth1TowerSumEtDr04;     //[0,0,14]hcal depth1 tower based isolation dR 0.4
     Double32_t        fHcalDepth2TowerSumEtDr04;     //[0,0,14]hcal depth2 tower based isolation dR 0.4
     Double32_t        fEcalJurassicIsolation;        //[0,0,14]ecal jura iso dR 0.4 *RENAMING*
@@ -391,7 +397,7 @@ namespace mithep
     // The problem is that process ID seems to be not set at the point where conversion rules are applied
     // which is strange since process ID is set in ProcIDRef::Streamer..
 
-    ClassDef(Electron, 22)                             // Electron class
+    ClassDef(Electron, 23)                             // Electron class
   };
 }
 
@@ -431,24 +437,19 @@ inline const mithep::Track *mithep::Electron::BestTrk() const
 
 inline
 Double_t
-mithep::Electron::CoviEtaiEta() const
+mithep::Electron::CoviEtaiEta(Bool_t zs/* = kFALSE*/) const
 {
-  if (fCoviEtaiEta5x5 >= 0.)
-    return fCoviEtaiEta5x5;
-  else if (fCoviEtaiEta >= 0.)
+  if (zs) // explicity requiring zero-suppressed sigma ieta ieta
     return fCoviEtaiEta;
-  else
-    return SCluster()->SigmaIEtaIEta();
-}
-
-inline
-Double_t
-mithep::Electron::CoviEtaiEta5x5() const
-{
-  if (fCoviEtaiEta5x5 >= 0.)
-    return fCoviEtaiEta5x5;
-  else
-    return SCluster()->SigmaIEtaIEta();
+  else {
+    // otherwise return 5x5 if available so that old code that uses CoviEtaiEta() works
+    if (fCoviEtaiEta5x5 >= 0.)
+      return fCoviEtaiEta5x5;
+    else if (fCoviEtaiEta >= 0.)
+      return fCoviEtaiEta;
+    else
+      return SCluster()->SigmaIEtaIEta();
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
