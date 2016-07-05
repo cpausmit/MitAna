@@ -312,7 +312,7 @@ class CondorConfig(object):
 
                     continue
 
-                if key == 'transfer_input_files' or key == 'transfer_output_files':
+                elif key == 'transfer_input_files' or key == 'transfer_output_files':
                     self.jdl[key].extend(value.split(','))
                     self.jdl[key] = list(set(self.jdl[key]))
 
@@ -360,8 +360,8 @@ class CondorConfig(object):
             jdlFile.write(self.toString())
 
     def outputList(self, jobInfo):
-        outPaths = self.jdl['transfer_output_files']
-        remaps = self.jdl['transfer_output_remaps']
+        outPaths = list(self.jdl['transfer_output_files'])
+        remaps = dict(self.jdl['transfer_output_remaps'])
 
         for iP in range(len(outPaths)):
             outPath = outPaths[iP]
