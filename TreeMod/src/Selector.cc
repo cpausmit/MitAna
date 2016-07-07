@@ -24,6 +24,7 @@ ClassImp(mithep::Selector)
 Selector::Selector() : 
   fDoRunInfo     (kTRUE),
   fUseCacher     (0),
+  fCacherTimeout (1800),
   fCacher        (0),
   fEvtHdrName    (Names::gkEvtHeaderBrn),
   fRunTreeName   (Names::gkRunTreeName),
@@ -197,6 +198,7 @@ void Selector::SlaveBegin(TTree *tree)
 
       fCacher = new Cacher(&inputList, fUseCacher == 2); // 2: full-local caching
       fCacher->SetNFilesAhead(1); // do not download too many files locally
+      fCacher->SetTimeout(fCacherTimeout);
       if (!fCacher->InitialCaching()) {
         Error("SlaveBegin", "Initial cache failed.");
         AbortAnalysis();

@@ -133,39 +133,59 @@ namespace mithep
         TEC9S
       };
 
-      enum ETrackAlgorithm { //taken from DataFormats/TrackReco/interface/TrackBase.h
-        undefAlgorithm=0,
-        ctf=1,
-        rs=2,
-        cosmics=3,
-        iter0=4,
-        iter1=5,
-        iter2=6,
-        iter3=7,
-        iter4=8,
-        iter5=9,
-        iter6=10,
-        iter7=11,
-        iter8=12,
-        iter9=13,
-        iter10=14,
-        outInEcalSeededConv=15,
-        inOutEcalSeededConv=16, 
-        nuclInter=17,
-        standAloneMuon=18,
-        globalMuon=19,
-        cosmicStandAloneMuon=20,
-        cosmicGlobalMuon=21,
-        iter1LargeD0=22,
-        iter2LargeD0=23,
-        iter3LargeD0=24,
-        iter4LargeD0=25,
-        iter5LargeD0=26,
-        bTagGhostTracks=27,
-        beamhalo=28, 
-        algoSize=29
+      // taken from DataFormats/TrackReco/interface/TrackBase.h
+      // CMSSW enum has changed since 7_4_X.
+      // If you are reading Bambu version <= 032, do not use this enum
+      // but refer to the old TrackBase.h and refer to algorithms with literal numbers.
+      enum ETrackAlgorithm {
+        undefAlgorithm = 0,
+        ctf = 1, 
+        duplicateMerge = 2,
+        cosmics = 3,
+        initialStep = 4,
+        lowPtTripletStep = 5,
+        pixelPairStep = 6,
+        detachedTripletStep = 7,
+        mixedTripletStep = 8,
+        pixelLessStep = 9,
+        tobTecStep = 10,
+        jetCoreRegionalStep = 11,
+        conversionStep = 12,
+        muonSeededStepInOut = 13,
+        muonSeededStepOutIn = 14,
+        outInEcalSeededConv = 15,
+        inOutEcalSeededConv = 16,
+        nuclInter = 17,
+        standAloneMuon = 18,
+        globalMuon = 19,
+        cosmicStandAloneMuon = 20,
+        cosmicGlobalMuon = 21,
+        highPtTripletStep = 22,
+        lowPtQuadStep = 23,
+        detachedQuadStep = 24,
+        reservedForUpgrades1 = 25,
+        reservedForUpgrades2 = 26,
+        bTagGhostTracks = 27,
+        beamhalo = 28,
+        gsf = 29,
+        hltPixel = 30,
+        hltIter0 = 31,
+        hltIter1 = 32,
+        hltIter2 = 33,
+        hltIter3 = 34,
+        hltIter4 = 35,
+        hltIterX = 36,
+        hiRegitMuInitialStep = 37,
+        hiRegitMuLowPtTripletStep = 38,
+        hiRegitMuPixelPairStep = 39,
+        hiRegitMuDetachedTripletStep = 40,
+        hiRegitMuMixedTripletStep = 41,
+        hiRegitMuPixelLessStep = 42,
+        hiRegitMuTobTecStep = 43,
+        hiRegitMuMuonSeededStepInOut = 44,
+        hiRegitMuMuonSeededStepOutIn = 45,
+        algoSize = 46
       };
-
 
       Track() : fNHits(0), fNPixelHits(0), fNMissingHits(0), fNExpectedHitsInner(0), fNExpectedHitsOuter(0),
                 fAlgo(undefAlgorithm), fIsGsf(0), fPtErr(0), fQOverP(0), fQOverPErr(0),
@@ -184,12 +204,12 @@ namespace mithep
       Int_t                Charge()         const { return (fQOverP>0) ? 1 : -1;  }
       Double_t             Chi2()           const { return fChi2;                 }
       void                 ClearHit(EHitLayer l)  { fHits.ClearBit(l);            } 
-      Double_t	           D0()             const { return -fDxy;                 }
+      Double_t             D0()             const { return -fDxy;                 }
       Double_t             D0Corrected(const BaseVertex &iVertex) const;
       Double_t             D0Corrected(const ThreeVector &iVertex) const;
       Double_t             DzCorrected(const BaseVertex &iVertex) const;
       Double_t             DzCorrected(const ThreeVector &iVertex) const;
-      Double_t	           D0Err()          const { return fDxyErr;               }
+      Double_t             D0Err()          const { return fDxyErr;               }
       Double_t             Dsz()            const { return fDsz;                  }
       Double_t             DszErr()         const { return fDszErr;               }
       Double_t             Dxy()            const { return fDxy;                  }
@@ -220,11 +240,11 @@ namespace mithep
       Double_t             P2()             const { return 1./fQOverP/fQOverP;                 }
       Double_t             P()              const { return TMath::Abs(1./fQOverP);             }
       Double_t             Phi()            const { return fPhi0;                              }
-      Double_t	           Phi0()           const { return fPhi0;                              }
-      Double_t	           Phi0Err()        const { return fPhi0Err;                           }
+      Double_t             Phi0()           const { return fPhi0;                              }
+      Double_t             Phi0Err()        const { return fPhi0Err;                           }
       Double_t             PhiEcal()        const { return fPhiEcal;                           }
       Double_t             Prob()           const { return TMath::Prob(fChi2,fNdof);           }
-      Double_t	           Pt()             const { return Mom().Rho();                        }
+      Double_t             Pt()             const { return Mom().Rho();                        }
       Double_t             PtErr()          const { return fPtErr;                             }
       Double_t             Px()             const { return Mom().X();                          } 
       Double_t             Py()             const { return Mom().Y();                          }
@@ -240,7 +260,7 @@ namespace mithep
       const BitMask48      StereoHits()     const { return (fHits & StereoLayers());           }
       void                 SetAlgo(ETrackAlgorithm e)          { fAlgo = e;                    }
       void                 SetChi2(Double_t chi2)              { fChi2 = chi2;                 }
-      void	           SetErrors(Double_t qOverPErr, Double_t lambdaErr, Double_t phi0Err, 
+      void           SetErrors(Double_t qOverPErr, Double_t lambdaErr, Double_t phi0Err, 
                                      Double_t dXyErr, Double_t dSzErr);
       void                 SetEtaEcal(Double_t eta)            { fEtaEcal = eta;               }
       void                 SetHelix (Double_t qOverP, Double_t lambda, Double_t phi0, 

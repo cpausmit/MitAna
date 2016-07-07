@@ -49,10 +49,12 @@ namespace mithep
     Double_t             E33()                        const { return fE33;                }
     Double_t             E55()                        const { return fE55;                }
     ThreeVectorC         CaloPos()                    const;
-    Double_t             CoviEtaiEta()                const;
-    Double_t             CoviEtaiEta5x5()             const;
-    Double_t             CoviPhiiPhi()                const { return SCluster()->SigmaIPhiIPhi(); }
+    Double_t             CoviEtaiEta(Bool_t zs = kFALSE) const;
     Double_t             CoviEtaiPhi()                const { return SCluster()->SigmaIEtaIPhi(); }
+    Double_t             CoviPhiiPhi()                const { return SCluster()->SigmaIPhiIPhi(); }
+    Double_t             CoviEtaiEta5x5()             const { return fCoviEtaiEta5x5; }
+    Double_t             CoviEtaiPhi5x5()             const { return fCoviEtaiPhi5x5; }
+    Double_t             CoviPhiiPhi5x5()             const { return fCoviPhiiPhi5x5; }
     Bool_t               HasPixelSeed()               const { return fHasPixelSeed;       }
     Double_t             HcalDepth1TowerSumEtDr03()   const { return fHcalDepth1TowerSumEtDr03; }
     Double_t             HcalDepth1TowerSumEtDr04()   const { return fHcalDepth1TowerSumEtDr04; }
@@ -138,6 +140,8 @@ namespace mithep
     void                 SetE55(Double_t x)                      { fE55                     = x; }
     void                 SetCoviEtaiEta(Double_t x)              { fCoviEtaiEta             = x; }
     void                 SetCoviEtaiEta5x5(Double_t x)           { fCoviEtaiEta5x5          = x; }
+    void                 SetCoviEtaiPhi5x5(Double_t x)           { fCoviEtaiPhi5x5          = x; }
+    void                 SetCoviPhiiPhi5x5(Double_t x)           { fCoviPhiiPhi5x5          = x; }
     void                 SetHasPixelSeed(Bool_t x)               { fHasPixelSeed            = x; }
     void                 SetEcalRecHitIsoDr04(Double_t x)        { fEcalRecHitIso           = x; }
     void                 SetHcalTowerSumEtDr04(Double_t x)       { fHcalTowerSumEtDr04      = x; }
@@ -200,8 +204,10 @@ namespace mithep
     Double32_t           fE25;                      //[0,0,14]2x5 crystal energy
     Double32_t           fE33;                      //[0,0,14]3x3 crystal energy
     Double32_t           fE55;                      //[0,0,14]5x5 crystal energy
-    Double32_t           fCoviEtaiEta = -1.;        //! covariance eta-eta (in crystals)
-    Double32_t           fCoviEtaiEta5x5 = -1.;     //! "full 5x5" covariance eta-eta (in crystals)
+    Double32_t           fCoviEtaiEta = -1.;        //[0,0,14]covariance eta-eta (in crystals)
+    Double32_t           fCoviEtaiEta5x5 = -1.;     //[0,0,14]"full 5x5" covariance eta-eta (in crystals)
+    Double32_t           fCoviEtaiPhi5x5;           //[0,0,14]covariance eta-phi (in crystals)
+    Double32_t           fCoviPhiiPhi5x5;           //[0,0,14]covariance phi-phi (in crystals)
     Double32_t           fEcalRecHitIso;            //[0,0,14]ecal rechit bsd isodR 0.4 *RENAME*
     Double32_t           fHcalTowerSumEtDr04;       //[0,0,14]hcal tower bsd isodR 0.4
     Double32_t           fHcalDepth1TowerSumEtDr04; //[0,0,14]hcal dp1 tw bsd isodR 0.4
@@ -305,7 +311,7 @@ namespace mithep
     // The problem is that process ID seems to be not set at the point where conversion rules are applied
     // which is strange since process ID is set in ProcIDRef::Streamer..
 
-    ClassDef(Photon, 25) // Photon class
+    ClassDef(Photon, 26) // Photon class
   };
 }
 
@@ -336,24 +342,19 @@ mithep::Photon::CaloPos() const
 
 inline
 Double_t
-mithep::Photon::CoviEtaiEta() const
+mithep::Photon::CoviEtaiEta(Bool_t zs/* = kFALSE*/) const
 {
-  if (fCoviEtaiEta5x5 >= 0.)
-    return fCoviEtaiEta5x5;
-  else if (fCoviEtaiEta >= 0.)
+  if (zs) // explicity requiring zero-suppressed sigma ieta ieta
     return fCoviEtaiEta;
-  else
-    return SCluster()->SigmaIEtaIEta();
-}
-
-inline
-Double_t
-mithep::Photon::CoviEtaiEta5x5() const
-{
-  if (fCoviEtaiEta5x5 >= 0.)
-    return fCoviEtaiEta5x5;
-  else
-    return SCluster()->SigmaIEtaIEta();
+  else {
+    // otherwise return 5x5 if available so that old code that uses CoviEtaiEta() works
+    if (fCoviEtaiEta5x5 >= 0.)
+      return fCoviEtaiEta5x5;
+    else if (fCoviEtaiEta >= 0.)
+      return fCoviEtaiEta;
+    else
+      return SCluster()->SigmaIEtaIEta();
+  }
 }
 
 inline
