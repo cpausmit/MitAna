@@ -7,6 +7,7 @@ import time
 import subprocess
 import glob
 import shutil
+import collections
 import socket
 
 # experimental full local caching
@@ -506,7 +507,7 @@ def setupWorkspace(env):
     
     if remakeLibPack:
         print ' Creating library tarball.'
-        runSubproc('tar', 'czf', env.cmsswdir + '/' + env.libPack, '-C', env.cmsswbase, 'lib')
+        runSubproc('tar', 'chzf', env.cmsswdir + '/' + env.libPack, '-C', env.cmsswbase, 'lib')
 
     copyLibPack = False
     if not os.path.exists(env.workspace + '/' + env.libPack) or \
@@ -540,7 +541,7 @@ def setupWorkspace(env):
     
     if remakeHdrPack:
         print ' Creating headers tarball.'
-        runSubproc('tar', 'czf', env.cmsswdir + '/' + env.hdrPack, '-C', env.cmsswbase, *tuple(headerPaths))
+        runSubproc('tar', 'chzf', env.cmsswdir + '/' + env.hdrPack, '-C', env.cmsswbase, *tuple(headerPaths))
 
     copyHdrPack = False
     if not os.path.exists(env.workspace + '/' + env.hdrPack) or \
@@ -561,7 +562,7 @@ def setupWorkspace(env):
 
     if remakeBinPack:
         print ' Creating MitAna/bin tarball.'
-        runSubproc('tar', 'czf', env.cmsswdir + '/' + env.binPack, '-C', env.cmsswbase, 'src/MitAna/bin')
+        runSubproc('tar', 'chzf', env.cmsswdir + '/' + env.binPack, '-C', env.cmsswbase, 'src/MitAna/bin')
 
     copyBinPack = False
     if not os.path.exists(env.workspace + '/' + env.binPack) or \
@@ -709,49 +710,136 @@ def writeCatalogs(catalogDir, datasets, filesPerFileset = 0):
     invalid = []
 
     for datasetInfo in datasets:
+        if os.path.exists(datasetInfo.confDir + '/Files'):
+            # not updating any further
+            continue
+
+        # catalog is not copied / created yet. Copy or write
+        catalogSrc = catalogDir + '/' + datasetInfo.path()
+        if datasetInfo.skimName() != '-':
+            catalogSrc += '/' + datasetInfo.skimName()
+
+        set0size = 0
+        try:
+            with open(catalogSrc + '/Files') as fileList:
+                for line in fileList:
+                    if line.split()[0] == '0000':
+                        set0size += 1
+        except IOError:
+            print ' Could not open catalog ' + catalogSrc + '. Skipping dataset.'
+            invalid.append(datasetInfo)
+            continue
+
+        if filesPerFileset == 0 or filesPerFileset >= set0size:
+            # using default fileset size - copy
+            for fileName in os.listdir(catalogSrc):
+                if os.path.isfile(catalogSrc + '/' + fileName):
+                    shutil.copyfile(catalogSrc + '/' + fileName, datasetInfo.confDir + '/' + fileName)
+        else:
+            # fileset size smaller than default - write own catalog
+            with open(catalogSrc + '/Files') as src:
+                with open(datasetInfo.confDir + '/Files', 'w') as dst:
+                    iLine = 0
+                    for line in src:
+                        dst.write('%04d ' % (iLine / filesPerFileset))
+                        dst.write(' '.join(line.split()[1:]) + '\n')
+                        iLine += 1
+
+            nFilesets = iLine / filesPerFileset
+            if iLine % filesPerFileset != 0:
+                nFilesets += 1
+            
+            with open(catalogSrc + '/Filesets') as src:
+                location = src.readline().split()[1]
+
+            with open(datasetInfo.confDir + '/Filesets', 'w') as dst:
+                # write dummy data
+                for iSet in range(nFilesets):
+                    dst.write('%04d %s 0 0 0 0 0 0\n' % (iSet, location))
+
+    # clean up datasets that were invalid
+    for entry in invalid:
+        datasets.remove(entry)
+
+
+def topupCatalogs(catalogDir, datasets, filesPerFileset = 0):
+    """
+    Open the catalog and read out the list of filesets. Write out the catalog to
+    the workspace (fileset size may be different depending on filesPerFileset).
+    """
+
+    invalid = []
+
+    for datasetInfo in datasets:
         if not os.path.exists(datasetInfo.confDir + '/Files'):
-            # catalog is not copied / created yet. Copy or write
-            catalogSrc = catalogDir + '/' + datasetInfo.path()
-            if datasetInfo.skimName() != '-':
-                catalogSrc += '/' + datasetInfo.skimName()
+            print 'Catalog not found in ' + datasetInfo.confDir
+            invalid.append(datasetInfo)
+            continue
 
-            set0size = 0
-            try:
-                with open(catalogSrc + '/Files') as fileList:
-                    for line in fileList:
-                        if line.split()[0] == '0000':
-                            set0size += 1
-            except IOError:
-                print ' Could not open catalog ' + catalogSrc + '. Skipping dataset.'
-                invalid.append(datasetInfo)
-                continue
-    
-            if filesPerFileset == 0 or filesPerFileset >= set0size:
-                # using default fileset size - copy
-                for fileName in os.listdir(catalogSrc):
-                    if os.path.isfile(catalogSrc + '/' + fileName):
-                        shutil.copyfile(catalogSrc + '/' + fileName, datasetInfo.confDir + '/' + fileName)
-            else:
-                # fileset size smaller than default - write own catalog
-                with open(catalogSrc + '/Files') as src:
-                    with open(datasetInfo.confDir + '/Files', 'w') as dst:
-                        iLine = 0
-                        for line in src:
-                            dst.write('%04d ' % (iLine / filesPerFileset))
-                            dst.write(' '.join(line.split()[1:]) + '\n')
-                            iLine += 1
+        catalogSrc = catalogDir + '/' + datasetInfo.path()
+        if datasetInfo.skimName() != '-':
+            catalogSrc += '/' + datasetInfo.skimName()
 
-                nFilesets = iLine / filesPerFileset
-                if iLine % filesPerFileset != 0:
-                    nFilesets += 1
-                
-                with open(catalogSrc + '/Filesets') as src:
-                    location = src.readline().split()[1]
+        newList = {}
+        try:
+            with open(catalogSrc + '/Files') as fileList:
+                for line in fileList:
+                    words = line.split()
+                    filename = words[1]
+                    newList[filename] = ' '.join(words[2:])
 
-                with open(datasetInfo.confDir + '/Filesets', 'w') as dst:
-                    # write dummy data
-                    for iSet in range(nFilesets):
-                        dst.write('%04d %s 0 0 0 0 0 0\n' % (iSet, location))
+        except IOError:
+            print ' Could not open catalog ' + catalogSrc + '. Skipping dataset.'
+            invalid.append(datasetInfo)
+            continue
+
+        set0size = 0
+        lastFileset = -1
+        try:
+            with open(datasetInfo.confDir + '/Files') as fileList:
+                for line in fileList:
+                    fileset, filename = line.split()[:2]
+
+                    if fileset == '0000':
+                        set0size += 1
+
+                    if int(fileset) > lastFileset:
+                        lastFileset = int(fileset)
+
+                    try:
+                        newList.pop(filename)
+                    except KeyError:
+                        print 'File ' + filename + ' exists in ' + datasetInfo.confDir + '/Files but not in ' + catalogSrc
+                        continue
+
+        except IOError:
+            print ' Could not open catalog in ' + datasetInfo.confDir + '. Skipping dataset.'
+            invalid.append(datasetInfo)
+            continue
+
+        if len(newList) == 0:
+            continue
+
+        if filesPerFileset == 0 or filesPerFileset >= set0size:
+            filesPerFileset = set0size
+
+        fileset = lastFileset + 1
+
+        with open(datasetInfo.confDir + '/Files', 'a') as fileList:
+            nFile = 0
+            for filename, line in newList.items():
+                fileList.write('%04d %s %s\n' % (fileset, filename, line))
+                nFile += 1
+                if nFile % filesPerFileset == 0:
+                    fileset += 1
+
+        with open(datasetInfo.confDir + '/Filesets') as src:
+            location = src.readline().split()[1]
+
+        with open(datasetInfo.confDir + '/Filesets', 'a') as dst:
+            # write dummy data
+            for iSet in range(lastFileset + 1, fileset + 1):
+                dst.write('%04d %s 0 0 0 0 0 0\n' % (iSet, location))
 
     # clean up datasets that were invalid
     for entry in invalid:
@@ -871,6 +959,59 @@ def writeMacros(workspace, datasets, noOverwrite = True):
     for entry in invalid:
         datasets.remove(entry)
 
+
+def topupMacros(workspace, datasets):
+    for datasetInfo in datasets:
+        fileList = collections.defaultdict(list)
+
+        catalogName = workspace + '/' + datasetInfo.path() + '/Files'
+        with open(catalogName) as catalog:
+            for line in catalog:
+                fileset, filename = line.split()[:2]
+                fileList[fileset].append(filename)
+
+        fileName = workspace + '/' + datasetInfo.path() + '/run.py'
+
+        try:
+            source = open(fileName)
+        except IOError:
+            continue
+
+        lines = source.read().split('\n')
+        source.close()
+
+        with open(fileName + '_tmp', 'w') as dest:
+            inputBlock = False
+            dirname = ''
+            for line in lines:
+                if line.startswith('files = '):
+                    inputBlock = True
+
+                if inputBlock:
+                    matches = re.match(' +\'([0-9]+)\': \[', line)
+                    if matches:
+                        try:
+                            fileList.pop(matches.group(1))
+                        except KeyError:
+                            print fileName
+
+                    if not dirname:
+                        matches = re.match('^ +\'(.+)\',$', line)
+                        if matches:
+                            dirname = os.path.dirname(matches.group(1))
+
+                    if line == '}': # end of block
+                        for fileset in sorted(fileList.keys()):
+                            dest.write('    \'%s\': [\n' % fileset)
+                            for filename in fileList[fileset]:
+                                dest.write('        \'%s/%s\',\n' % (dirname, filename))
+                            dest.write('    ],\n')
+
+                        inputBlock = False
+
+                dest.write(line + '\n')
+
+        shutil.copy(fileName + '_tmp', fileName)
 
 def makeJobs(datasets, condorConf, limitTo = [], killStatus = [], skip = None):
     """
@@ -1049,7 +1190,7 @@ def printDiagnostics(env, datasets):
                 with open(outFile) as stdLog:
                     host = stdLog.readline().strip()
 
-                output += ' (%s)' % host
+                output += ' (%s:%s %s)' % (jobInfo.submitHost, jobInfo.jobId, host)
                 try:
                     hostCounts[host] += 1
                 except KeyError:
@@ -1063,15 +1204,27 @@ def printDiagnostics(env, datasets):
                 with open(errFile) as errorLog:
                     lines = errorLog.readlines()
 
+                iLastCache = -1
+                iSecondLastCache = -1
                 iStackTrace = -1
                 for iL in range(len(lines)):
-                    if lines[iL].startswith('#0'):
+                    if iStackTrace < 0 and lines[iL].startswith('#0'):
                         iStackTrace = iL
-                        break
+
+                    if 'cache file' in lines[iL]:
+                        if iL > iLastCache:
+                            iSecondLastCache = iLastCache
+                            iLastCache = iL
 
                 if iStackTrace == -1:
                     output += '   No stack trace in error log\n'
                 else:
+                    if iLastCache > 0:
+                        if iSecondLastCache > 0:
+                            output += '   ' + lines[iSecondLastCache]
+                        output += '   ' + lines[iLastCache]
+                        output += '...\n'
+                        
                     for iL in range(iStackTrace - 6, iStackTrace):
                         output += '   ' + lines[iL]
 
@@ -1087,7 +1240,7 @@ def printDiagnostics(env, datasets):
             print host, hostCounts[host]
 
 
-def printSummary(datasets):
+def printSummary(datasets, statuses):
     for datasetInfo in datasets:
         summary = {'initial': 0, 'idle': 0, 'running': 0, 'complete': 0, 'error': 0}
 
@@ -1108,7 +1261,14 @@ def printSummary(datasets):
             else:
                 summary['initial'] += 1
 
-        status = 'DONE' if summary['complete'] == sum(summary.values()) else 'INCOMPLETE'
+        if summary['complete'] == sum(summary.values()):
+            status = 'DONE' 
+        else:
+            status = 'INCOMPLETE'
+
+        if len(statuses) != 0 and status not in statuses:
+            continue
+
         print ' [' + datasetInfo.dataset + ']', status
         print '  Initial : %4d' % summary['initial']
         print '  In queue: %4d' % summary['idle']
@@ -1190,6 +1350,7 @@ if __name__ == '__main__':
     argParser.add_argument('--name', '-n', metavar = 'NAME', dest = 'taskName', default = '', help = 'Workspace name. If not given, set to the configuration file name if applicable, otherwise to current epoch time.')
     argParser.add_argument('--recreate', '-R', action = 'store_true', dest = 'recreate', help = 'Clear the existing workspace if there is one.')
     argParser.add_argument('--update', '-U', action = 'store_true', dest = 'update', help = 'Update the libraries / scripts / headers.')
+    argParser.add_argument('--top-up', '-T', action = 'store_true', dest = 'topup', help = 'Top up the specified book/dataset, reading data from the central catalog.')
     argParser.add_argument('--condor-template', '-t', metavar = 'FILE', dest = 'condorTemplatePath', default = '', help = 'Condor JDL file template. Strings {task}, {book}, {dataset}, and {fileset} can be used as placeholders in any of the lines.')
     argParser.add_argument('--add-output', '-x', metavar = 'MAPS', dest = 'outputMapStrs', nargs = '+', default = [], help = 'Additional output files (e.g. tuples) to be transferred back. Each item must be a name mapping of form "<original name> = <output name>" where output name must contain a string {fileset}. {task}, {book}, {dataset} are also useable.')
     argParser.add_argument('--merge-output', '-g', metavar = 'FILES', dest = 'outputToBeMerged', nargs = '+', help = 'Output ROOT files of each job that should be merged into {fileset}.root.')
@@ -1201,7 +1362,7 @@ if __name__ == '__main__':
     argParser.add_argument('--resubmit-held', '-H', action = 'store_true', dest = 'resubmitHeld', help = 'Resubmit jobs not submitted yet or in held state. By default held jobs count as running and are skipped.')
     argParser.add_argument('--auto-resubmit', '-u', metavar = 'INTERVAL', dest = 'autoResubmit', type = int, nargs = '?', default = 0, const = 300, help = 'Automatically keep resubmitting jobs that are not complete and not running. The script will stay alive until all jobs are done. INTERVAL specifies the submission repeat frequency.')
     argParser.add_argument('--diagnose-held', '-G', action = 'store_true', dest = 'diagnoseHeld', help = 'Print out the last lines of the error logs of the held jobs.')
-    argParser.add_argument('--summary', '-S', action = 'store_true', dest = 'showSummary', help = 'Show the summary of the task. (Implies --no-submit)')
+    argParser.add_argument('--summary', '-y', metavar = 'STATUS', dest = 'showSummary', nargs = '*', help = 'Show the summary of the task. Implies --no-submit. Options are: DONE, INCOMPLETE.')
     argParser.add_argument('--kill', '-K', action = 'store_true', dest = 'kill', help = 'Kill running jobs of the task.')
     argParser.add_argument('--yes', '-Y', action = 'store_true', dest = 'yes', help = 'Answer yes to all prompts.')
     
@@ -1222,15 +1383,27 @@ if __name__ == '__main__':
             print ' Task configuration file ' + args.configFileName + ' does not exist'
             sys.exit(1)
 
-        if args.dataset or args.goodlumiFile:
+        if args.dataset or args.goodlumiFile != '~':
             print ' Configuration file name is given. --dataset and --goodlumi options are ignored.'
 
-    if args.update and not args.taskName:
+    if (args.update or args.topup) and not args.taskName:
         print ' Specify the task name to update.'
         sys.exit(1)
 
     if args.autoResubmit != 0 and args.autoResubmit < 60:
         print ' Auto-resubmit interval is negative or too short.'
+        sys.exit(1)
+
+    incompatibles = 0
+    if args.recreate:
+        incompatibles += 1
+    if args.update:
+        incompatibles += 1
+    if args.topup:
+        incompatibles += 1
+
+    if incompatibles > 1:
+        print 'Options --recreate, --update, and --top0=-up cannot be used in conjunction.'
         sys.exit(1)
 
     # create a struct to hold various directory and file names
@@ -1367,17 +1540,25 @@ if __name__ == '__main__':
     # datasets: list of tuples (book, dataset, json)
     updateDatasetList = False
 
+    currentList = readDatasetList(env.workspace + '/datasets.list')
+
     if args.configFileName:
         if not newTask and not env.update:
             print ' A dataset list was given, but we are not updating the workspace. Use --update flag to append new datasets.'
             sys.exit(1)
 
-        updateDatasetList = True
         datasets = readDatasetList(args.configFileName)
+        for inDataset in datasets:
+            try:
+                next(info for info in currentList if info == inDataset)
+            except StopIteration:
+                updateDatasetList = True
+
     else:
-        currentList = readDatasetList(env.workspace + '/datasets.list')
         if args.dataset:
-            datasets = []
+            if args.book == '':
+                print ' Specify a book for the dataset', args.dataset
+                sys.exit(1)
 
             inDataset = DatasetInfo(book = args.book, dataset = args.dataset)
 
@@ -1392,28 +1573,23 @@ if __name__ == '__main__':
                     value = parseValueStr(value)
                     inDataset.custom[key] = value
 
-            for datasetInfo in currentList:
-                if datasetInfo.dataset == args.dataset:
-                    if not inDataset.book:
-                        inDataset.book = datasetInfo.book
-                    if not inDataset.skim:
-                        inDataset.skim = datasetInfo.skim
-                    if not inDataset.json:
-                        inDataset.json = datasetInfo.json
-                    if len(inDataset.custom) == 0:
-                        inDataset.custom.update(datasetInfo.custom)
+            try:
+                existing = next(info for info in currentList if info.book == inDataset.book and info.dataset == inDataset.dataset and info.skim == inDataset.skim)
 
-                    datasets.append(inDataset)
-                    if inDataset != datasetInfo:
-                        updateDatasetList = True
+                if inDataset.json == '~' or inDataset.json == '-':
+                    inDataset.json = existing.json
+                if len(inDataset.custom) == 0:
+                    inDataset.custom.update(existing.custom)
 
-            if len(datasets) == 0:
+                if existing != inDataset:
+                    updateDatasetList = True
+                
+            except StopIteration:
+                updateDatasetList = True
+
+            if updateDatasetList:
                 if not newTask and not env.update:
                     print ' A dataset was given, but we are not updating the workspace. Use --update flag to append new datasets.'
-                    sys.exit(1)
-
-                if inDataset.book == '':
-                    print ' Specify a book to add the dataset from.'
                     sys.exit(1)
 
                 message = ' Add dataset config?\n'
@@ -1424,14 +1600,17 @@ if __name__ == '__main__':
                 if len(inDataset.custom) != 0:
                     message += '\n  custom    = ' + str(inDataset.custom)
 
-                if yes(message):
-                    updateDatasetList = True
-                    datasets.append(inDataset)
-                else:
+                if not yes(message):
                     sys.exit(0)
+
+            datasets = [inDataset]
 
         else:
             datasets = currentList
+
+    if args.topup and updateDatasetList:
+        print 'Cannot update dataset configurations when topping up.'
+        sys.exit(1)
 
     if updateDatasetList:
         # write updates to the list of datasets
@@ -1462,8 +1641,14 @@ if __name__ == '__main__':
     if updateDatasetList:
         writeCatalogs(env.catalogDir, datasets, filesPerFileset = args.numFiles)
 
+    if args.topup:
+        topupCatalogs(env.catalogDir, datasets, filesPerFileset = args.numFiles)
+
     if updateDatasetList or (env.update and env.inMacroPath):
         writeMacros(env.workspace, datasets, noOverwrite = env.update and not env.inMacroPath)
+
+    if args.topup:
+        topupMacros(env.workspace, datasets)
 
     print ' Checking for running jobs..'
 
@@ -1500,8 +1685,8 @@ if __name__ == '__main__':
         printDiagnostics(env, datasets)
         sys.exit(0)
 
-    if args.showSummary:
-        printSummary(datasets)
+    if args.showSummary is not None:
+        printSummary(datasets, args.showSummary)
         sys.exit(0)
 
     # if pilot is requested, update allFilesets with the pilot information

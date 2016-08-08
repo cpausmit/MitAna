@@ -34,7 +34,7 @@ then
   echo "  Make new tar ball."
   echo "  found newer: $newer"
   echo "  -> tar fzc ${CMSSW_VERSION}.tgz $CMSSW_VERSION/{external,lib}"
-  tar fzc ${CMSSW_VERSION}.tgz $CMSSW_VERSION/{external,lib}
+  tar fhzc ${CMSSW_VERSION}.tgz $CMSSW_VERSION/{external,lib}
 else
   echo "  Tar ball ${CMSSW_VERSION}.tgz is up to date."  
 fi
@@ -56,7 +56,7 @@ then
   echo "  found newer: $newer"
   echo "  -> tar fzc ${CMSSW_VERSION}-src.tgz $CMSSW_VERSION/src \
                      --exclude ${CMSSW_VERSION}/src/MitPhysics/data"
-  tar fzc ${CMSSW_VERSION}-src.tgz $CMSSW_VERSION/src --exclude ${CMSSW_VERSION}/src/MitPhysics/data
+  tar fhzc ${CMSSW_VERSION}-src.tgz $CMSSW_VERSION/src --exclude ${CMSSW_VERSION}/src/MitPhysics/data
 else
   echo "  Tar ball ${CMSSW_VERSION}-src.tgz is up to date."  
 fi
@@ -80,7 +80,7 @@ then
     echo "  Make new tar ball."
     echo "  found newer: $newer"
     echo "  -> tar fzc external.tgz external"
-    tar fzc $workDir/external.tgz external
+    tar fhzc $workDir/external.tgz external
   else
     echo "  Tar ball $workDir/external.tgz is up to date."  
   fi
@@ -102,7 +102,7 @@ then
   echo "  Make new tar ball."
   echo "  found newer: $newer"
   echo "  -> tar fzc json.tgz json"
-  tar fzc $workDir/json.tgz json
+  tar fhzc $workDir/json.tgz json
 else
   echo "  Tar ball $workDir/json.tgz is up to date."  
 fi
