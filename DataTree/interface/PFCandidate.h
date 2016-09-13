@@ -75,9 +75,8 @@ namespace mithep
       Double_t            PhiECal()                const
       { return fPhiECal < -99. ? fPhiECalFraction / 256. * 6.28318530 - 3.14159265 : fPhiECal; }
       Bool_t              Flag(EPFFlags f)         const    { return fPFFlags.TestBit(f);      }
-      Bool_t              HasMother()              const    { return fMother.IsValid();           }
-      Bool_t              HasMother(const PFCandidate *m) const;
-      const PFCandidate  *Mother()                 const    { return fMother.Obj();               }
+      Double_t            PuppiWeight()            const    { return fPuppiWeight;             }
+      FourVectorM         PuppiP4()                const    { return FourVectorM(fMom.Pt() * fPuppiWeight, fMom.Eta(), fMom.Phi(), fMom.M() * fPuppiWeight); }
       EObjType            ObjType()                const    { return kPFCandidate;                }
       EPFType             PFType()                 const    { return EPFType(fPFType);            }
       void                SetCharge(Double_t c)             { fCharge = c; ClearCharge();         }
@@ -87,9 +86,9 @@ namespace mithep
       void                SetPhiECal(Double_t phi)          { fPhiECalFraction = (phi + 3.14159265) / 6.28318530 * 256.; }
       void                SetPFType(EPFType t)              { fPFType = t;                        }
       void                SetFlag(EPFFlags f, Bool_t b = kTRUE) { fPFFlags.SetBit(f, b);       }
+      void                SetPuppiWeight(Double_t w)        { fPuppiWeight = w;                   }
       void                SetPtEtaPhiM(Double_t pt, Double_t eta, Double_t phi, Double_t m);
       void		  SetMom(Double_t px, Double_t py, Double_t pz, Double_t e);
-      void		  SetMother(const PFCandidate *p)   { fMother = p;                        }
       void                SetVertex(Double_t x, Double_t y, Double_t z);
       const ThreeVector   SourceVertex()           const    { return fSourceVertex.V();           }
 
@@ -130,7 +129,7 @@ namespace mithep
       Byte_t              fPhiECalFraction;  //phi at ecal front face in 2pi/256 steps from -pi to pi
       Byte_t              fPFType;           //particle flow type
       BitMask32           fPFFlags;          //various PF flags
-      Ref<PFCandidate>    fMother;           //reference to mother
+      Double32_t          fPuppiWeight;      //PUPPI weight
       Ref<Track>          fTrackerTrack;     //reference to (standard) track
       Ref<Track>          fGsfTrack;         //reference to gsf track (for electrons only)
       Ref<Muon>           fMuon;             //reference to corresponding reco muon
@@ -142,7 +141,7 @@ namespace mithep
       Double32_t          fEtaECal{-100.};   //! (deprecated)
       Double32_t          fPhiECal{-100.};   //! (deprecated)
 
-    ClassDef(PFCandidate,6) // Particle-flow candidate class
+    ClassDef(PFCandidate,7) // Particle-flow candidate class
   };
 }
 
@@ -183,24 +182,6 @@ inline void mithep::PFCandidate::GetMom() const
   // Get momentum values from stored values.
 
   fCachedMom.SetCoordinates(fMom.Pt(),fMom.Eta(),fMom.Phi(),fMom.M()); 
-}
-
-//--------------------------------------------------------------------------------------------------
-inline Bool_t mithep::PFCandidate::HasMother(const PFCandidate *m) const
-{
-  // Return true if the given particle is among mothers. (Note the comparison
-  // is made on pointers and therefore will fail if you work on copies.)
-
-  if (!m) 
-    return kFALSE;
-
-  const mithep::PFCandidate *mother = Mother();
-  while (mother && mother!=m)
-    mother = mother->Mother();
-
-  if (mother) 
-    return kTRUE;
-  return kFALSE;
 }
 
 //--------------------------------------------------------------------------------------------------
