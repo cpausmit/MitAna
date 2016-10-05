@@ -88,6 +88,11 @@ namespace mithep {
       ClassDef(LeptonData, 1)
     };
 
+    enum DoubleBTagAlgo {
+      kBoostedDoubleSecondaryVertex,
+      nDoubleBTagAlgos
+    };
+
     FatJet() {}
     FatJet(PFJet const& p) : PFJet(p) {}
     ~FatJet() {}
@@ -106,6 +111,7 @@ namespace mithep {
     Double_t Tau3() const                  { return fTau3; }
     Double_t Tau4() const                  { return fTau4; }
     Double_t MassSoftDrop() const          { return fMassSD; }
+    Double_t DoubleBJetTagsDisc(UInt_t) const;
 
     Jet* MakeCopy() const override { return new FatJet(*this); }
 
@@ -128,12 +134,16 @@ namespace mithep {
     void SetMassSoftDrop(float t)    { fMassSD      = t; }
     void SetTauDot(Float_t t)          { fTauDot = t; }
     void SetZRatio(Float_t t)          { fZRatio = t; }
+    void SetDoubleBJetTagsDisc(Double_t, UInt_t);
     void AddTrackData(TrackData *t)     { fTrackData.push_back(*t); }
     void AddSVData(SVData *s)           { fSVData.push_back(*s); }
     void AddMuonData(LeptonData *s)     { fMuonData.push_back(*s); }
     void AddElectronData(LeptonData *s) { fElectronData.push_back(*s); }
     void AddSubJetBtag(Float_t btag) { fSubjetBtags.push_back(btag); }
     void AddSubJetPtEtaPhiM(Double_t, Double_t, Double_t, Double_t);
+
+    static char const* DoubleBTagAlgoName(UInt_t);
+    static UInt_t DoubleBTagAlgoIndex(char const*);
 
   protected:
     Double_t GetCharge() const override;
@@ -147,6 +157,7 @@ namespace mithep {
     Double32_t         fTau3{-1.};         //3-subjettiness
     Double32_t         fTau4{-1.};         //4-subjettiness
     Double32_t         fMassSD{-1.};       // soft drop mass
+    Double32_t      fDoubleBJetTagsDisc[nDoubleBTagAlgos];
     std::vector<Vect3> fTauIVFAxes{};
 
     // ordered by decreasing subjet pT
@@ -161,7 +172,7 @@ namespace mithep {
     std::vector<LeptonData> fMuonData{};
     std::vector<LeptonData> fElectronData{};
 
-    ClassDef(FatJet, 4) // FatJet class
+    ClassDef(FatJet, 5) // FatJet class
   };
 
 }

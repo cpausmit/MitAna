@@ -107,8 +107,6 @@ mithep::PFCandidate::Mark(UInt_t ib) const
   mithep::DataObject::Mark(ib);
 
   // mark my dependencies if they are there
-  if (fMother.IsValid())
-    fMother.Obj()->Mark(ib);
   if (fTrackerTrack.IsValid())
     fTrackerTrack.Obj()->Mark(ib);
   if (fGsfTrack.IsValid())
